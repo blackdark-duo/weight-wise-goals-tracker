@@ -3,16 +3,54 @@ import { Check, X } from "lucide-react";
 
 const ComparisonTable = () => {
   const features = [
-    { name: "Weight Tracking", competitors: true, us: true },
-    { name: "Goal Setting", competitors: true, us: true },
-    { name: "Email Verification", competitors: false, us: true },
-    { name: "Personalized Dashboard", competitors: true, us: true },
-    { name: "Progress Visualization", competitors: true, us: true },
-    { name: "Custom Goal Types", competitors: false, us: true },
-    { name: "Milestone Tracking", competitors: false, us: true },
-    { name: "Account Data Control", competitors: false, us: true },
-    { name: "Privacy Focus", competitors: false, us: true },
-    { name: "Free Basic Plan", competitors: false, us: true },
+    { 
+      name: "Comprehensive Weight Tracking", 
+      description: "Detailed logging of weight, body measurements, and progress photos",
+      competitors: false, 
+      us: true 
+    },
+    { 
+      name: "Intelligent Goal Setting", 
+      description: "AI-powered personalized weight loss and fitness goals",
+      competitors: false, 
+      us: true 
+    },
+    { 
+      name: "No Hidden Costs", 
+      description: "100% free basic tier with no ads or subscriptions", 
+      competitors: false, 
+      us: true 
+    },
+    { 
+      name: "Privacy-First Approach", 
+      description: "End-to-end encryption and strict data protection", 
+      competitors: false, 
+      us: true 
+    },
+    { 
+      name: "Advanced Analytics", 
+      description: "Trend analysis, predictive insights, and progress visualization", 
+      competitors: false, 
+      us: true 
+    },
+    { 
+      name: "Multi-Platform Support", 
+      description: "Seamless experience across web, mobile, and desktop", 
+      competitors: true, 
+      us: true 
+    },
+    { 
+      name: "Custom Progress Milestones", 
+      description: "Create and track personalized achievement markers", 
+      competitors: false, 
+      us: true 
+    },
+    { 
+      name: "Community Support", 
+      description: "Optional anonymous peer motivation and tips", 
+      competitors: false, 
+      us: true 
+    }
   ];
 
   return (
@@ -24,7 +62,7 @@ const ComparisonTable = () => {
             <span className="text-brand-secondary">Wise</span>?
           </h2>
           <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-            See how we compare to other weight tracking applications in the market
+            We're not just another weight tracking app. We're your comprehensive health companion.
           </p>
         </div>
 
@@ -48,7 +86,10 @@ const ComparisonTable = () => {
                   key={index} 
                   className={index % 2 === 0 ? "bg-ui-background" : "bg-white"}
                 >
-                  <td className="p-4 border-b border-ui-border font-medium">{feature.name}</td>
+                  <td className="p-4 border-b border-ui-border">
+                    <div className="font-medium">{feature.name}</div>
+                    <p className="text-sm text-muted-foreground">{feature.description}</p>
+                  </td>
                   <td className="p-4 border-b border-ui-border text-center">
                     {feature.competitors ? (
                       <Check className="inline h-5 w-5 text-goal-progress" />
@@ -71,13 +112,13 @@ const ComparisonTable = () => {
 
         <div className="mt-12 text-center">
           <p className="text-lg font-medium mb-6">
-            Ready to experience the difference?
+            Your health journey starts here - completely free, completely yours.
           </p>
           <a 
             href="/signup" 
             className="inline-flex h-11 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
           >
-            Start Your Journey Today
+            Start Your Transformation Today
           </a>
         </div>
       </div>
