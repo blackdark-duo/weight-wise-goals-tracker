@@ -61,7 +61,30 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+                // Custom theme colors for weight tracking app
+                brand: {
+                    primary: '#8B5CF6', // Purple main color
+                    secondary: '#F97316', // Orange accent
+                    light: '#F3F4F6', // Light background
+                    dark: '#1F2937', // Dark text
+                },
+                weight: {
+                    gain: '#F97316', // Orange for weight gain
+                    loss: '#10B981', // Green for weight loss
+                    maintain: '#6366F1', // Indigo for maintenance
+                },
+                goal: {
+                    progress: '#10B981', // Green for progress
+                    pending: '#F59E0B', // Amber for pending
+                    missed: '#EF4444', // Red for missed goals
+                },
+                ui: {
+                    background: '#F8FAFC', // Very light background
+                    card: '#FFFFFF',
+                    border: '#E2E8F0',
+                    hover: '#F1F5F9',
+                }
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
