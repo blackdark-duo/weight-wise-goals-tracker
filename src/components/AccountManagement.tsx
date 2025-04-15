@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,35 +15,112 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
-import { AlertCircle, Trash2, UserCog, KeyRound, Save } from "lucide-react";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { AlertCircle, Trash2, UserCog, KeyRound, Save, Scale, Globe } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+// Define list of timezones for the dropdown
+const TIMEZONES = [
+  "UTC",
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "Europe/London",
+  "Europe/Paris",
+  "Europe/Berlin",
+  "Asia/Tokyo",
+  "Asia/Singapore",
+  "Australia/Sydney",
+  "Pacific/Auckland"
+];
 
 const AccountManagement = () => {
-  const [displayName, setDisplayName] = useState("John Doe");
+  const [displayName, setDisplayName] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [preferredUnit, setPreferredUnit] = useState("kg");
+  const [timezone, setTimezone] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
-  const handleUpdateDisplayName = async (e: React.FormEvent) => {
+  // Fetch user profile data on component mount
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      setIsLoading(true);
+      try {
+        // Get the current user
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          setUserId(user.id);
+          
+          // Get the user's profile
+          const { data, error } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", user.id)
+            .single();
+            
+          if (error) throw error;
+          
+          if (data) {
+            setDisplayName(data.display_name || "");
+            setPreferredUnit(data.preferred_unit || "kg");
+            
+            // Set browser's timezone as default if not set
+            const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            setTimezone(data.timezone || browserTimezone || "UTC");
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching profile:", err);
+        setError("Failed to load profile data");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchUserProfile();
+  }, []);
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
     setSuccess("");
 
     try {
-      // This will be implemented with Supabase later
-      console.log("Updating display name to:", displayName);
+      if (!userId) throw new Error("User ID not found");
       
-      // Simulate API call
-      setTimeout(() => {
-        setSuccess("Display name updated successfully");
-        setIsLoading(false);
-      }, 1000);
-    } catch (err) {
-      setError("Failed to update display name");
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          display_name: displayName,
+          preferred_unit: preferredUnit,
+          timezone: timezone,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", userId);
+        
+      if (error) throw error;
+      
+      setSuccess("Profile updated successfully");
+      toast.success("Profile settings saved!");
+    } catch (err: any) {
+      setError(err.message || "Failed to update profile");
       console.error("Update error:", err);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -61,20 +138,21 @@ const AccountManagement = () => {
     }
 
     try {
-      // This will be implemented with Supabase later
-      console.log("Changing password");
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
       
-      // Simulate API call
-      setTimeout(() => {
-        setSuccess("Password changed successfully");
-        setCurrentPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
-        setIsLoading(false);
-      }, 1000);
-    } catch (err) {
-      setError("Failed to change password");
+      if (error) throw error;
+      
+      setSuccess("Password changed successfully");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      toast.success("Password updated successfully!");
+    } catch (err: any) {
+      setError(err.message || "Failed to change password");
       console.error("Password change error:", err);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -85,17 +163,30 @@ const AccountManagement = () => {
     setSuccess("");
 
     try {
-      // This will be implemented with Supabase later
-      console.log("Deleting user data");
+      if (!userId) throw new Error("User ID not found");
       
-      // Simulate API call
-      setTimeout(() => {
-        setSuccess("All user data has been deleted");
-        setIsLoading(false);
-      }, 1000);
-    } catch (err) {
-      setError("Failed to delete user data");
+      // Delete all weight entries
+      const { error: weightError } = await supabase
+        .from("weight_entries")
+        .delete()
+        .eq("user_id", userId);
+      
+      if (weightError) throw weightError;
+      
+      // Delete all goals
+      const { error: goalError } = await supabase
+        .from("goals")
+        .delete()
+        .eq("user_id", userId);
+      
+      if (goalError) throw goalError;
+      
+      setSuccess("All user data has been deleted");
+      toast.success("All your data has been deleted successfully");
+    } catch (err: any) {
+      setError(err.message || "Failed to delete user data");
       console.error("Data deletion error:", err);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -105,18 +196,18 @@ const AccountManagement = () => {
     setError("");
 
     try {
-      // This will be implemented with Supabase later
-      console.log("Deleting user account");
+      const { error } = await supabase.auth.admin.deleteUser(userId || "");
       
-      // Simulate API call
-      setTimeout(() => {
-        // Will redirect to home after account deletion in real implementation
-        console.log("Account deleted");
-        setIsLoading(false);
-      }, 1000);
-    } catch (err) {
-      setError("Failed to delete account");
+      if (error) throw error;
+      
+      // Sign out after account deletion
+      await supabase.auth.signOut();
+      toast.success("Account deleted successfully");
+      window.location.href = "/";
+    } catch (err: any) {
+      setError(err.message || "Failed to delete account");
       console.error("Account deletion error:", err);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -136,14 +227,14 @@ const AccountManagement = () => {
         </div>
       )}
       
-      {/* Update Display Name */}
+      {/* Update Profile Information */}
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <UserCog className="h-5 w-5 text-brand-primary" />
           <h3 className="text-lg font-medium">Profile Information</h3>
         </div>
         
-        <form onSubmit={handleUpdateDisplayName} className="space-y-4">
+        <form onSubmit={handleUpdateProfile} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="displayName">Display Name</Label>
             <Input
@@ -151,6 +242,49 @@ const AccountManagement = () => {
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
             />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="preferredUnit" className="flex items-center gap-2">
+                <Scale className="h-4 w-4" />
+                Preferred Weight Unit
+              </Label>
+              <Select value={preferredUnit} onValueChange={setPreferredUnit}>
+                <SelectTrigger id="preferredUnit">
+                  <SelectValue placeholder="Select unit" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="kg">Kilograms (kg)</SelectItem>
+                  <SelectItem value="lbs">Pounds (lbs)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                This will be used as the default unit for all weight entries and goals.
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="timezone" className="flex items-center gap-2">
+                <Globe className="h-4 w-4" />
+                Timezone
+              </Label>
+              <Select value={timezone} onValueChange={setTimezone}>
+                <SelectTrigger id="timezone">
+                  <SelectValue placeholder="Select timezone" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIMEZONES.map((tz) => (
+                    <SelectItem key={tz} value={tz}>
+                      {tz.replace("_", " ")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                This will be used for displaying dates and times across the application.
+              </p>
+            </div>
           </div>
           
           <Button type="submit" disabled={isLoading}>

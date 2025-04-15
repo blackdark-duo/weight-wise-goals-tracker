@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,24 +10,39 @@ import SignUp from "./pages/SignUp";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import AccountManagement from "./components/AccountManagement";
+import Reports from "./pages/Reports";
 import { useState, useEffect } from "react";
+import { supabase } from "./integrations/supabase/client";
+import { Session } from "@supabase/supabase-js";
 
 const queryClient = new QueryClient();
 
 const App = () => {
-  // This will be replaced with Supabase auth logic
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Simulate auth check
   useEffect(() => {
-    // Check for existing session in localStorage (for demo purposes)
-    const hasSession = localStorage.getItem("demo-auth-session");
-    setIsAuthenticated(!!hasSession);
+    // Set up auth state listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_, session) => {
+        setSession(session);
+        setIsLoading(false);
+      }
+    );
+
+    // Then check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  // This will be implemented with Supabase auth
+  // Private route wrapper component
   const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
-    return isAuthenticated ? <>{children}</> : <Navigate to="/signin" />;
+    if (isLoading) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return session ? <>{children}</> : <Navigate to="/signin" />;
   };
 
   return (
@@ -53,6 +69,11 @@ const App = () => {
                   <h1 className="text-2xl font-bold mb-6">Account Settings</h1>
                   <AccountManagement />
                 </div>
+              </PrivateRoute>
+            } />
+            <Route path="/reports" element={
+              <PrivateRoute>
+                <Reports />
               </PrivateRoute>
             } />
             
