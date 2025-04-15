@@ -78,7 +78,7 @@ const AccountManagement = () => {
             setDisplayName(data.display_name || "");
             setPreferredUnit(data.preferred_unit || "kg");
             
-            // Set browser's timezone as default if not set
+            // Set browser's timezone as default if not set in profile
             const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
             setTimezone(data.timezone || browserTimezone || "UTC");
           }
