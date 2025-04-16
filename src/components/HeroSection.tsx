@@ -25,7 +25,7 @@ const HeroSection = () => {
               <span className="relative inline-block">
                 <TextRotate 
                   texts={rotatingPhrases}
-                  className="text-brand-primary font-extrabold"
+                  mainClassName="text-brand-primary font-extrabold"
                   staggerDuration={0.03}
                   rotationInterval={3000}
                 />
