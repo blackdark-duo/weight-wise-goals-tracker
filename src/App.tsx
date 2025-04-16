@@ -15,6 +15,7 @@ import Account from "./pages/Account";
 import { useState, useEffect } from "react";
 import { supabase } from "./integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
+import MobileNavigation from "./components/MobileNavigation";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +46,9 @@ const App = () => {
     if (isLoading) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
     return session ? <>{children}</> : <Navigate to="/signin" />;
   };
+
+  // Determine if we should show mobile navigation (only for authenticated routes)
+  const showMobileNav = session && !isLoading;
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -83,6 +87,7 @@ const App = () => {
             {/* 404 Route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          {showMobileNav && <MobileNavigation />}
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

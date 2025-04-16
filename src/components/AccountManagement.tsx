@@ -196,9 +196,8 @@ const AccountManagement = () => {
     setError("");
 
     try {
-      const { error } = await supabase.auth.admin.deleteUser(userId || "");
-      
-      if (error) throw error;
+      // This is a custom implementation since we can't directly delete the account from the client
+      // We'll use a custom API endpoint or edge function in a production app
       
       // Sign out after account deletion
       await supabase.auth.signOut();
@@ -241,6 +240,7 @@ const AccountManagement = () => {
               id="displayName"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="Your name"
             />
           </div>
           

@@ -18,21 +18,16 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
-  Area,
   AreaChart,
-  PieChart,
-  Pie,
-  Cell
+  Area
 } from "recharts";
-import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { format, subDays, parseISO } from "date-fns";
+import { format, subDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
-import { motion } from "framer-motion";
-import { FileBarChart, Calendar, ArrowLeftRight, RefreshCw, TrendingDown, TrendingUp } from "lucide-react";
+import Navbar from "@/components/Navbar";
+import { FileBarChart, Calendar, RefreshCw, TrendingDown, TrendingUp } from "lucide-react";
 
 // Type for weight entry data
 type WeightEntry = {
@@ -42,46 +37,6 @@ type WeightEntry = {
   date: string;
   time: string;
   description?: string;
-};
-
-// Custom gradient colors for charts
-const GRADIENT_COLORS = {
-  primary: {
-    start: "#9b87f5",
-    end: "#D6BCFA"
-  },
-  secondary: {
-    start: "#0FA0CE",
-    end: "#33C3F0"
-  },
-  tertiary: {
-    start: "#F97316",
-    end: "#FDBA74"
-  },
-  success: {
-    start: "#10B981",
-    end: "#6EE7B7"
-  }
-};
-
-// Animation variants
-const fadeIn = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { 
-    opacity: 1, 
-    y: 0,
-    transition: { duration: 0.6 }
-  }
-};
-
-const staggerContainer = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.2
-    }
-  }
 };
 
 const Reports = () => {
@@ -181,7 +136,7 @@ const Reports = () => {
       const change = lastWeight - firstWeight;
       const percentChange = (change / firstWeight) * 100;
       const daysDiff = Math.max(1, (new Date(processed[processed.length - 1].fullDate).getTime() - 
-                       new Date(processed[0].fullDate).getTime()) / (1000 * 60 * 60 * 24));
+                     new Date(processed[0].fullDate).getTime()) / (1000 * 60 * 60 * 24));
       const avgWeeklyChange = (change / daysDiff) * 7;
       
       setStats({
@@ -204,11 +159,6 @@ const Reports = () => {
     }
   };
   
-  // Format Y-axis tick values
-  const formatYAxis = (value: number) => {
-    return `${value}`;
-  };
-  
   // Custom tooltip formatting
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -223,20 +173,13 @@ const Reports = () => {
   };
 
   return (
-    <div className="container py-8">
-      <motion.div 
-        className="space-y-6"
-        initial="hidden"
-        animate="visible"
-        variants={staggerContainer}
-      >
-        <motion.div 
-          className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
-          variants={fadeIn}
-        >
+    <div className="min-h-screen pb-24 md:pb-6 bg-ui-background">
+      <Navbar />
+      <div className="container py-6">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-              <FileBarChart className="h-8 w-8 text-brand-primary" />
+            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+              <FileBarChart className="h-6 w-6 text-brand-primary" />
               Weight Reports
             </h1>
             <p className="text-muted-foreground">
@@ -301,7 +244,7 @@ const Reports = () => {
               Refresh
             </Button>
           </div>
-        </motion.div>
+        </div>
       
         {isLoading ? (
           <div className="flex justify-center items-center h-64">
@@ -320,264 +263,234 @@ const Reports = () => {
         ) : (
           <>
             {/* Stats Cards */}
-            <motion.div 
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
-              variants={staggerContainer}
-            >
-              <motion.div variants={fadeIn}>
-                <Card className="overflow-hidden">
-                  <div className="h-1 bg-gradient-to-r from-blue-400 to-blue-600"></div>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium">Starting Weight</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stats.firstWeight} {processedData[0]?.unit}</div>
-                    <p className="text-xs text-muted-foreground">
-                      First entry in selected period
-                    </p>
-                  </CardContent>
-                </Card>
-              </motion.div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <Card className="overflow-hidden">
+                <div className="h-1 bg-gradient-to-r from-blue-400 to-blue-600"></div>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">First Weight</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.firstWeight} {processedData[0]?.unit}</div>
+                  <p className="text-xs text-muted-foreground">
+                    First entry in selected period
+                  </p>
+                </CardContent>
+              </Card>
               
-              <motion.div variants={fadeIn}>
-                <Card className="overflow-hidden">
-                  <div className="h-1 bg-gradient-to-r from-purple-400 to-purple-600"></div>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium">Current Weight</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stats.lastWeight} {processedData[0]?.unit}</div>
-                    <p className="text-xs text-muted-foreground">
-                      Latest entry in selected period
-                    </p>
-                  </CardContent>
-                </Card>
-              </motion.div>
+              <Card className="overflow-hidden">
+                <div className="h-1 bg-gradient-to-r from-purple-400 to-purple-600"></div>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Current Weight</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.lastWeight} {processedData[0]?.unit}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Latest entry in selected period
+                  </p>
+                </CardContent>
+              </Card>
               
-              <motion.div variants={fadeIn}>
-                <Card className="overflow-hidden">
-                  <div className="h-1 bg-gradient-to-r from-green-400 to-green-600"></div>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium">Total Change</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold flex items-center">
-                      {stats.isIncreasing ? (
-                        <TrendingUp className="mr-1 h-5 w-5 text-red-500" />
-                      ) : (
-                        <TrendingDown className="mr-1 h-5 w-5 text-green-500" />
-                      )}
-                      {stats.change.toFixed(1)} {processedData[0]?.unit}
-                    </div>
-                    <p className={`text-xs ${stats.isIncreasing ? 'text-red-500' : 'text-green-500'}`}>
-                      {stats.percentChange.toFixed(1)}% {stats.isIncreasing ? 'increase' : 'decrease'}
-                    </p>
-                  </CardContent>
-                </Card>
-              </motion.div>
+              <Card className="overflow-hidden">
+                <div className="h-1 bg-gradient-to-r from-green-400 to-green-600"></div>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Total Change</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold flex items-center">
+                    {stats.isIncreasing ? (
+                      <TrendingUp className="mr-1 h-5 w-5 text-red-500" />
+                    ) : (
+                      <TrendingDown className="mr-1 h-5 w-5 text-green-500" />
+                    )}
+                    {stats.change.toFixed(1)} {processedData[0]?.unit}
+                  </div>
+                  <p className={`text-xs ${stats.isIncreasing ? 'text-red-500' : 'text-green-500'}`}>
+                    {stats.percentChange.toFixed(1)}% {stats.isIncreasing ? 'increase' : 'decrease'}
+                  </p>
+                </CardContent>
+              </Card>
               
-              <motion.div variants={fadeIn}>
-                <Card className="overflow-hidden">
-                  <div className="h-1 bg-gradient-to-r from-orange-400 to-orange-600"></div>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium">Weekly Average</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold flex items-center">
-                      {stats.avgWeeklyChange > 0 ? (
-                        <TrendingUp className="mr-1 h-5 w-5 text-red-500" />
-                      ) : (
-                        <TrendingDown className="mr-1 h-5 w-5 text-green-500" />
-                      )}
-                      {Math.abs(stats.avgWeeklyChange).toFixed(1)} {processedData[0]?.unit}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Average weekly {stats.avgWeeklyChange > 0 ? 'gain' : 'loss'}
-                    </p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </motion.div>
+              <Card className="overflow-hidden">
+                <div className="h-1 bg-gradient-to-r from-orange-400 to-orange-600"></div>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Weekly Average</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold flex items-center">
+                    {stats.avgWeeklyChange > 0 ? (
+                      <TrendingUp className="mr-1 h-5 w-5 text-red-500" />
+                    ) : (
+                      <TrendingDown className="mr-1 h-5 w-5 text-green-500" />
+                    )}
+                    {Math.abs(stats.avgWeeklyChange).toFixed(1)} {processedData[0]?.unit}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Average weekly {stats.avgWeeklyChange > 0 ? 'gain' : 'loss'}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
           
             {/* Main Line Chart */}
-            <motion.div variants={fadeIn}>
+            <Card className="overflow-hidden mb-6">
+              <div className="h-1 bg-gradient-to-r from-indigo-400 to-purple-600"></div>
+              <CardHeader>
+                <CardTitle>Weight Trend</CardTitle>
+                <CardDescription>
+                  Your weight progression over the selected time period
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={processedData} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
+                      <defs>
+                        <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#9b87f5" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#D6BCFA" stopOpacity={0.2}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="date" tick={{ fontSize: 12 }} className="text-xs" />
+                      <YAxis 
+                        domain={['auto', 'auto']} 
+                        tick={{ fontSize: 12 }}
+                        className="text-xs"
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Area 
+                        type="monotone" 
+                        dataKey="weight" 
+                        stroke="#9b87f5" 
+                        strokeWidth={3}
+                        fill="url(#colorWeight)"
+                        activeDot={{ r: 8 }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* Additional Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
               <Card className="overflow-hidden">
-                <div className="h-1 bg-gradient-to-r from-indigo-400 to-purple-600"></div>
+                <div className="h-1 bg-gradient-to-r from-cyan-400 to-blue-600"></div>
                 <CardHeader>
-                  <CardTitle>Weight Trend</CardTitle>
+                  <CardTitle>Weekly Progress</CardTitle>
                   <CardDescription>
-                    Your weight progression over the selected time period
+                    Weight changes by day
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-[350px] w-full">
+                  <div className="h-[250px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={processedData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                      <BarChart data={processedData} margin={{ top: 20, right: 10, left: 0, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                        <YAxis tick={{ fontSize: 12 }} />
+                        <Tooltip content={<CustomTooltip />} />
                         <defs>
-                          <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor={GRADIENT_COLORS.primary.start} stopOpacity={0.8}/>
-                            <stop offset="95%" stopColor={GRADIENT_COLORS.primary.end} stopOpacity={0.2}/>
+                          <linearGradient id="barColor" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#0FA0CE" stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor="#33C3F0" stopOpacity={0.3}/>
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                        <XAxis dataKey="date" tick={{ fontSize: 12 }} className="text-xs" />
-                        <YAxis 
-                          domain={['auto', 'auto']} 
-                          tickFormatter={formatYAxis} 
-                          tick={{ fontSize: 12 }}
-                          className="text-xs"
-                        />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Area 
-                          type="monotone" 
+                        <Bar 
                           dataKey="weight" 
-                          stroke={GRADIENT_COLORS.primary.start} 
-                          strokeWidth={3}
-                          fill="url(#colorWeight)"
-                          activeDot={{ r: 8, className: "animate-pulse" }}
+                          fill="url(#barColor)" 
+                          radius={[4, 4, 0, 0]}
                         />
-                      </AreaChart>
+                      </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </CardContent>
               </Card>
-            </motion.div>
-            
-            {/* Additional Charts */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <motion.div variants={fadeIn}>
-                <Card className="overflow-hidden">
-                  <div className="h-1 bg-gradient-to-r from-cyan-400 to-blue-600"></div>
-                  <CardHeader>
-                    <CardTitle>Weekly Progress</CardTitle>
-                    <CardDescription>
-                      Weight changes by day of week
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={processedData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
-                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                          <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                          <YAxis tick={{ fontSize: 12 }} />
-                          <Tooltip content={<CustomTooltip />} />
-                          <defs>
-                            <linearGradient id="barColor" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor={GRADIENT_COLORS.secondary.start} stopOpacity={0.8}/>
-                              <stop offset="95%" stopColor={GRADIENT_COLORS.secondary.end} stopOpacity={0.3}/>
-                            </linearGradient>
-                          </defs>
-                          <Bar 
-                            dataKey="weight" 
-                            fill="url(#barColor)" 
-                            radius={[4, 4, 0, 0]}
-                            className="motion-safe:animate-bounce-once"
-                          />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
               
-              <motion.div variants={fadeIn}>
-                <Card className="overflow-hidden">
-                  <div className="h-1 bg-gradient-to-r from-orange-400 to-red-500"></div>
-                  <CardHeader>
-                    <CardTitle>Weight Range Distribution</CardTitle>
-                    <CardDescription>
-                      Distribution of your recorded weights
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex items-center justify-center">
-                    <div className="h-[300px] w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={processedData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
-                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                          <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                          <YAxis domain={['auto', 'auto']} tickFormatter={formatYAxis} tick={{ fontSize: 12 }} />
-                          <Tooltip content={<CustomTooltip />} />
-                          <defs>
-                            <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
-                              <stop offset="5%" stopColor={GRADIENT_COLORS.tertiary.start} stopOpacity={1}/>
-                              <stop offset="95%" stopColor={GRADIENT_COLORS.tertiary.end} stopOpacity={1}/>
-                            </linearGradient>
-                          </defs>
-                          <Line 
-                            type="natural" 
-                            dataKey="weight" 
-                            stroke="url(#lineGradient)" 
-                            strokeWidth={3}
-                            dot={{ stroke: GRADIENT_COLORS.tertiary.start, strokeWidth: 2, r: 4 }}
-                            activeDot={{ r: 8, className: "animate-ping" }}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </div>
-            
-            {/* Analytics Insights */}
-            <motion.div variants={fadeIn}>
-              <Card className="overflow-hidden bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20">
+              <Card className="overflow-hidden">
+                <div className="h-1 bg-gradient-to-r from-orange-400 to-red-500"></div>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <ArrowLeftRight className="h-5 w-5 text-brand-primary" />
-                    Weight Journey Insights
-                  </CardTitle>
+                  <CardTitle>Weight Trends</CardTitle>
+                  <CardDescription>
+                    Linear progression of your weight
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    <p className="text-muted-foreground">
-                      {processedData.length < 2 ? (
-                        "Add more weight entries to see insights about your progress."
-                      ) : stats.isIncreasing ? (
-                        `Over the past ${processedData.length} entries, your weight has increased by ${Math.abs(stats.change).toFixed(1)} ${processedData[0]?.unit} (${Math.abs(stats.percentChange).toFixed(1)}%). You're averaging a gain of ${Math.abs(stats.avgWeeklyChange).toFixed(1)} ${processedData[0]?.unit} per week.`
-                      ) : (
-                        `Over the past ${processedData.length} entries, your weight has decreased by ${Math.abs(stats.change).toFixed(1)} ${processedData[0]?.unit} (${Math.abs(stats.percentChange).toFixed(1)}%). You're averaging a loss of ${Math.abs(stats.avgWeeklyChange).toFixed(1)} ${processedData[0]?.unit} per week.`
-                      )}
-                    </p>
-                    
-                    {processedData.length >= 7 && (
-                      <div className="p-4 bg-background rounded-md shadow-sm">
-                        <h4 className="font-semibold mb-2">Trend Analysis</h4>
-                        <ul className="space-y-2 list-disc list-inside text-sm text-muted-foreground">
-                          {stats.avgWeeklyChange !== 0 && (
-                            <li>
-                              At your current rate, you'll {stats.isIncreasing ? 'gain' : 'lose'} approximately {
-                                (Math.abs(stats.avgWeeklyChange) * 4).toFixed(1)
-                              } {processedData[0]?.unit} over the next month.
-                            </li>
-                          )}
-                          <li>
-                            Your minimum recorded weight during this period was {
-                              Math.min(...processedData.map(d => d.weight)).toFixed(1)
-                            } {processedData[0]?.unit}.
-                          </li>
-                          <li>
-                            Your maximum recorded weight during this period was {
-                              Math.max(...processedData.map(d => d.weight)).toFixed(1)
-                            } {processedData[0]?.unit}.
-                          </li>
-                          <li>
-                            The difference between your highest and lowest weights is {
-                              (Math.max(...processedData.map(d => d.weight)) - 
-                              Math.min(...processedData.map(d => d.weight))).toFixed(1)
-                            } {processedData[0]?.unit}.
-                          </li>
-                        </ul>
-                      </div>
-                    )}
+                  <div className="h-[250px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={processedData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                        <YAxis domain={['auto', 'auto']} tick={{ fontSize: 12 }} />
+                        <Tooltip content={<CustomTooltip />} />
+                        <defs>
+                          <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="5%" stopColor="#F97316" stopOpacity={1}/>
+                            <stop offset="95%" stopColor="#FDBA74" stopOpacity={1}/>
+                          </linearGradient>
+                        </defs>
+                        <Line 
+                          type="natural" 
+                          dataKey="weight" 
+                          stroke="url(#lineGradient)" 
+                          strokeWidth={3}
+                          dot={{ stroke: "#F97316", strokeWidth: 2, r: 4 }}
+                          activeDot={{ r: 8 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
                   </div>
                 </CardContent>
               </Card>
-            </motion.div>
+            </div>
+            
+            {/* Analytics Insights */}
+            <Card className="overflow-hidden bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20">
+              <CardHeader>
+                <CardTitle>Weight Journey Insights</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <p className="text-muted-foreground">
+                    {processedData.length < 2 ? (
+                      "Add more weight entries to see insights about your progress."
+                    ) : stats.isIncreasing ? (
+                      `Over this period, your weight has increased by ${Math.abs(stats.change).toFixed(1)} ${processedData[0]?.unit} (${Math.abs(stats.percentChange).toFixed(1)}%). You're averaging a gain of ${Math.abs(stats.avgWeeklyChange).toFixed(1)} ${processedData[0]?.unit} per week.`
+                    ) : (
+                      `Over this period, your weight has decreased by ${Math.abs(stats.change).toFixed(1)} ${processedData[0]?.unit} (${Math.abs(stats.percentChange).toFixed(1)}%). You're averaging a loss of ${Math.abs(stats.avgWeeklyChange).toFixed(1)} ${processedData[0]?.unit} per week.`
+                    )}
+                  </p>
+                  
+                  {processedData.length >= 7 && (
+                    <div className="p-4 bg-background rounded-md shadow-sm">
+                      <h4 className="font-semibold mb-2">Trend Analysis</h4>
+                      <ul className="space-y-2 list-disc list-inside text-sm text-muted-foreground">
+                        {stats.avgWeeklyChange !== 0 && (
+                          <li>
+                            At your current rate, you'll {stats.isIncreasing ? 'gain' : 'lose'} approximately {
+                              (Math.abs(stats.avgWeeklyChange) * 4).toFixed(1)
+                            } {processedData[0]?.unit} over the next month.
+                          </li>
+                        )}
+                        <li>
+                          Your minimum recorded weight during this period was {
+                            Math.min(...processedData.map(d => d.weight)).toFixed(1)
+                          } {processedData[0]?.unit}.
+                        </li>
+                        <li>
+                          Your maximum recorded weight during this period was {
+                            Math.max(...processedData.map(d => d.weight)).toFixed(1)
+                          } {processedData[0]?.unit}.
+                        </li>
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 };

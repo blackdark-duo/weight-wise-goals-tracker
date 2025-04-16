@@ -61,7 +61,6 @@ const Navbar = () => {
 
   const authenticatedLinks = [
     { title: "Dashboard", href: "/dashboard", icon: Home },
-    { title: "Weight Tracker", href: "/dashboard", icon: Scale },
     { title: "Goals", href: "/goals", icon: Target },
     { title: "Reports", href: "/reports", icon: BarChart2 },
     { title: "Account", href: "/account", icon: Settings },
@@ -71,7 +70,10 @@ const Navbar = () => {
     <header className="sticky top-0 z-50 w-full border-b border-ui-border bg-white/80 backdrop-blur-md">
       <div className="container flex h-16 items-center justify-between">
         {/* Logo */}
-        <Link to={session ? "/dashboard" : "/"} className="flex items-center gap-2 font-bold text-xl md:text-2xl text-brand-primary">
+        <Link 
+          to={session ? "/dashboard" : "/"} 
+          className="flex items-center gap-2 font-bold text-xl md:text-2xl text-brand-primary"
+        >
           <Scale className="h-6 w-6" />
           <span>Weight</span>
           <span className="text-brand-secondary">Wise</span>
@@ -192,30 +194,6 @@ const Navbar = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Mobile Bottom Navigation for Authenticated Users */}
-      {session && (
-        <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-ui-border md:hidden">
-          <div className="flex justify-between p-2">
-            <Link to="/dashboard" className="flex flex-col items-center p-2">
-              <Home className="h-5 w-5" />
-              <span className="text-xs mt-1">Home</span>
-            </Link>
-            <Link to="/goals" className="flex flex-col items-center p-2">
-              <Target className="h-5 w-5" />
-              <span className="text-xs mt-1">Goals</span>
-            </Link>
-            <Link to="/reports" className="flex flex-col items-center p-2">
-              <BarChart2 className="h-5 w-5" />
-              <span className="text-xs mt-1">Reports</span>
-            </Link>
-            <Link to="/account" className="flex flex-col items-center p-2">
-              <UserCircle className="h-5 w-5" />
-              <span className="text-xs mt-1">Account</span>
-            </Link>
-          </div>
-        </nav>
       )}
     </header>
   );

@@ -5,8 +5,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
@@ -21,7 +19,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 interface Goal {
   id: string;
   user_id: string;
-  start_weight: number;
   target_weight: number;
   target_date: string | null;
   achieved: boolean | null;
@@ -43,7 +40,6 @@ const Goals = () => {
   const [weightEntries, setWeightEntries] = useState<WeightEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingGoal, setIsAddingGoal] = useState(false);
-  const [startWeight, setStartWeight] = useState<number | "">("");
   const [targetWeight, setTargetWeight] = useState<number | "">("");
   const [targetDate, setTargetDate] = useState<Date | undefined>(undefined);
   const [unit, setUnit] = useState("kg");
@@ -96,7 +92,7 @@ const Goals = () => {
   };
 
   const handleCreateGoal = async () => {
-    if (!startWeight || !targetWeight || !targetDate || !unit) {
+    if (!targetWeight || !targetDate || !unit) {
       toast.error("Please fill in all fields");
       return;
     }
@@ -105,9 +101,13 @@ const Goals = () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return;
 
+      // Get the most recent weight entry to use as the starting point
+      const latestEntry = weightEntries.length > 0 
+        ? weightEntries[weightEntries.length - 1]
+        : null;
+
       const newGoal = {
         user_id: userData.user.id,
-        start_weight: Number(startWeight),
         target_weight: Number(targetWeight),
         target_date: format(targetDate, "yyyy-MM-dd"),
         achieved: false,
@@ -123,7 +123,6 @@ const Goals = () => {
       
       toast.success("Goal created successfully!");
       setIsAddingGoal(false);
-      setStartWeight("");
       setTargetWeight("");
       setTargetDate(undefined);
       
@@ -161,25 +160,31 @@ const Goals = () => {
   };
 
   const calculateProgress = (goal: Goal) => {
-    const totalLoss = goal.start_weight - goal.target_weight;
+    // Get current weight from latest entry
     const relevantEntries = weightEntries.filter(entry => 
       entry.unit === goal.unit && 
-      new Date(entry.date) >= new Date(goal.created_at || "") &&
-      (goal.target_date ? new Date(entry.date) <= new Date(goal.target_date) : true)
+      new Date(entry.date) >= new Date(goal.created_at || "")
     );
     
     const latestEntry = relevantEntries.length > 0 
       ? relevantEntries[relevantEntries.length - 1] 
       : null;
     
-    if (!latestEntry) return { percentage: 0, current: goal.start_weight };
+    if (!latestEntry) return { percentage: 0, current: 0 };
     
-    const currentLoss = goal.start_weight - latestEntry.weight;
-    const percentage = Math.min(100, Math.max(0, (currentLoss / totalLoss) * 100));
+    // Calculate current weight and goal difference
+    const currentWeight = latestEntry.weight;
+    const startingWeight = weightEntries[0]?.weight || currentWeight;
+    const goalDifference = startingWeight - goal.target_weight;
+    
+    if (goalDifference === 0) return { percentage: 100, current: currentWeight };
+    
+    const currentDifference = startingWeight - currentWeight;
+    const percentage = Math.min(100, Math.max(0, (currentDifference / goalDifference) * 100));
     
     return {
       percentage: Math.round(percentage),
-      current: latestEntry.weight
+      current: currentWeight
     };
   };
 
@@ -276,10 +281,15 @@ const Goals = () => {
     return goals.find(goal => goal.id === selectedGoal);
   };
 
+  const getCurrentWeight = () => {
+    if (weightEntries.length === 0) return null;
+    return weightEntries[weightEntries.length - 1].weight;
+  };
+
   return (
-    <div className="min-h-screen pb-16 md:pb-0 bg-ui-background">
+    <div className="min-h-screen pb-24 md:pb-6 bg-ui-background">
       <Navbar />
-      <div className="container py-8">
+      <div className="container py-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Weight Goals</h1>
           <Button 
@@ -308,17 +318,17 @@ const Goals = () => {
                 <CardDescription>Set a new weight goal to track your progress</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-2">                  
                   <div className="space-y-2">
-                    <Label htmlFor="start-weight">Starting Weight</Label>
+                    <Label htmlFor="target-weight">Target Weight</Label>
                     <div className="flex">
                       <Input
-                        id="start-weight"
+                        id="target-weight"
                         type="number"
                         step="0.1"
-                        value={startWeight}
-                        onChange={(e) => setStartWeight(e.target.value ? Number(e.target.value) : "")}
-                        placeholder="75.0"
+                        value={targetWeight}
+                        onChange={(e) => setTargetWeight(e.target.value ? Number(e.target.value) : "")}
+                        placeholder="65.0"
                       />
                       <Select value={unit} onValueChange={setUnit}>
                         <SelectTrigger className="w-20 ml-2">
@@ -333,18 +343,6 @@ const Goals = () => {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="target-weight">Target Weight</Label>
-                    <Input
-                      id="target-weight"
-                      type="number"
-                      step="0.1"
-                      value={targetWeight}
-                      onChange={(e) => setTargetWeight(e.target.value ? Number(e.target.value) : "")}
-                      placeholder="65.0"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2 sm:col-span-2">
                     <Label htmlFor="target-date">Target Date</Label>
                     <Popover>
                       <PopoverTrigger asChild>
@@ -415,7 +413,7 @@ const Goals = () => {
                             <div>
                               <h3 className="font-medium flex items-center">
                                 <Target className="h-4 w-4 mr-2" />
-                                {goal.start_weight} → {goal.target_weight} {goal.unit}
+                                Goal: {goal.target_weight} {goal.unit}
                               </h3>
                               <p className="text-sm text-muted-foreground mt-1">
                                 {goal.target_date ? `By ${format(new Date(goal.target_date), "MMM d, yyyy")}` : "No deadline"}
@@ -467,18 +465,16 @@ const Goals = () => {
                       const goal = getSelectedGoal()!;
                       const progress = calculateProgress(goal);
                       const predictionData = generatePredictionData(goal);
+                      const currentWeight = getCurrentWeight();
                       
                       return (
                         <div className="space-y-6">
-                          <div className="grid gap-4 sm:grid-cols-3">
+                          <div className="grid gap-4 sm:grid-cols-2">
                             <div className="bg-blue-50 p-4 rounded-lg">
-                              <div className="text-sm text-blue-600 mb-1">Starting Weight</div>
-                              <div className="text-2xl font-semibold">{goal.start_weight} {goal.unit}</div>
-                            </div>
-                            
-                            <div className="bg-green-50 p-4 rounded-lg">
-                              <div className="text-sm text-green-600 mb-1">Current Weight</div>
-                              <div className="text-2xl font-semibold">{progress.current} {goal.unit}</div>
+                              <div className="text-sm text-blue-600 mb-1">Current Weight</div>
+                              <div className="text-2xl font-semibold">
+                                {progress.current ? `${progress.current} ${goal.unit}` : "No data"}
+                              </div>
                             </div>
                             
                             <div className="bg-purple-50 p-4 rounded-lg">
@@ -498,9 +494,9 @@ const Goals = () => {
                               />
                             </div>
                             <div className="flex justify-between mt-2 text-sm">
-                              <span>{goal.start_weight} {goal.unit}</span>
+                              <span>Current: {progress.current} {goal.unit}</span>
                               <span className="font-medium">{progress.percentage}% Complete</span>
-                              <span>{goal.target_weight} {goal.unit}</span>
+                              <span>Goal: {goal.target_weight} {goal.unit}</span>
                             </div>
                           </div>
                           
@@ -537,20 +533,7 @@ const Goals = () => {
                                       tickFormatter={(date) => format(new Date(date), "MMM d")} 
                                       interval="preserveStartEnd"
                                     />
-                                    <YAxis domain={[
-                                      Math.min(goal.target_weight, Math.min(...predictionData.map(d => 
-                                        Math.min(
-                                          d.actual !== null ? d.actual : Infinity, 
-                                          d.predicted !== null ? d.predicted : Infinity
-                                        )
-                                      ))) - 1,
-                                      Math.max(goal.start_weight, Math.max(...predictionData.map(d => 
-                                        Math.max(
-                                          d.actual !== null ? d.actual : -Infinity, 
-                                          d.predicted !== null ? d.predicted : -Infinity
-                                        )
-                                      ))) + 1
-                                    ]} />
+                                    <YAxis domain={['auto', 'auto']} />
                                     <Tooltip
                                       formatter={(value, name) => [Number(value).toFixed(1) + ` ${goal.unit}`, name === "actual" ? "Actual" : "Projected"]}
                                       labelFormatter={(date) => format(new Date(date), "MMMM d, yyyy")}
