@@ -20,6 +20,7 @@ interface Goal {
   id: string;
   user_id: string;
   target_weight: number;
+  start_weight: number;
   target_date: string | null;
   achieved: boolean | null;
   unit: string;
@@ -105,10 +106,14 @@ const Goals = () => {
       const latestEntry = weightEntries.length > 0 
         ? weightEntries[weightEntries.length - 1]
         : null;
+      
+      // If no weight entries exist, use the target weight as starting weight with a small offset
+      const startWeight = latestEntry ? latestEntry.weight : Number(targetWeight) + 5;
 
       const newGoal = {
         user_id: userData.user.id,
         target_weight: Number(targetWeight),
+        start_weight: startWeight, // Add the required start_weight field
         target_date: format(targetDate, "yyyy-MM-dd"),
         achieved: false,
         unit: unit,
