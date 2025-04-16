@@ -1,8 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,15 +10,12 @@ import {
   ChevronRight, 
   LineChart, 
   Plus, 
-  Settings, 
   Target, 
   TrendingDown, 
   TrendingUp,
   Trophy,
-  User,
   FileBarChart,
   Scale,
-  ArrowRight
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
@@ -88,6 +83,7 @@ type UserProfile = {
   timezone?: string;
 };
 
+// Update the weight entry form and goal visualization
 const Dashboard = () => {
   // User data state
   const [userData, setUserData] = useState({
@@ -392,7 +388,7 @@ const Dashboard = () => {
                       <Input
                         id="weight"
                         type="number"
-                        step="0.1"
+                        step="any" // Changed from step="0.1" to accept any decimal
                         min="0"
                         placeholder="Enter weight"
                         value={newWeight}
@@ -469,21 +465,7 @@ const Dashboard = () => {
           className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
           variants={staggerContainer}
         >
-          <motion.div variants={popIn}>
-            <Card className="overflow-hidden">
-              <div className="h-1 bg-gradient-to-r from-blue-400 to-blue-600"></div>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Initial Weight
-                </CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{userData.initialWeight} {userData.unit}</div>
-              </CardContent>
-            </Card>
-          </motion.div>
-          
+          {/* Current Weight Card */}
           <motion.div variants={popIn}>
             <Card className="overflow-hidden">
               <div className="h-1 bg-gradient-to-r from-green-400 to-green-600"></div>
@@ -506,6 +488,7 @@ const Dashboard = () => {
             </Card>
           </motion.div>
           
+          {/* Goal Weight Card */}
           <motion.div variants={popIn}>
             <Card className="overflow-hidden">
               <div className="h-1 bg-gradient-to-r from-purple-400 to-purple-600"></div>
@@ -529,14 +512,15 @@ const Dashboard = () => {
                   </p>
                 ) : (
                   <p className="text-xs text-brand-primary cursor-pointer hover:underline">
-                    Set a goal weight to track progress
+                    <Link to="/goals">Set a goal weight to track progress</Link>
                   </p>
                 )}
               </CardContent>
             </Card>
           </motion.div>
           
-          <motion.div variants={popIn}>
+          {/* Goal Progress Card - Improved visualization */}
+          <motion.div variants={popIn} className="md:col-span-2">
             <Card className="overflow-hidden">
               <div className="h-1 bg-gradient-to-r from-yellow-400 to-amber-600"></div>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -546,16 +530,86 @@ const Dashboard = () => {
                 <Trophy className="h-4 w-4 text-brand-primary" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{userData.goalWeight ? `${Math.round(userData.progress * 100)}%` : "N/A"}</div>
-                {userData.goalWeight && (
-                  <div className="mt-2 h-2 w-full rounded-full bg-muted overflow-hidden">
-                    <motion.div
-                      className="h-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-primary/70"
-                      style={{ width: `${userData.progress * 100}%` }}
-                      initial={{ width: 0 }}
-                      animate={{ width: `${userData.progress * 100}%` }}
-                      transition={{ duration: 1, ease: "easeOut" }}
-                    />
+                {userData.goalWeight ? (
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">{userData.currentWeight} {userData.unit}</span>
+                      <span className="text-sm font-medium">{Math.round(userData.progress * 100)}%</span>
+                      <span className="text-sm">{userData.goalWeight} {userData.unit}</span>
+                    </div>
+                    
+                    <div className="relative h-8 w-full bg-muted rounded-full overflow-hidden">
+                      {/* Progress Bar */}
+                      <motion.div
+                        className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-brand-primary to-brand-primary/70"
+                        style={{ width: `${userData.progress * 100}%` }}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${userData.progress * 100}%` }}
+                        transition={{ duration: 1, ease: "easeOut" }}
+                      />
+                      
+                      {/* Current Weight Marker */}
+                      <div 
+                        className="absolute top-0 h-full"
+                        style={{ 
+                          left: `${userData.progress * 100}%`,
+                          transform: 'translateX(-50%)'
+                        }}
+                      >
+                        <div className="h-8 w-2 bg-white border border-gray-300 rounded-full" />
+                      </div>
+                      
+                      {/* Milestones */}
+                      {userData.initialWeight !== userData.goalWeight && (
+                        <>
+                          {[0.25, 0.5, 0.75].map((milestone) => {
+                            // Calculate milestone position
+                            const milestonePosition = `${milestone * 100}%`;
+                            
+                            // Calculate the weight at this milestone
+                            const milestoneWeight = userData.initialWeight > userData.goalWeight
+                              ? userData.initialWeight - (milestone * (userData.initialWeight - userData.goalWeight))
+                              : userData.initialWeight + (milestone * (userData.goalWeight - userData.initialWeight));
+                              
+                            // Determine if this milestone has been reached
+                            const isReached = userData.initialWeight > userData.goalWeight
+                              ? userData.currentWeight <= milestoneWeight
+                              : userData.currentWeight >= milestoneWeight;
+                              
+                            return (
+                              <div 
+                                key={milestone}
+                                className="absolute top-0 h-full flex flex-col items-center"
+                                style={{ 
+                                  left: milestonePosition,
+                                }}
+                              >
+                                <div 
+                                  className={`h-8 w-0.5 ${isReached ? 'bg-white' : 'bg-gray-400'}`}
+                                />
+                                <span className="text-xs mt-1">{milestoneWeight.toFixed(1)}</span>
+                              </div>
+                            );
+                          })}
+                        </>
+                      )}
+                    </div>
+                    
+                    <p className="text-center text-sm text-muted-foreground mt-2">
+                      {userData.currentWeight > userData.goalWeight
+                        ? `${(userData.currentWeight - userData.goalWeight).toFixed(1)} ${userData.unit} left to lose`
+                        : `${(userData.goalWeight - userData.currentWeight).toFixed(1)} ${userData.unit} left to gain`}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-4">
+                    <p className="text-muted-foreground">No goal set yet</p>
+                    <Button variant="outline" size="sm" className="mt-2" asChild>
+                      <Link to="/goals">
+                        <Target className="mr-2 h-4 w-4" />
+                        Set Weight Goal
+                      </Link>
+                    </Button>
                   </div>
                 )}
               </CardContent>
@@ -619,212 +673,106 @@ const Dashboard = () => {
           </Card>
         </motion.div>
 
-        {/* Main Content Tabs */}
+        {/* Recent Entries */}
         <motion.div variants={fadeInUp}>
-          <Tabs defaultValue="entries" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="entries">
-                <LineChart className="mr-2 h-4 w-4" />
-                Recent Entries
-              </TabsTrigger>
-              <TabsTrigger value="goals">
-                <Target className="mr-2 h-4 w-4" />
-                Goals
-              </TabsTrigger>
-              <TabsTrigger value="account">
-                <User className="mr-2 h-4 w-4" />
-                Account
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="entries" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Weight Entries</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {recentEntries.length > 0 ? (
-                    <div className="space-y-1">
-                      {recentEntries.map((entry, i) => (
-                        <motion.div 
-                          key={entry.id}
-                          className="flex items-center justify-between border-b py-3 last:border-0 last:pb-0"
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: i * 0.05 }}
-                        >
-                          <div className="flex items-center">
-                            <div>
-                              <p className="text-sm font-medium">
-                                {format(new Date(entry.date), "MMM dd, yyyy")}
-                                <span className="text-xs text-muted-foreground ml-2">
-                                  {entry.time.slice(0, 5)}
-                                </span>
-                              </p>
-                              {entry.description && (
-                                <p className="text-xs text-muted-foreground mt-1 italic">
-                                  "{entry.description}"
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center">
-                            <p className="mr-2 text-sm font-semibold">{entry.weight} {entry.unit}</p>
-                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-32 text-center">
-                      <p className="text-muted-foreground">
-                        No weight entries yet. Add your first entry above.
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="goals" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Your Weight Goals</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {userData.goalWeight ? (
-                    <div className="space-y-4">
-                      <div className="rounded-lg border p-4">
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <h3 className="font-medium">
-                              {userData.initialWeight > userData.goalWeight 
-                                ? "Weight Loss Goal" 
-                                : "Weight Gain Goal"}
-                            </h3>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              Target: {userData.goalWeight} {userData.unit}
-                            </p>
-                          </div>
-                          <div className="bg-brand-primary/10 text-brand-primary px-2 py-1 rounded-md text-sm">
-                            {Math.round(userData.progress * 100)}% Complete
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span>Start: {userData.initialWeight} {userData.unit}</span>
-                            <span>Current: {userData.currentWeight} {userData.unit}</span>
-                            <span>Goal: {userData.goalWeight} {userData.unit}</span>
-                          </div>
-                          <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                            <motion.div
-                              className="h-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-primary/70"
-                              style={{ width: `${userData.progress * 100}%` }}
-                              initial={{ width: 0 }}
-                              animate={{ width: `${userData.progress * 100}%` }}
-                              transition={{ duration: 1, ease: "easeOut" }}
-                            />
-                          </div>
-                          
-                          <p className="text-sm text-muted-foreground mt-2">
-                            {userData.initialWeight > userData.goalWeight 
-                              ? `${(userData.currentWeight - userData.goalWeight).toFixed(1)} ${userData.unit} left to lose` 
-                              : `${(userData.goalWeight - userData.currentWeight).toFixed(1)} ${userData.unit} left to gain`}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Recent Entries</CardTitle>
+                <CardDescription>Your latest weight measurements</CardDescription>
+              </div>
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/reports">
+                  <Calendar className="mr-2 h-4 w-4" />
+                  View All
+                </Link>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {recentEntries.length > 0 ? (
+                <div className="space-y-1">
+                  {recentEntries.slice(0, 5).map((entry, i) => (
+                    <motion.div 
+                      key={entry.id}
+                      className="flex items-center justify-between border-b py-3 last:border-0 last:pb-0"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                    >
+                      <div className="flex items-center">
+                        <div>
+                          <p className="text-sm font-medium">
+                            {format(new Date(entry.date), "MMM dd, yyyy")}
+                            <span className="text-xs text-muted-foreground ml-2">
+                              {entry.time.slice(0, 5)}
+                            </span>
                           </p>
+                          {entry.description && (
+                            <p className="text-xs text-muted-foreground mt-1 italic">
+                              "{entry.description}"
+                            </p>
+                          )}
                         </div>
                       </div>
-                      
-                      <div className="rounded-md bg-muted p-4">
-                        <h4 className="font-medium mb-2">Motivational Tips</h4>
-                        <ul className="space-y-2 list-disc list-inside text-sm text-muted-foreground">
-                          <li>Celebrate small victories along your journey</li>
-                          <li>Consistency is more important than perfection</li>
-                          <li>Track your food intake alongside your weight for better results</li>
-                          <li>Drink plenty of water throughout the day</li>
-                          <li>Aim for gradual, sustainable progress</li>
-                        </ul>
+                      <div className="flex items-center">
+                        <p className="mr-2 text-sm font-semibold">{entry.weight} {entry.unit}</p>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
                       </div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-64 text-center p-4">
-                      <Target className="h-16 w-16 text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-medium mb-2">No goals set yet</h3>
-                      <p className="text-muted-foreground max-w-md mb-4">
-                        Set a weight goal to track your progress and stay motivated on your health journey.
-                      </p>
-                      <Button>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add New Goal
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="account" className="space-y-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Account Management</CardTitle>
-                  <Settings className="h-5 w-5 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col space-y-4">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className="font-medium">Profile Settings</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Manage your display name and preferences
-                        </p>
-                      </div>
-                      <Button variant="outline" asChild>
-                        <Link to="/account">
-                          Manage Account
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </Link>
-                      </Button>
-                    </div>
-                    
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className="font-medium">Weight Reports</h3>
-                        <p className="text-sm text-muted-foreground">
-                          View detailed reports and analytics
-                        </p>
-                      </div>
-                      <Button variant="outline" asChild>
-                        <Link to="/reports">
-                          View Reports
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </Link>
-                      </Button>
-                    </div>
-                    
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className="font-medium">Sign Out</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Log out of your account
-                        </p>
-                      </div>
-                      <Button 
-                        variant="outline" 
-                        className="border-destructive/50 text-destructive hover:bg-destructive/10"
-                        onClick={async () => {
-                          await supabase.auth.signOut();
-                          toast.success("You have been signed out");
-                          navigate("/");
-                        }}
-                      >
-                        Sign Out
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-32 text-center">
+                  <p className="text-muted-foreground">
+                    No weight entries yet. Add your first entry above.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* More Actions */}
+        <motion.div variants={fadeInUp} className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Goals</CardTitle>
+              <CardDescription>Set and track your weight goals</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col">
+                <p className="text-muted-foreground mb-4">
+                  Set weight goals to stay motivated and track your progress over time.
+                </p>
+                <Button asChild>
+                  <Link to="/goals">
+                    <Target className="mr-2 h-4 w-4" />
+                    Manage Goals
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Reports</CardTitle>
+              <CardDescription>View detailed weight analytics</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col">
+                <p className="text-muted-foreground mb-4">
+                  Access comprehensive reports and insights about your weight journey.
+                </p>
+                <Button asChild>
+                  <Link to="/reports">
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    View Reports
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </motion.div>
       </motion.div>
     </motion.div>

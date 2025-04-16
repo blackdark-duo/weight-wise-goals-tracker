@@ -7,11 +7,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
-import { CalendarIcon, Plus, Target, Trophy, Trash2 } from "lucide-react";
+import { CalendarIcon, Plus, Target, Trophy, Trash2, InfoIcon, BarChart3, TrendingDown, TrendingUp } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer, 
+  Legend,
+  ReferenceLine
+} from "recharts";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -121,7 +131,7 @@ const Goals = () => {
 
       const { data, error } = await supabase
         .from("goals")
-        .insert([newGoal])
+        .insert(newGoal)
         .select();
 
       if (error) throw error;
@@ -164,6 +174,27 @@ const Goals = () => {
     }
   };
 
+  const handleMarkAchieved = async (goalId: string, achieved: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("goals")
+        .update({ achieved, updated_at: new Date().toISOString() })
+        .eq("id", goalId);
+
+      if (error) throw error;
+      
+      toast.success(achieved ? "Goal marked as achieved!" : "Goal marked as in progress");
+      
+      // Update local state
+      setGoals(goals.map(goal => 
+        goal.id === goalId ? { ...goal, achieved } : goal
+      ));
+    } catch (error) {
+      console.error("Error updating goal:", error);
+      toast.error("Failed to update goal");
+    }
+  };
+
   const calculateProgress = (goal: Goal) => {
     // Get current weight from latest entry
     const relevantEntries = weightEntries.filter(entry => 
@@ -179,7 +210,7 @@ const Goals = () => {
     
     // Calculate current weight and goal difference
     const currentWeight = latestEntry.weight;
-    const startingWeight = weightEntries[0]?.weight || currentWeight;
+    const startingWeight = goal.start_weight;
     const goalDifference = startingWeight - goal.target_weight;
     
     if (goalDifference === 0) return { percentage: 100, current: currentWeight };
@@ -222,7 +253,8 @@ const Goals = () => {
       data.push({
         date: entry.date,
         actual: entry.weight,
-        predicted: null
+        predicted: null,
+        ideal: calculateIdealProgress(goal, new Date(entry.date))
       });
     }
     
@@ -239,12 +271,29 @@ const Goals = () => {
       data.push({
         date: format(currentDate, "yyyy-MM-dd"),
         actual: null,
-        predicted: currentWeight
+        predicted: currentWeight,
+        ideal: calculateIdealProgress(goal, currentDate)
       });
       currentDate.setDate(currentDate.getDate() + 1);
     }
     
     return data;
+  };
+
+  // Function to calculate the ideal progress line
+  const calculateIdealProgress = (goal: Goal, date: Date) => {
+    if (!goal.target_date) return null;
+    
+    const startDate = goal.created_at ? new Date(goal.created_at) : new Date();
+    const targetDate = new Date(goal.target_date);
+    const totalDays = (targetDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
+    
+    if (totalDays <= 0) return goal.target_weight;
+    
+    const daysPassed = (date.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
+    const ratio = Math.min(1, Math.max(0, daysPassed / totalDays));
+    
+    return goal.start_weight - (ratio * (goal.start_weight - goal.target_weight));
   };
 
   const calculateExpectedCompletion = (goal: Goal) => {
@@ -265,21 +314,69 @@ const Goals = () => {
     const totalChange = firstEntry.weight - lastEntry.weight;
     const dailyChange = totalChange / daysPassed;
     
-    if (dailyChange <= 0) {
-      return "No weight loss detected";
+    // Check if direction matches goal direction
+    const isLossGoal = goal.start_weight > goal.target_weight;
+    const isCurrentlyLosing = dailyChange > 0;
+    
+    if ((isLossGoal && !isCurrentlyLosing) || (!isLossGoal && isCurrentlyLosing)) {
+      return `Not on track - current trend doesn't match goal direction`;
     }
     
-    const remainingLoss = lastEntry.weight - goal.target_weight;
-    const daysRemaining = Math.ceil(remainingLoss / dailyChange);
+    if (Math.abs(dailyChange) < 0.01) {
+      return "Progress is too slow to predict";
+    }
     
-    if (daysRemaining <= 0) {
+    const remainingChange = isLossGoal ? 
+      lastEntry.weight - goal.target_weight : 
+      goal.target_weight - lastEntry.weight;
+    
+    if (remainingChange <= 0) {
       return "Goal already achieved!";
     }
+    
+    const daysRemaining = Math.ceil(remainingChange / Math.abs(dailyChange));
     
     const completionDate = new Date(lastEntry.date);
     completionDate.setDate(completionDate.getDate() + daysRemaining);
     
+    // Check if completion date is after target date
+    if (goal.target_date) {
+      const targetDate = new Date(goal.target_date);
+      if (completionDate > targetDate) {
+        const daysLate = Math.ceil((completionDate.getTime() - targetDate.getTime()) / (1000 * 60 * 60 * 24));
+        return `Expected by ${format(completionDate, "MMMM d, yyyy")} (${daysLate} days late)`;
+      } else {
+        const daysEarly = Math.ceil((targetDate.getTime() - completionDate.getTime()) / (1000 * 60 * 60 * 24));
+        return `Expected by ${format(completionDate, "MMMM d, yyyy")} (${daysEarly} days early)`;
+      }
+    }
+    
     return `Expected by ${format(completionDate, "MMMM d, yyyy")}`;
+  };
+
+  const calculateDailyGoal = (goal: Goal) => {
+    if (!goal.target_date) return null;
+    
+    const now = new Date();
+    const targetDate = new Date(goal.target_date);
+    const daysRemaining = Math.max(1, Math.ceil((targetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+    
+    // Get current weight
+    const relevantEntries = weightEntries.filter(entry => 
+      entry.unit === goal.unit
+    ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
+    if (relevantEntries.length === 0) return null;
+    
+    const currentWeight = relevantEntries[0].weight;
+    const remainingChange = Math.abs(currentWeight - goal.target_weight);
+    
+    return {
+      daily: (remainingChange / daysRemaining).toFixed(2),
+      weekly: ((remainingChange / daysRemaining) * 7).toFixed(2),
+      daysRemaining,
+      direction: currentWeight > goal.target_weight ? "lose" : "gain"
+    };
   };
 
   const getSelectedGoal = () => {
@@ -295,19 +392,30 @@ const Goals = () => {
     <div className="min-h-screen pb-24 md:pb-6 bg-ui-background">
       <Navbar />
       <div className="container py-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
           <h1 className="text-2xl font-bold">Weight Goals</h1>
-          <Button 
-            onClick={() => setIsAddingGoal(!isAddingGoal)}
-            variant={isAddingGoal ? "outline" : "default"}
-          >
-            {isAddingGoal ? "Cancel" : (
-              <>
-                <Plus className="mr-2 h-4 w-4" />
-                New Goal
-              </>
-            )}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline"
+              asChild
+            >
+              <Link to="/reports">
+                <BarChart3 className="mr-2 h-4 w-4" />
+                View Reports
+              </Link>
+            </Button>
+            <Button 
+              onClick={() => setIsAddingGoal(!isAddingGoal)}
+              variant={isAddingGoal ? "outline" : "default"}
+            >
+              {isAddingGoal ? "Cancel" : (
+                <>
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Goal
+                </>
+              )}
+            </Button>
+          </div>
         </div>
         
         {isAddingGoal && (
@@ -330,7 +438,7 @@ const Goals = () => {
                       <Input
                         id="target-weight"
                         type="number"
-                        step="0.1"
+                        step="any"
                         value={targetWeight}
                         onChange={(e) => setTargetWeight(e.target.value ? Number(e.target.value) : "")}
                         placeholder="65.0"
@@ -341,7 +449,7 @@ const Goals = () => {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="kg">kg</SelectItem>
-                          <SelectItem value="lb">lb</SelectItem>
+                          <SelectItem value="lbs">lbs</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -368,7 +476,8 @@ const Goals = () => {
                           selected={targetDate}
                           onSelect={setTargetDate}
                           initialFocus
-                          disabled={(date) => date < new Date()}
+                          disabled={(date) => date < addDays(new Date(), 1)}
+                          defaultMonth={addDays(new Date(), 30)}
                         />
                       </PopoverContent>
                     </Popover>
@@ -399,30 +508,43 @@ const Goals = () => {
             <div className="lg:col-span-1">
               <Card>
                 <CardHeader>
-                  <CardTitle>Your Goals</CardTitle>
+                  <CardTitle className="flex items-center">
+                    <Target className="mr-2 h-5 w-5" />
+                    Your Goals
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
+                  <div className="space-y-4">
                     {goals.map(goal => {
                       const progress = calculateProgress(goal);
+                      const isLossGoal = goal.start_weight > goal.target_weight;
+                      const statusIcon = goal.achieved ? 
+                        <Trophy className="h-5 w-5 text-amber-500" /> : 
+                        isLossGoal ? 
+                          <TrendingDown className="h-5 w-5 text-indigo-500" /> :
+                          <TrendingUp className="h-5 w-5 text-emerald-500" />;
+                      
                       return (
                         <div 
                           key={goal.id}
                           className={cn(
                             "p-4 rounded-lg border cursor-pointer transition-colors",
-                            selectedGoal === goal.id ? "border-primary bg-primary/5" : "hover:bg-muted/50"
+                            selectedGoal === goal.id ? "border-primary bg-primary/5" : "hover:bg-muted/50",
+                            goal.achieved ? "border-amber-200 bg-amber-50" : ""
                           )}
                           onClick={() => setSelectedGoal(goal.id)}
                         >
                           <div className="flex justify-between items-start">
-                            <div>
-                              <h3 className="font-medium flex items-center">
-                                <Target className="h-4 w-4 mr-2" />
-                                Goal: {goal.target_weight} {goal.unit}
-                              </h3>
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {goal.target_date ? `By ${format(new Date(goal.target_date), "MMM d, yyyy")}` : "No deadline"}
-                              </p>
+                            <div className="flex items-start">
+                              {statusIcon}
+                              <div className="ml-2">
+                                <h3 className="font-medium">
+                                  {isLossGoal ? "Lose" : "Gain"} to {goal.target_weight} {goal.unit}
+                                </h3>
+                                <p className="text-sm text-muted-foreground">
+                                  {goal.target_date ? `By ${format(new Date(goal.target_date), "MMM d, yyyy")}` : "No deadline"}
+                                </p>
+                              </div>
                             </div>
                             <Button 
                               variant="ghost" 
@@ -444,13 +566,31 @@ const Goals = () => {
                             </div>
                             <div className="h-2 bg-muted rounded-full overflow-hidden">
                               <motion.div 
-                                className="h-full bg-primary" 
+                                className={`h-full ${goal.achieved ? 'bg-amber-500' : 'bg-primary'}`}
                                 initial={{ width: "0%" }}
                                 animate={{ width: `${progress.percentage}%` }}
                                 transition={{ duration: 1, ease: "easeOut" }}
                               />
                             </div>
                           </div>
+                          
+                          {!goal.achieved && progress.current > 0 && (
+                            <div className="mt-3">
+                              <p className="text-sm text-muted-foreground">
+                                {isLossGoal ? 
+                                  `${Math.abs(progress.current - goal.target_weight).toFixed(1)} ${goal.unit} to lose` :
+                                  `${Math.abs(goal.target_weight - progress.current).toFixed(1)} ${goal.unit} to gain`
+                                }
+                              </p>
+                            </div>
+                          )}
+                          
+                          {goal.achieved && (
+                            <div className="mt-3 flex items-center">
+                              <Trophy className="h-4 w-4 text-amber-500 mr-1" />
+                              <p className="text-sm font-medium text-amber-600">Goal achieved!</p>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -463,7 +603,19 @@ const Goals = () => {
               {selectedGoal && getSelectedGoal() && (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Goal Details</CardTitle>
+                    <CardTitle className="flex items-center">
+                      {getSelectedGoal()!.achieved ? 
+                        <Trophy className="mr-2 h-5 w-5 text-amber-500" /> : 
+                        <Target className="mr-2 h-5 w-5" />
+                      }
+                      Goal Details
+                    </CardTitle>
+                    <CardDescription>
+                      {getSelectedGoal()!.achieved ? 
+                        "You've achieved this goal! 🎉" : 
+                        "Track your progress toward this weight goal"
+                      }
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     {(() => {
@@ -471,43 +623,101 @@ const Goals = () => {
                       const progress = calculateProgress(goal);
                       const predictionData = generatePredictionData(goal);
                       const currentWeight = getCurrentWeight();
+                      const dailyGoal = calculateDailyGoal(goal);
+                      const isLossGoal = goal.start_weight > goal.target_weight;
                       
                       return (
                         <div className="space-y-6">
-                          <div className="grid gap-4 sm:grid-cols-2">
-                            <div className="bg-blue-50 p-4 rounded-lg">
-                              <div className="text-sm text-blue-600 mb-1">Current Weight</div>
+                          <div className="grid gap-4 sm:grid-cols-3">
+                            <div className={`p-4 rounded-lg ${isLossGoal ? 'bg-blue-50' : 'bg-emerald-50'}`}>
+                              <div className="text-sm text-muted-foreground mb-1">Start Weight</div>
+                              <div className="text-2xl font-semibold">
+                                {goal.start_weight} {goal.unit}
+                              </div>
+                            </div>
+                            
+                            <div className="bg-indigo-50 p-4 rounded-lg">
+                              <div className="text-sm text-muted-foreground mb-1">Current Weight</div>
                               <div className="text-2xl font-semibold">
                                 {progress.current ? `${progress.current} ${goal.unit}` : "No data"}
                               </div>
                             </div>
                             
                             <div className="bg-purple-50 p-4 rounded-lg">
-                              <div className="text-sm text-purple-600 mb-1">Target Weight</div>
+                              <div className="text-sm text-muted-foreground mb-1">Target Weight</div>
                               <div className="text-2xl font-semibold">{goal.target_weight} {goal.unit}</div>
                             </div>
                           </div>
                           
+                          {!goal.achieved && dailyGoal && (
+                            <div className="bg-muted rounded-lg p-4">
+                              <h3 className="text-lg font-medium mb-3 flex items-center">
+                                <InfoIcon className="h-5 w-5 mr-2 text-muted-foreground" />
+                                Recommended Rate
+                              </h3>
+                              <div className="grid gap-4 sm:grid-cols-2">
+                                <div>
+                                  <p className="text-sm text-muted-foreground">To reach your goal by the target date:</p>
+                                  <ul className="mt-2 space-y-1">
+                                    <li className="text-sm font-medium">
+                                      {dailyGoal.direction === "lose" ? "Lose" : "Gain"} {dailyGoal.daily} {goal.unit} per day
+                                    </li>
+                                    <li className="text-sm font-medium">
+                                      {dailyGoal.direction === "lose" ? "Lose" : "Gain"} {dailyGoal.weekly} {goal.unit} per week
+                                    </li>
+                                  </ul>
+                                </div>
+                                <div>
+                                  <p className="text-sm text-muted-foreground">Time remaining:</p>
+                                  <p className="mt-2 text-sm font-medium">
+                                    {dailyGoal.daysRemaining} days 
+                                    {goal.target_date && ` (until ${format(new Date(goal.target_date), "MMM d, yyyy")})`}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          
                           <div>
                             <h3 className="text-lg font-medium mb-3">Progress Tracker</h3>
-                            <div className="h-4 bg-muted rounded-full overflow-hidden">
+                            <div className="h-12 bg-muted rounded-full overflow-hidden relative">
                               <motion.div 
-                                className="h-full bg-gradient-to-r from-blue-500 to-purple-500" 
+                                className={`h-full ${goal.achieved ? 'bg-amber-500' : 'bg-gradient-to-r from-blue-500 to-purple-500'}`}
                                 initial={{ width: "0%" }}
                                 animate={{ width: `${progress.percentage}%` }}
                                 transition={{ duration: 1.5, ease: "easeOut" }}
                               />
+                              <div className="absolute top-0 left-0 right-0 bottom-0 flex items-center justify-between px-4">
+                                <span className="text-sm font-medium text-white z-10 drop-shadow-md">
+                                  {goal.start_weight} {goal.unit}
+                                </span>
+                                <span className="text-sm font-medium z-10 drop-shadow-md">
+                                  {goal.target_weight} {goal.unit}
+                                </span>
+                              </div>
+                              
+                              {/* Current position indicator */}
+                              {progress.current > 0 && (
+                                <div 
+                                  className="absolute top-0 h-12 w-1 bg-white"
+                                  style={{ 
+                                    left: `${progress.percentage}%`, 
+                                    transform: 'translateX(-50%)'
+                                  }}
+                                />
+                              )}
                             </div>
-                            <div className="flex justify-between mt-2 text-sm">
-                              <span>Current: {progress.current} {goal.unit}</span>
-                              <span className="font-medium">{progress.percentage}% Complete</span>
-                              <span>Goal: {goal.target_weight} {goal.unit}</span>
+                            <div className="flex justify-between mt-2">
+                              <span className="text-sm">
+                                {progress.current && `Current: ${progress.current} ${goal.unit}`}
+                              </span>
+                              <span className="text-sm font-medium">{progress.percentage}% Complete</span>
                             </div>
                           </div>
                           
-                          {goal.target_date && (
-                            <div>
-                              <h3 className="text-lg font-medium mb-2">Time Remaining</h3>
+                          {!goal.achieved && goal.target_date && (
+                            <div className="bg-white rounded-lg border p-4">
+                              <h3 className="text-lg font-medium mb-2">Completion Forecast</h3>
                               <div className="flex items-center space-x-2">
                                 <CalendarIcon className="h-5 w-5 text-muted-foreground" />
                                 <span>
@@ -520,6 +730,30 @@ const Goals = () => {
                                 <Trophy className="h-5 w-5 text-amber-500" />
                                 <span>{calculateExpectedCompletion(goal)}</span>
                               </div>
+                              
+                              {!goal.achieved && (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => handleMarkAchieved(goal.id, true)} 
+                                  className="mt-4"
+                                >
+                                  <Trophy className="mr-2 h-4 w-4" />
+                                  Mark as Achieved
+                                </Button>
+                              )}
+                              
+                              {goal.achieved && (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => handleMarkAchieved(goal.id, false)} 
+                                  className="mt-4"
+                                >
+                                  <Target className="mr-2 h-4 w-4" />
+                                  Mark as In Progress
+                                </Button>
+                              )}
                             </div>
                           )}
                           
@@ -540,10 +774,43 @@ const Goals = () => {
                                     />
                                     <YAxis domain={['auto', 'auto']} />
                                     <Tooltip
-                                      formatter={(value, name) => [Number(value).toFixed(1) + ` ${goal.unit}`, name === "actual" ? "Actual" : "Projected"]}
+                                      formatter={(value, name) => [
+                                        Number(value).toFixed(1) + ` ${goal.unit}`, 
+                                        name === "actual" ? "Actual" : 
+                                        name === "predicted" ? "Predicted" : "Ideal Path"
+                                      ]}
                                       labelFormatter={(date) => format(new Date(date), "MMMM d, yyyy")}
                                     />
-                                    <Legend formatter={(value) => value === "actual" ? "Actual" : "Projected"} />
+                                    <Legend 
+                                      formatter={(value) => 
+                                        value === "actual" ? "Actual" : 
+                                        value === "predicted" ? "Predicted" : "Ideal Path"
+                                      } 
+                                    />
+                                    
+                                    {/* Target weight reference line */}
+                                    <ReferenceLine 
+                                      y={goal.target_weight} 
+                                      label={{
+                                        value: `Target: ${goal.target_weight} ${goal.unit}`,
+                                        position: 'right'
+                                      }}
+                                      stroke="#9333ea" 
+                                      strokeDasharray="3 3" 
+                                    />
+                                    
+                                    {/* Add ideal progress line */}
+                                    <Line 
+                                      type="monotone" 
+                                      dataKey="ideal" 
+                                      stroke="#9333ea" 
+                                      strokeDasharray="5 5"
+                                      strokeWidth={1.5}
+                                      dot={false}
+                                      isAnimationActive={true}
+                                    />
+                                    
+                                    {/* Actual data */}
                                     <Line 
                                       type="monotone" 
                                       dataKey="actual" 
@@ -552,6 +819,8 @@ const Goals = () => {
                                       dot={{ r: 4 }}
                                       isAnimationActive={true}
                                     />
+                                    
+                                    {/* Predicted data */}
                                     <Line 
                                       type="monotone" 
                                       dataKey="predicted" 
