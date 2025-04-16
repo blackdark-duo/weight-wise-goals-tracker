@@ -2,7 +2,6 @@
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
 import ComparisonTable from "@/components/ComparisonTable";
-import { Preview as TextRotateDemo } from "@/components/ui/text-rotate-demo";
 
 const Index = () => {
   return (
@@ -10,18 +9,6 @@ const Index = () => {
       <Navbar />
       <main>
         <HeroSection />
-        
-        {/* Customer Ratings Section */}
-        <section className="py-20 bg-gradient-to-b from-white to-ui-background">
-          <div className="container text-center">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-12">
-              Loved by Health-Conscious People Everywhere
-            </h2>
-            <div className="mx-auto max-w-xl">
-              <TextRotateDemo />
-            </div>
-          </div>
-        </section>
         
         <ComparisonTable />
         

@@ -5,8 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, Info } from "lucide-react";
-import SupabaseNote from "@/components/SupabaseNote";
+import { AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -107,8 +106,6 @@ const SignUp = () => {
         
         <form onSubmit={handleSignUp}>
           <CardContent className="space-y-4">
-            <SupabaseNote />
-            
             {error && (
               <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive flex items-center gap-2">
                 <AlertCircle className="h-4 w-4" />
@@ -151,13 +148,6 @@ const SignUp = () => {
               />
               <p className="text-xs text-muted-foreground">
                 Password must be at least 6 characters long
-              </p>
-            </div>
-            
-            <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-600 flex items-start gap-2">
-              <Info className="h-4 w-4 mt-0.5" />
-              <p>
-                No email verification is required. You'll be automatically logged in after signing up.
               </p>
             </div>
           </CardContent>

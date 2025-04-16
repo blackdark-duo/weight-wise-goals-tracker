@@ -9,8 +9,9 @@ import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
-import AccountManagement from "./components/AccountManagement";
 import Reports from "./pages/Reports";
+import Goals from "./pages/Goals";
+import Account from "./pages/Account";
 import { useState, useEffect } from "react";
 import { supabase } from "./integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
@@ -65,15 +66,17 @@ const App = () => {
             } />
             <Route path="/account" element={
               <PrivateRoute>
-                <div className="container py-10">
-                  <h1 className="text-2xl font-bold mb-6">Account Settings</h1>
-                  <AccountManagement />
-                </div>
+                <Account />
               </PrivateRoute>
             } />
             <Route path="/reports" element={
               <PrivateRoute>
                 <Reports />
+              </PrivateRoute>
+            } />
+            <Route path="/goals" element={
+              <PrivateRoute>
+                <Goals />
               </PrivateRoute>
             } />
             
