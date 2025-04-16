@@ -1,10 +1,7 @@
 
 import React from "react";
-import HeroTitle from "./hero/HeroTitle";
-import HeroDescription from "./hero/HeroDescription";
 import HeroButtons from "./hero/HeroButtons";
 import HeroRating from "./hero/HeroRating";
-import HeroImage from "./hero/HeroImage";
 import { TextRotate } from "@/components/ui/text-rotate";
 
 const HeroSection = () => {
@@ -32,17 +29,21 @@ const HeroSection = () => {
               </span>
               {" "}Journey with Precision
             </h1>
-            <HeroDescription 
-              text="WeightWise is your comprehensive, user-friendly platform designed to help you track, understand, and achieve your weight management goals with scientific accuracy and personalized insights."
-            />
+            <p className="text-muted-foreground md:text-xl max-w-[600px]">
+              WeightWise is your comprehensive, user-friendly platform designed to help you track, understand, and achieve your weight management goals with scientific accuracy and personalized insights.
+            </p>
             <HeroButtons />
             <HeroRating />
           </div>
           
-          <HeroImage 
-            src="/images/weight-tracker-dashboard.png"
-            alt="Weight Wise App Dashboard"
-          />
+          <div className="relative mx-auto max-w-[500px] w-full overflow-hidden rounded-xl shadow-xl">
+            <img 
+              src="/images/weight-tracker-dashboard.png"
+              alt="Weight Wise App Dashboard"
+              className="w-full h-auto"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-brand-primary/20 to-brand-secondary/20 mix-blend-multiply"></div>
+          </div>
         </div>
       </div>
     </section>

@@ -1,6 +1,7 @@
 
 import { useState, useEffect, createContext, useContext } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface UserPreferences {
   preferredUnit: string;
@@ -25,11 +26,11 @@ export const UserPreferencesProvider = ({ children }: { children: React.ReactNod
     isLoading: true
   });
   
-  // Load preferences from DB on mount and when localStorage changes
+  // Load preferences from DB on mount
   useEffect(() => {
     const loadPreferences = async () => {
       try {
-        // First try to get from localStorage for immediate response
+        // First get from localStorage for immediate response
         const storedUnit = localStorage.getItem("preferredUnit");
         if (storedUnit) {
           setPreferences(prev => ({
@@ -38,7 +39,7 @@ export const UserPreferencesProvider = ({ children }: { children: React.ReactNod
           }));
         }
         
-        // Then try to get from DB for accurate data
+        // Then get from DB for accurate data
         const { data: { user } } = await supabase.auth.getUser();
         
         if (user) {
@@ -55,7 +56,7 @@ export const UserPreferencesProvider = ({ children }: { children: React.ReactNod
               isLoading: false
             });
             
-            // Update localStorage
+            // Update localStorage with the correct DB value
             localStorage.setItem("preferredUnit", data.preferred_unit || "kg");
           } else {
             setPreferences(prev => ({ ...prev, isLoading: false }));
@@ -72,13 +73,12 @@ export const UserPreferencesProvider = ({ children }: { children: React.ReactNod
     // Initial load
     loadPreferences();
     
-    // Listen for localStorage changes (e.g. from another component)
-    const handleStorageChange = () => {
-      const storedUnit = localStorage.getItem("preferredUnit");
-      if (storedUnit) {
+    // Listen for localStorage changes
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "preferredUnit" && e.newValue) {
         setPreferences(prev => ({
           ...prev,
-          preferredUnit: storedUnit
+          preferredUnit: e.newValue as string
         }));
       }
     };
@@ -115,11 +115,16 @@ export const UserPreferencesProvider = ({ children }: { children: React.ReactNod
       // Update localStorage
       if (prefs.preferredUnit) {
         localStorage.setItem("preferredUnit", prefs.preferredUnit);
-        // Dispatch a storage event to notify other components
-        window.dispatchEvent(new Event("storage"));
+        
+        // Manually trigger a storage event to notify other components
+        window.dispatchEvent(new StorageEvent("storage", {
+          key: "preferredUnit",
+          newValue: prefs.preferredUnit
+        }));
       }
     } catch (error) {
       console.error("Error updating preferences:", error);
+      toast.error("Failed to update preferences. Please try again.");
       throw error;
     }
   };

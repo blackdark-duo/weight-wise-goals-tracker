@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Index from "./pages/Index";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
@@ -23,22 +23,36 @@ import { UserPreferencesProvider } from "./hooks/use-user-preferences";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: 1000 * 60 * 15, // 15 minutes to prevent frequent refetches
       refetchOnWindowFocus: false,
       retry: 1,
     },
   },
 });
 
+// This prevents double rendering in React.StrictMode
+const sessionCache = {
+  session: null as Session | null,
+  initialized: false,
+};
+
 const App = () => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [session, setSession] = useState<Session | null>(sessionCache.session);
+  const [isLoading, setIsLoading] = useState(!sessionCache.initialized);
   
   useEffect(() => {
-    // Set up auth state listener first
+    // Only run this once to prevent double initialization
+    if (sessionCache.initialized) {
+      return;
+    }
+    
+    sessionCache.initialized = true;
+    
+    // Setup auth state listener first (before checking session)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_, session) => {
         setSession(session);
+        sessionCache.session = session;
         setIsLoading(false);
       }
     );
@@ -46,6 +60,7 @@ const App = () => {
     // Then check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      sessionCache.session = session;
       setIsLoading(false);
     });
 
@@ -67,8 +82,9 @@ const App = () => {
         <CustomToastProvider>
           <TooltipProvider>
             <Toaster />
-            <Sonner />
+            <Sonner position="top-right" expand={false} closeButton richColors />
             <BrowserRouter>
+              <ScrollToTop />
               <Routes>
                 {/* Public Routes */}
                 <Route path="/" element={<Index />} />
@@ -107,6 +123,17 @@ const App = () => {
       </UserPreferencesProvider>
     </QueryClientProvider>
   );
+};
+
+// Component to force scroll to top on route change
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+  
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  
+  return null;
 };
 
 export default App;
