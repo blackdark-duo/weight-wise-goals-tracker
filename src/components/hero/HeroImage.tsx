@@ -17,8 +17,8 @@ const HeroImage = ({ src, alt }: HeroImageProps) => {
     >
       <div className="aspect-[4/3] overflow-hidden rounded-xl bg-gradient-to-br from-brand-primary/20 to-brand-secondary/20 p-4">
         <img
-          src={src}
-          alt={alt}
+          src="/images/weight-tracker-dashboard.png" // We'll need to make sure this image exists
+          alt="WeightWise dashboard showing weight tracking chart and progress indicators"
           className="h-full w-full rounded-lg object-cover shadow-lg"
         />
       </div>

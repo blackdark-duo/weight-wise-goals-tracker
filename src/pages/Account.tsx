@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import * as React from "react"; // Added React import for React.useRef
+import * as React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,9 +10,33 @@ import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import AccountManagement from "@/components/AccountManagement";
 import { supabase } from "@/integrations/supabase/client";
-import { Download, Upload, FileJson, ExternalLink, HelpCircle, RotateCcw } from "lucide-react";
+import { Download, Upload, FileText, ExternalLink, HelpCircle, RotateCcw, X } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+// Define grouped timezones with geography information
+const TIMEZONES = {
+  popular: [
+    { value: "Asia/Kolkata", label: "India Standard Time (UTC+5:30) - New Delhi, Mumbai" },
+    { value: "America/New_York", label: "Eastern Time (UTC-5:00) - New York, Washington DC" },
+    { value: "Europe/London", label: "Greenwich Mean Time (UTC+0:00) - London, Dublin" },
+  ],
+  others: [
+    { value: "UTC", label: "Coordinated Universal Time (UTC)" },
+    { value: "Asia/Dubai", label: "Gulf Standard Time (UTC+4:00) - Dubai, Abu Dhabi" },
+    { value: "Asia/Kabul", label: "Afghanistan Time (UTC+4:30) - Kabul" },
+    { value: "Asia/Tehran", label: "Iran Standard Time (UTC+3:30) - Tehran" },
+    { value: "Asia/Tokyo", label: "Japan Standard Time (UTC+9:00) - Tokyo, Osaka" },
+    { value: "Asia/Singapore", label: "Singapore Time (UTC+8:00) - Singapore, Kuala Lumpur" },
+    { value: "Australia/Sydney", label: "Australian Eastern Time (UTC+10:00) - Sydney, Melbourne" },
+    { value: "Pacific/Auckland", label: "New Zealand Time (UTC+12:00) - Auckland, Wellington" },
+    { value: "America/Chicago", label: "Central Time (UTC-6:00) - Chicago, Dallas" },
+    { value: "America/Denver", label: "Mountain Time (UTC-7:00) - Denver, Phoenix" },
+    { value: "America/Los_Angeles", label: "Pacific Time (UTC-8:00) - Los Angeles, Seattle" },
+    { value: "Europe/Paris", label: "Central European Time (UTC+1:00) - Paris, Berlin, Rome" },
+    { value: "Europe/Moscow", label: "Moscow Time (UTC+3:00) - Moscow, St. Petersburg" },
+  ]
+};
 
 const Account = () => {
   const [userName, setUserName] = useState<string | null>(null);
@@ -66,20 +90,25 @@ const Account = () => {
         .update({
           preferred_unit: preferredUnit,
           timezone: timezone,
-          updated_at: new Date().toISOString() // Convert Date to string
+          updated_at: new Date().toISOString()
         })
         .eq("id", user.id);
         
       if (error) throw error;
       
       toast.success("Preferences updated successfully");
+      
+      // Update global app state (if applicable)
+      // This will help ensure the unit preference is reflected immediately across the app
+      window.localStorage.setItem("preferredUnit", preferredUnit);
+      window.dispatchEvent(new Event("storage"));
     } catch (error: any) {
       console.error("Error updating preferences:", error);
       toast.error(error.message || "Failed to update preferences");
     }
   };
 
-  // Function to handle export of user data
+  // Function to export CSV
   const handleExportData = async () => {
     try {
       setIsExporting(true);
@@ -107,32 +136,27 @@ const Account = () => {
         
       if (goalsError) throw goalsError;
       
-      // Fetch profile
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-        
-      if (profileError && profileError.code !== "PGRST116") throw profileError;
+      // Convert to CSV
+      const weightEntriesCSV = convertToCSV(weightEntries || [], [
+        'date', 'weight', 'unit', 'time', 'dietary_notes'
+      ], 'weight_entries');
       
-      // Prepare export data
-      const exportData = {
-        profile: profile || {},
-        weightEntries: weightEntries || [],
-        goals: goals || [],
-        exportDate: new Date().toISOString(),
-        version: "1.0"
-      };
+      const goalsCSV = convertToCSV(goals || [], [
+        'target_weight', 'start_weight', 'unit', 'target_date', 'achieved'
+      ], 'goals');
       
-      // Convert to JSON and create download link
-      const dataStr = JSON.stringify(exportData, null, 2);
-      const dataBlob = new Blob([dataStr], { type: "application/json" });
-      const url = URL.createObjectURL(dataBlob);
+      // Combine both CSVs with section headers
+      const combinedCSV = `# Weight Tracker Export\n# Date: ${new Date().toISOString()}\n\n` +
+                         `# WEIGHT ENTRIES\n${weightEntriesCSV}\n\n` +
+                         `# GOALS\n${goalsCSV}`;
+      
+      // Create download link
+      const blob = new Blob([combinedCSV], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
       
       const a = document.createElement("a");
       a.href = url;
-      a.download = `weight-tracker-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `weightwise-export-${new Date().toISOString().slice(0, 10)}.csv`;
       document.body.appendChild(a);
       a.click();
       
@@ -142,13 +166,87 @@ const Account = () => {
         URL.revokeObjectURL(url);
       }, 100);
       
-      toast.success("Data exported successfully");
+      toast.success("Data exported successfully as CSV");
     } catch (error: any) {
       console.error("Error exporting data:", error);
       toast.error(error.message || "Failed to export data");
     } finally {
       setIsExporting(false);
     }
+  };
+  
+  // Function to convert JSON to CSV
+  const convertToCSV = (data: any[], fields: string[], type: string) => {
+    // Create header row
+    const header = fields.join(',');
+    
+    // Create data rows
+    const rows = data.map(item => {
+      return fields.map(field => {
+        let value = item[field] || '';
+        // If the value contains commas, quotes, or newlines, wrap it in quotes
+        if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
+          value = `"${value.replace(/"/g, '""')}"`;
+        }
+        return value;
+      }).join(',');
+    });
+    
+    return [header, ...rows].join('\n');
+  };
+
+  // Function to parse CSV data
+  const parseCSV = (csv: string) => {
+    const result: { weightEntries: any[], goals: any[] } = {
+      weightEntries: [],
+      goals: []
+    };
+    
+    let currentSection = '';
+    const lines = csv.split('\n');
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      
+      // Skip empty lines
+      if (!line) continue;
+      
+      // Check for section headers
+      if (line.startsWith('#')) {
+        if (line.includes('WEIGHT ENTRIES')) {
+          currentSection = 'weightEntries';
+          continue;
+        } else if (line.includes('GOALS')) {
+          currentSection = 'goals';
+          continue;
+        } else {
+          // Skip other comments
+          continue;
+        }
+      }
+      
+      // Process data lines
+      if (currentSection) {
+        // First line after section header is the column names
+        if (result[currentSection].length === 0) {
+          // Store column names
+          result[`${currentSection}Columns`] = line.split(',');
+        } else {
+          // Parse data row
+          const values = line.split(',');
+          
+          if (values.length > 1) { // Make sure it's a valid data row
+            const dataObject = {};
+            result[`${currentSection}Columns`].forEach((column, index) => {
+              dataObject[column] = values[index] || '';
+            });
+            result[currentSection].push(dataObject);
+          }
+        }
+      }
+    }
+    
+    return result;
   };
 
   // Function to handle file selection for import
@@ -165,6 +263,11 @@ const Account = () => {
       return;
     }
     
+    if (!importFile.name.endsWith('.csv')) {
+      toast.error("Please select a CSV file");
+      return;
+    }
+    
     try {
       setIsImporting(true);
       
@@ -177,24 +280,19 @@ const Account = () => {
       
       // Read file
       const fileContent = await importFile.text();
-      let importData;
       
-      try {
-        importData = JSON.parse(fileContent);
-      } catch (e) {
-        throw new Error("Invalid JSON file format");
+      // Parse CSV
+      const importData = parseCSV(fileContent);
+      
+      if (!importData.weightEntries || importData.weightEntries.length === 0) {
+        throw new Error("No valid weight entries found in the CSV file");
       }
       
-      // Validate file structure
-      if (!importData.weightEntries || !Array.isArray(importData.weightEntries)) {
-        throw new Error("Invalid import file: missing weight entries");
-      }
-      
-      // Prepare data for import - modify to match current user ID
-      const weightEntries = importData.weightEntries.map((entry: any) => ({
+      // Add user_id to entries and prepare for import
+      const weightEntries = importData.weightEntries.map(entry => ({
         ...entry,
         user_id: user.id,
-        id: undefined  // Remove existing IDs to create new ones
+        description: entry.dietary_notes || entry.description, // Handle both field names
       }));
       
       // Import weight entries
@@ -207,11 +305,10 @@ const Account = () => {
       }
       
       // Import goals if they exist
-      if (importData.goals && Array.isArray(importData.goals) && importData.goals.length > 0) {
-        const goals = importData.goals.map((goal: any) => ({
+      if (importData.goals && importData.goals.length > 0) {
+        const goals = importData.goals.map(goal => ({
           ...goal,
           user_id: user.id,
-          id: undefined  // Remove existing IDs to create new ones
         }));
         
         const { error: goalsError } = await supabase
@@ -296,15 +393,23 @@ const Account = () => {
                       <SelectValue placeholder="Select timezone" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="UTC">UTC</SelectItem>
-                      <SelectItem value="America/New_York">Eastern Time (ET)</SelectItem>
-                      <SelectItem value="America/Chicago">Central Time (CT)</SelectItem>
-                      <SelectItem value="America/Denver">Mountain Time (MT)</SelectItem>
-                      <SelectItem value="America/Los_Angeles">Pacific Time (PT)</SelectItem>
-                      <SelectItem value="Europe/London">Greenwich Mean Time (GMT)</SelectItem>
-                      <SelectItem value="Europe/Paris">Central European Time (CET)</SelectItem>
-                      <SelectItem value="Asia/Tokyo">Japan Standard Time (JST)</SelectItem>
-                      <SelectItem value="Australia/Sydney">Australian Eastern Time (AET)</SelectItem>
+                      <SelectItem value="" disabled>
+                        Popular Timezones
+                      </SelectItem>
+                      {TIMEZONES.popular.map((tz) => (
+                        <SelectItem key={tz.value} value={tz.value}>
+                          {tz.label}
+                        </SelectItem>
+                      ))}
+                      
+                      <SelectItem value="" disabled>
+                        Other Timezones
+                      </SelectItem>
+                      {TIMEZONES.others.map((tz) => (
+                        <SelectItem key={tz.value} value={tz.value}>
+                          {tz.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -336,21 +441,21 @@ const Account = () => {
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p className="max-w-xs">Download all your weight entries and goals in JSON format</p>
+                          <p className="max-w-xs">Download all your weight entries and goals in CSV format</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </div>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Download all your weight tracking data as a JSON file for backup or transferring to another device.
+                    Download all your weight tracking data as a CSV file for backup or transferring to another device.
                   </p>
                   <Button 
                     onClick={handleExportData} 
                     disabled={isExporting}
                     className="w-full"
                   >
-                    {isExporting ? "Exporting..." : "Export Data"}
-                    <Download className="ml-2 h-4 w-4" />
+                    {isExporting ? "Exporting..." : "Export CSV Data"}
+                    <FileText className="ml-2 h-4 w-4" />
                   </Button>
                 </div>
                 
@@ -365,19 +470,19 @@ const Account = () => {
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p className="max-w-xs">Import previously exported data in JSON format</p>
+                          <p className="max-w-xs">Import previously exported data in CSV format</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </div>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Import previously exported weight tracking data from a JSON file.
+                    Import previously exported weight tracking data from a CSV file.
                   </p>
                   
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button className="w-full">
-                        Import Data
+                        Import CSV Data
                         <Upload className="ml-2 h-4 w-4" />
                       </Button>
                     </DialogTrigger>
@@ -385,7 +490,7 @@ const Account = () => {
                       <DialogHeader>
                         <DialogTitle>Import Weight Tracking Data</DialogTitle>
                         <DialogDescription>
-                          Upload a previously exported JSON file to import your weight data. This will add the imported entries to your existing data.
+                          Upload a previously exported CSV file to import your weight data. This will add the imported entries to your existing data.
                         </DialogDescription>
                       </DialogHeader>
                       
@@ -393,17 +498,17 @@ const Account = () => {
                         <div className="flex items-center justify-center w-full">
                           <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/30 hover:bg-muted/50 transition-colors">
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                              <FileJson className="w-10 h-10 mb-3 text-muted-foreground" />
+                              <FileText className="w-10 h-10 mb-3 text-muted-foreground" />
                               <p className="mb-2 text-sm text-muted-foreground">
                                 <span className="font-semibold">Click to upload</span> or drag and drop
                               </p>
-                              <p className="text-xs text-muted-foreground">JSON files only</p>
+                              <p className="text-xs text-muted-foreground">CSV files only</p>
                             </div>
                             <input 
                               ref={fileInputRef}
                               id="dropzone-file" 
                               type="file" 
-                              accept=".json" 
+                              accept=".csv" 
                               className="hidden" 
                               onChange={handleFileChange}
                             />
@@ -413,7 +518,7 @@ const Account = () => {
                         {importFile && (
                           <div className="p-3 bg-muted rounded-md flex items-center justify-between">
                             <div className="flex items-center">
-                              <FileJson className="h-5 w-5 mr-2 text-brand-primary" />
+                              <FileText className="h-5 w-5 mr-2 text-brand-primary" />
                               <span className="text-sm font-medium truncate max-w-[200px]">
                                 {importFile.name}
                               </span>

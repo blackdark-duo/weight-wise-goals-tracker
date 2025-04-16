@@ -16,8 +16,19 @@ import { useState, useEffect } from "react";
 import { supabase } from "./integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import MobileNavigation from "./components/MobileNavigation";
+import { CustomToastProvider } from "./components/ui/custom-toast";
+import { UserPreferencesProvider } from "./hooks/use-user-preferences";
 
-const queryClient = new QueryClient();
+// Create a client with stale time to prevent unnecessary refetches
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 const App = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -44,7 +55,7 @@ const App = () => {
   // Private route wrapper component
   const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
     if (isLoading) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
-    return session ? <>{children}</> : <Navigate to="/signin" />;
+    return session ? <>{children}</> : <Navigate to="/signin" replace />;
   };
 
   // Determine if we should show mobile navigation (only for authenticated routes)
@@ -52,44 +63,48 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<Index />} />
-            <Route path="/signin" element={<SignIn />} />
-            <Route path="/signup" element={<SignUp />} />
-            
-            {/* Protected Routes */}
-            <Route path="/dashboard" element={
-              <PrivateRoute>
-                <Dashboard />
-              </PrivateRoute>
-            } />
-            <Route path="/account" element={
-              <PrivateRoute>
-                <Account />
-              </PrivateRoute>
-            } />
-            <Route path="/reports" element={
-              <PrivateRoute>
-                <Reports />
-              </PrivateRoute>
-            } />
-            <Route path="/goals" element={
-              <PrivateRoute>
-                <Goals />
-              </PrivateRoute>
-            } />
-            
-            {/* 404 Route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          {showMobileNav && <MobileNavigation />}
-        </BrowserRouter>
-      </TooltipProvider>
+      <UserPreferencesProvider>
+        <CustomToastProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<Index />} />
+                <Route path="/signin" element={<SignIn />} />
+                <Route path="/signup" element={<SignUp />} />
+                
+                {/* Protected Routes */}
+                <Route path="/dashboard" element={
+                  <PrivateRoute>
+                    <Dashboard />
+                  </PrivateRoute>
+                } />
+                <Route path="/account" element={
+                  <PrivateRoute>
+                    <Account />
+                  </PrivateRoute>
+                } />
+                <Route path="/reports" element={
+                  <PrivateRoute>
+                    <Reports />
+                  </PrivateRoute>
+                } />
+                <Route path="/goals" element={
+                  <PrivateRoute>
+                    <Goals />
+                  </PrivateRoute>
+                } />
+                
+                {/* 404 Route */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              {showMobileNav && <MobileNavigation />}
+            </BrowserRouter>
+          </TooltipProvider>
+        </CustomToastProvider>
+      </UserPreferencesProvider>
     </QueryClientProvider>
   );
 };

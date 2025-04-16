@@ -31,8 +31,8 @@ import {
   Tooltip,
   ResponsiveContainer
 } from 'recharts';
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 
-// Animation variants
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
   visible: { 
@@ -83,42 +83,41 @@ type UserProfile = {
   timezone?: string;
 };
 
-// Update the weight entry form and goal visualization
 const Dashboard = () => {
-  // User data state
+  const { preferredUnit } = useUserPreferences();
+  
   const [userData, setUserData] = useState({
     name: "",
     initialWeight: 0,
     currentWeight: 0,
     goalWeight: 0,
     progress: 0,
-    unit: "kg"
+    unit: preferredUnit
   });
   
-  // Weight entry form state
   const [newWeight, setNewWeight] = useState("");
-  const [weightUnit, setWeightUnit] = useState("kg");
+  const [weightUnit, setWeightUnit] = useState(preferredUnit);
   const [entryDate, setEntryDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [entryTime, setEntryTime] = useState(format(new Date(), "HH:mm"));
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Recent entries state
   const [recentEntries, setRecentEntries] = useState<WeightEntry[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // User profile
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   
   const navigate = useNavigate();
 
-  // Fetch user data
+  useEffect(() => {
+    setWeightUnit(preferredUnit);
+  }, [preferredUnit]);
+
   useEffect(() => {
     const fetchUserData = async () => {
       setIsLoading(true);
       try {
-        // Get current user
         const { data: { user } } = await supabase.auth.getUser();
         
         if (!user) {
@@ -126,7 +125,6 @@ const Dashboard = () => {
           return;
         }
         
-        // Get user's profile
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("*")
@@ -142,7 +140,6 @@ const Dashboard = () => {
           setWeightUnit(profileData.preferred_unit || "kg");
         }
         
-        // Get weight entries
         const { data: entries, error: entriesError } = await supabase
           .from("weight_entries")
           .select("*")
@@ -155,11 +152,9 @@ const Dashboard = () => {
           console.error("Error fetching entries:", entriesError);
         }
         
-        // Process entries data
         if (entries && entries.length > 0) {
           setRecentEntries(entries);
           
-          // Get initial weight (first recorded entry)
           const { data: firstEntry } = await supabase
             .from("weight_entries")
             .select("*")
@@ -169,7 +164,6 @@ const Dashboard = () => {
             .limit(1)
             .single();
             
-          // Get goal weight if exists
           const { data: goalData } = await supabase
             .from("goals")
             .select("*")
@@ -179,7 +173,6 @@ const Dashboard = () => {
             .limit(1)
             .maybeSingle();
             
-          // Get last 7 days data for chart
           const sevenDaysAgo = new Date();
           sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
           
@@ -190,9 +183,7 @@ const Dashboard = () => {
             .gte("date", format(sevenDaysAgo, "yyyy-MM-dd"))
             .order("date", { ascending: true });
             
-          // Process chart data
           if (chartEntries && chartEntries.length > 0) {
-            // Group by date
             const groupedByDate = chartEntries.reduce((acc, entry) => {
               if (!acc[entry.date]) {
                 acc[entry.date] = entry;
@@ -200,7 +191,6 @@ const Dashboard = () => {
               return acc;
             }, {} as Record<string, WeightEntry>);
             
-            // Convert to array for chart
             const chartData = Object.values(groupedByDate).map(entry => ({
               date: format(new Date(entry.date), "MMM dd"),
               weight: entry.weight,
@@ -210,7 +200,6 @@ const Dashboard = () => {
             setChartData(chartData);
           }
           
-          // Calculate progress if goal exists
           let progress = 0;
           if (goalData && firstEntry) {
             const initialWeight = firstEntry.weight;
@@ -218,12 +207,10 @@ const Dashboard = () => {
             const goalWeight = goalData.target_weight;
             
             if (initialWeight > goalWeight) {
-              // Weight loss goal
               progress = Math.min(1, Math.max(0, 
                 (initialWeight - currentWeight) / (initialWeight - goalWeight)
               ));
             } else if (initialWeight < goalWeight) {
-              // Weight gain goal
               progress = Math.min(1, Math.max(0, 
                 (currentWeight - initialWeight) / (goalWeight - initialWeight)
               ));
@@ -258,7 +245,6 @@ const Dashboard = () => {
     fetchUserData();
   }, [navigate]);
 
-  // Add weight entry handler
   const handleAddWeight = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -284,7 +270,6 @@ const Dashboard = () => {
         return;
       }
       
-      // Add weight entry to database
       const { data, error } = await supabase
         .from("weight_entries")
         .insert({
@@ -300,22 +285,18 @@ const Dashboard = () => {
         
       if (error) throw error;
       
-      // Update recent entries
       setRecentEntries(prev => [data, ...prev].slice(0, 10));
       
-      // Update current weight in stats
       setUserData(prev => ({
         ...prev,
         currentWeight: weight
       }));
       
-      // Clear form
       setNewWeight("");
       setDescription("");
       
       toast.success("Weight entry added successfully!");
       
-      // Refresh the page to update all stats
       setTimeout(() => {
         window.location.reload();
       }, 1000);
@@ -328,7 +309,6 @@ const Dashboard = () => {
     }
   };
   
-  // Custom tooltip for chart
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
@@ -366,7 +346,6 @@ const Dashboard = () => {
           </div>
         </motion.div>
 
-        {/* Add Weight Entry Form */}
         <motion.div variants={popIn}>
           <Card className="overflow-hidden">
             <div className="h-1 bg-gradient-to-r from-brand-primary to-purple-500"></div>
@@ -388,7 +367,7 @@ const Dashboard = () => {
                       <Input
                         id="weight"
                         type="number"
-                        step="any" // Changed from step="0.1" to accept any decimal
+                        step="any"
                         min="0"
                         placeholder="Enter weight"
                         value={newWeight}
@@ -460,12 +439,10 @@ const Dashboard = () => {
           </Card>
         </motion.div>
 
-        {/* Stats Overview */}
         <motion.div 
           className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
           variants={staggerContainer}
         >
-          {/* Current Weight Card */}
           <motion.div variants={popIn}>
             <Card className="overflow-hidden">
               <div className="h-1 bg-gradient-to-r from-green-400 to-green-600"></div>
@@ -488,7 +465,6 @@ const Dashboard = () => {
             </Card>
           </motion.div>
           
-          {/* Goal Weight Card */}
           <motion.div variants={popIn}>
             <Card className="overflow-hidden">
               <div className="h-1 bg-gradient-to-r from-purple-400 to-purple-600"></div>
@@ -519,7 +495,6 @@ const Dashboard = () => {
             </Card>
           </motion.div>
           
-          {/* Goal Progress Card - Improved visualization */}
           <motion.div variants={popIn} className="md:col-span-2">
             <Card className="overflow-hidden">
               <div className="h-1 bg-gradient-to-r from-yellow-400 to-amber-600"></div>
@@ -539,7 +514,6 @@ const Dashboard = () => {
                     </div>
                     
                     <div className="relative h-8 w-full bg-muted rounded-full overflow-hidden">
-                      {/* Progress Bar */}
                       <motion.div
                         className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-brand-primary to-brand-primary/70"
                         style={{ width: `${userData.progress * 100}%` }}
@@ -548,7 +522,6 @@ const Dashboard = () => {
                         transition={{ duration: 1, ease: "easeOut" }}
                       />
                       
-                      {/* Current Weight Marker */}
                       <div 
                         className="absolute top-0 h-full"
                         style={{ 
@@ -559,19 +532,15 @@ const Dashboard = () => {
                         <div className="h-8 w-2 bg-white border border-gray-300 rounded-full" />
                       </div>
                       
-                      {/* Milestones */}
                       {userData.initialWeight !== userData.goalWeight && (
                         <>
                           {[0.25, 0.5, 0.75].map((milestone) => {
-                            // Calculate milestone position
                             const milestonePosition = `${milestone * 100}%`;
                             
-                            // Calculate the weight at this milestone
                             const milestoneWeight = userData.initialWeight > userData.goalWeight
                               ? userData.initialWeight - (milestone * (userData.initialWeight - userData.goalWeight))
                               : userData.initialWeight + (milestone * (userData.goalWeight - userData.initialWeight));
                               
-                            // Determine if this milestone has been reached
                             const isReached = userData.initialWeight > userData.goalWeight
                               ? userData.currentWeight <= milestoneWeight
                               : userData.currentWeight >= milestoneWeight;
@@ -617,7 +586,6 @@ const Dashboard = () => {
           </motion.div>
         </motion.div>
 
-        {/* Weight Chart */}
         <motion.div variants={fadeInUp}>
           <Card className="overflow-hidden">
             <div className="h-1 bg-gradient-to-r from-indigo-400 to-purple-600"></div>
@@ -673,7 +641,6 @@ const Dashboard = () => {
           </Card>
         </motion.div>
 
-        {/* Recent Entries */}
         <motion.div variants={fadeInUp}>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -732,7 +699,6 @@ const Dashboard = () => {
           </Card>
         </motion.div>
 
-        {/* More Actions */}
         <motion.div variants={fadeInUp} className="grid gap-4 md:grid-cols-2">
           <Card>
             <CardHeader>
