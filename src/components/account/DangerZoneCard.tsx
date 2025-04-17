@@ -19,10 +19,11 @@ import { useNavigate } from "react-router-dom";
 import { useToasts } from "../ui/toast-notification";
 
 interface DangerZoneCardProps {
+  userId: string | null;
   setIsLoading: (loading: boolean) => void;
 }
 
-const DangerZoneCard = ({ setIsLoading }: DangerZoneCardProps) => {
+const DangerZoneCard = ({ userId, setIsLoading }: DangerZoneCardProps) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const navigate = useNavigate();
   const { addToast } = useToasts();

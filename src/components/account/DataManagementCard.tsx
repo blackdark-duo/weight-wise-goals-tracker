@@ -10,10 +10,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToasts } from "../ui/toast-notification";
 
 interface DataManagementCardProps {
+  userId: string | null;
   setIsLoading: (loading: boolean) => void;
 }
 
-const DataManagementCard = ({ setIsLoading }: DataManagementCardProps) => {
+const DataManagementCard = ({ userId, setIsLoading }: DataManagementCardProps) => {
   const [isExporting, setIsExporting] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
