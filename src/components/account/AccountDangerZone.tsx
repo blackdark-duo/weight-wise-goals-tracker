@@ -8,7 +8,11 @@ interface AccountDangerZoneProps {
 }
 
 const AccountDangerZone: React.FC<AccountDangerZoneProps> = ({ userId, setIsLoading }) => {
-  return <DangerZoneCard userId={userId} setIsLoading={setIsLoading} />;
+  return (
+    <div className="space-y-6">
+      <DangerZoneCard userId={userId} setIsLoading={setIsLoading} />
+    </div>
+  );
 };
 
 export default AccountDangerZone;

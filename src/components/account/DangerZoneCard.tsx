@@ -83,7 +83,6 @@ const DangerZoneCard = ({ userId, setIsLoading }: DangerZoneCardProps) => {
       setIsDeleting(true);
       setIsLoading(true);
       
-      // In a real app, you would use a Supabase Edge Function to handle account deletion
       // First delete all user data
       await handleDeleteData(); 
       

@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Globe, Scale, Save, Check, Settings } from "lucide-react";
+import { Globe, Scale, Save, Check, Settings as SettingsIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
@@ -39,31 +40,36 @@ const AccountPreferences: React.FC<AccountPreferencesProps> = ({ userId, preferr
 
   // Get browser's timezone as default
   useEffect(() => {
-    const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    setSelectedTimezone(browserTimezone || "UTC");
-    
-    const fetchUserPreferences = async () => {
-      if (!userId) return;
+    try {
+      const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      setSelectedTimezone(browserTimezone || "UTC");
       
-      try {
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("preferred_unit, timezone")
-          .eq("id", userId)
-          .maybeSingle();
-          
-        if (error) throw error;
+      const fetchUserPreferences = async () => {
+        if (!userId) return;
         
-        if (data) {
-          setSelectedUnit(data.preferred_unit || preferredUnit || 'kg');
-          setSelectedTimezone(data.timezone || browserTimezone || "UTC");
+        try {
+          const { data, error } = await supabase
+            .from("profiles")
+            .select("preferred_unit, timezone")
+            .eq("id", userId)
+            .maybeSingle();
+            
+          if (error) throw error;
+          
+          if (data) {
+            setSelectedUnit(data.preferred_unit || preferredUnit || 'kg');
+            setSelectedTimezone(data.timezone || browserTimezone || "UTC");
+          }
+        } catch (error) {
+          console.error("Error fetching preferences:", error);
         }
-      } catch (error) {
-        console.error("Error fetching preferences:", error);
-      }
-    };
-    
-    fetchUserPreferences();
+      };
+      
+      fetchUserPreferences();
+    } catch (error) {
+      console.error("Error initializing timezone:", error);
+      setSelectedTimezone("UTC"); // Fallback to UTC
+    }
   }, [userId, preferredUnit]);
 
   // Track changes
@@ -94,22 +100,22 @@ const AccountPreferences: React.FC<AccountPreferencesProps> = ({ userId, preferr
       toast.success("Preferences updated successfully!", {
         icon: <Check className="h-4 w-4 text-green-500" />
       });
-    } catch (error) {
+      setHasChanges(false);
+    } catch (error: any) {
       console.error("Error saving preferences:", error);
       toast.error("Failed to update preferences. Please try again.");
     } finally {
       setIsSaving(false);
       setIsLoading(false);
-      setHasChanges(false);
     }
   };
 
   return (
     <Card className="overflow-hidden shadow-sm border border-brand-primary/5">
       <div className="h-1 bg-gradient-to-r from-blue-400 to-indigo-500"></div>
-      <CardHeader>
+      <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-2 text-xl">
-          <Settings className="h-5 w-5 text-blue-500" />
+          <SettingsIcon className="h-5 w-5 text-blue-500" />
           Application Preferences
         </CardTitle>
       </CardHeader>

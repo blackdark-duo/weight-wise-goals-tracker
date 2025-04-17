@@ -8,7 +8,11 @@ interface AccountDataManagementProps {
 }
 
 const AccountDataManagement: React.FC<AccountDataManagementProps> = ({ userId, setIsLoading }) => {
-  return <DataManagementCard userId={userId} setIsLoading={setIsLoading} />;
+  return (
+    <div className="space-y-6">
+      <DataManagementCard userId={userId} setIsLoading={setIsLoading} />
+    </div>
+  );
 };
 
 export default AccountDataManagement;

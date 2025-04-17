@@ -1,17 +1,34 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import HeroButtons from "./hero/HeroButtons";
 import HeroRating from "./hero/HeroRating";
 import { TextRotate } from "@/components/ui/text-rotate";
 import { motion } from "framer-motion";
 
 const HeroSection = () => {
-  const rotatingPhrases = [
+  const [rotatingTexts, setRotatingTexts] = useState<string[]>([
     "Weight Loss",
     "Health Goals",
     "Fitness Journey",
     "Wellness Tracking"
-  ];
+  ]);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    // Simulate a check for text rotation functionality
+    try {
+      if (rotatingTexts.length === 0) {
+        throw new Error("Rotating texts array cannot be empty");
+      }
+      setIsLoaded(true);
+    } catch (error) {
+      console.error("Error in HeroSection:", error);
+      setHasError(true);
+      // Fallback to a single text option if there's an error
+      setRotatingTexts(["Weight Management"]);
+    }
+  }, [rotatingTexts]);
 
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-white via-purple-50/30 to-blue-50/30 py-20 md:py-28">
@@ -27,12 +44,18 @@ const HeroSection = () => {
             <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl">
               Transform Your{" "}
               <span className="relative inline-block">
-                <TextRotate 
-                  texts={rotatingPhrases}
-                  mainClassName="text-brand-primary font-extrabold bg-gradient-to-r from-brand-primary to-blue-600 bg-clip-text text-transparent"
-                  staggerDuration={0.03}
-                  rotationInterval={3000}
-                />
+                {isLoaded && !hasError ? (
+                  <TextRotate 
+                    texts={rotatingTexts}
+                    mainClassName="text-brand-primary font-extrabold bg-gradient-to-r from-brand-primary to-blue-600 bg-clip-text text-transparent"
+                    staggerDuration={0.03}
+                    rotationInterval={3000}
+                  />
+                ) : (
+                  <span className="text-brand-primary font-extrabold bg-gradient-to-r from-brand-primary to-blue-600 bg-clip-text text-transparent">
+                    {rotatingTexts[0] || "Weight Journey"}
+                  </span>
+                )}
               </span>
               {" "}Journey with Precision
             </h1>
@@ -54,6 +77,12 @@ const HeroSection = () => {
               src="/images/weight-tracker-dashboard.png"
               alt="Weight tracking dashboard with charts and statistics"
               className="w-full h-auto rounded-xl shadow-lg relative z-0"
+              onError={(e) => {
+                // Handle image loading errors
+                console.error("Error loading dashboard image");
+                e.currentTarget.src = "placeholder.svg";
+                e.currentTarget.alt = "Dashboard preview unavailable";
+              }}
             />
             <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-black/50 to-transparent z-20 rounded-b-xl"></div>
             <div className="absolute bottom-4 left-6 text-white text-xl font-bold z-30">WeightWise Dashboard</div>

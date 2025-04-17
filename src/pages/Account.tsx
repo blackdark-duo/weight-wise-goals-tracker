@@ -13,9 +13,11 @@ import AccountProfile from "@/components/account/AccountProfile";
 import AccountPreferences from "@/components/account/AccountPreferences";
 import AccountDataManagement from "@/components/account/AccountDataManagement";
 import AccountDangerZone from "@/components/account/AccountDangerZone";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const Account = () => {
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [userData, setUserData] = useState({
     userName: null as string | null,
     email: null as string | null,
@@ -28,7 +30,13 @@ const Account = () => {
     const fetchUserProfile = async () => {
       try {
         setIsLoading(true);
-        const { data: { user } } = await supabase.auth.getUser();
+        setError(null);
+        
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError) {
+          throw userError;
+        }
         
         if (!user) {
           navigate('/signin');
@@ -41,15 +49,15 @@ const Account = () => {
           userId: user.id
         }));
         
-        const { data, error } = await supabase
+        const { data, error: profileError } = await supabase
           .from("profiles")
           .select("display_name")
           .eq("id", user.id)
           .maybeSingle();
           
-        if (error) {
-          console.error("Error fetching profile:", error);
-          toast.error("Failed to load profile. Please refresh the page.");
+        if (profileError) {
+          console.error("Error fetching profile:", profileError);
+          throw profileError;
         }
 
         if (data) {
@@ -58,9 +66,10 @@ const Account = () => {
             userName: data.display_name || null
           }));
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching profile:", error);
-        toast.error("Something went wrong. Please try again later.");
+        setError(error.message || "Something went wrong. Please try again later.");
+        toast.error("Failed to load account data. Please refresh the page.");
       } finally {
         setIsLoading(false);
       }
@@ -88,57 +97,66 @@ const Account = () => {
           )}
         </div>
         
-        <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid grid-cols-4 md:w-auto w-full bg-white/80 border border-brand-primary/10 p-1">
-            <TabsTrigger value="profile" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-brand-primary/10 data-[state=active]:to-brand-primary/5">
-              <User className="h-4 w-4 mr-2" strokeWidth={1.75} />
-              <span className="hidden sm:inline">Profile</span>
-            </TabsTrigger>
-            <TabsTrigger value="preferences" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500/10 data-[state=active]:to-blue-500/5">
-              <Settings className="h-4 w-4 mr-2" strokeWidth={1.75} />
-              <span className="hidden sm:inline">Preferences</span>
-            </TabsTrigger>
-            <TabsTrigger value="data" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500/10 data-[state=active]:to-teal-500/5">
-              <Database className="h-4 w-4 mr-2" strokeWidth={1.75} />
-              <span className="hidden sm:inline">Data</span>
-            </TabsTrigger>
-            <TabsTrigger value="danger" className="text-destructive data-[state=active]:text-destructive data-[state=active]:bg-gradient-to-r data-[state=active]:from-destructive/10 data-[state=active]:to-destructive/5">
-              <Shield className="h-4 w-4 mr-2" strokeWidth={1.75} />
-              <span className="hidden sm:inline">Danger</span>
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="profile" className="space-y-4 focus-visible:outline-none focus-visible:ring-0">
-            <AccountProfile 
-              userName={userData.userName} 
-              email={userData.email}
-              userId={userData.userId}
-              setIsLoading={setIsLoading} 
-            />
-          </TabsContent>
-          
-          <TabsContent value="preferences" className="space-y-4 focus-visible:outline-none focus-visible:ring-0">
-            <AccountPreferences 
-              userId={userData.userId}
-              preferredUnit={preferredUnit}
-              setIsLoading={setIsLoading} 
-            />
-          </TabsContent>
-          
-          <TabsContent value="data" className="space-y-4 focus-visible:outline-none focus-visible:ring-0">
-            <AccountDataManagement 
-              userId={userData.userId} 
-              setIsLoading={setIsLoading} 
-            />
-          </TabsContent>
-          
-          <TabsContent value="danger" className="space-y-4 focus-visible:outline-none focus-visible:ring-0">
-            <AccountDangerZone 
-              userId={userData.userId}
-              setIsLoading={setIsLoading} 
-            />
-          </TabsContent>
-        </Tabs>
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
+        {!isLoading && !error && (
+          <Tabs defaultValue="profile" className="space-y-6">
+            <TabsList className="grid grid-cols-4 md:w-auto w-full bg-white/80 border border-brand-primary/10 p-1">
+              <TabsTrigger value="profile" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-brand-primary/10 data-[state=active]:to-brand-primary/5">
+                <User className="h-4 w-4 mr-2" strokeWidth={1.75} />
+                <span className="hidden sm:inline">Profile</span>
+              </TabsTrigger>
+              <TabsTrigger value="preferences" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500/10 data-[state=active]:to-blue-500/5">
+                <Settings className="h-4 w-4 mr-2" strokeWidth={1.75} />
+                <span className="hidden sm:inline">Preferences</span>
+              </TabsTrigger>
+              <TabsTrigger value="data" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500/10 data-[state=active]:to-teal-500/5">
+                <Database className="h-4 w-4 mr-2" strokeWidth={1.75} />
+                <span className="hidden sm:inline">Data</span>
+              </TabsTrigger>
+              <TabsTrigger value="danger" className="text-destructive data-[state=active]:text-destructive data-[state=active]:bg-gradient-to-r data-[state=active]:from-destructive/10 data-[state=active]:to-destructive/5">
+                <Shield className="h-4 w-4 mr-2" strokeWidth={1.75} />
+                <span className="hidden sm:inline">Danger</span>
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="profile" className="space-y-4 focus-visible:outline-none focus-visible:ring-0">
+              <AccountProfile 
+                userName={userData.userName} 
+                email={userData.email}
+                userId={userData.userId}
+                setIsLoading={setIsLoading} 
+              />
+            </TabsContent>
+            
+            <TabsContent value="preferences" className="space-y-4 focus-visible:outline-none focus-visible:ring-0">
+              <AccountPreferences 
+                userId={userData.userId}
+                preferredUnit={preferredUnit}
+                setIsLoading={setIsLoading} 
+              />
+            </TabsContent>
+            
+            <TabsContent value="data" className="space-y-4 focus-visible:outline-none focus-visible:ring-0">
+              <AccountDataManagement 
+                userId={userData.userId} 
+                setIsLoading={setIsLoading} 
+              />
+            </TabsContent>
+            
+            <TabsContent value="danger" className="space-y-4 focus-visible:outline-none focus-visible:ring-0">
+              <AccountDangerZone 
+                userId={userData.userId}
+                setIsLoading={setIsLoading} 
+              />
+            </TabsContent>
+          </Tabs>
+        )}
       </div>
       <MobileNavigation />
       <Toaster />
