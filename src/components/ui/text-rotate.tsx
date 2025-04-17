@@ -9,6 +9,13 @@ interface TextRotateProps {
   rotationInterval?: number;
   mainClassName?: string;
   staggerDuration?: number;
+  // Add the missing props
+  staggerFrom?: "first" | "last" | "middle";
+  initial?: any;
+  animate?: any;
+  exit?: any;
+  transition?: any;
+  splitLevelClassName?: string;
 }
 
 export const TextRotate: React.FC<TextRotateProps> = ({
@@ -16,6 +23,12 @@ export const TextRotate: React.FC<TextRotateProps> = ({
   rotationInterval = 3000,
   mainClassName = '',
   staggerDuration = 0.03,
+  staggerFrom = "first",
+  initial,
+  animate,
+  exit,
+  transition,
+  splitLevelClassName,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -37,31 +50,45 @@ export const TextRotate: React.FC<TextRotateProps> = ({
   const currentText = texts[currentIndex];
   const characters = currentText.split('');
 
+  // Apply stagger direction logic
+  const getStaggerDelay = (index: number) => {
+    if (staggerFrom === "last") {
+      return staggerDuration * (characters.length - 1 - index);
+    } else if (staggerFrom === "middle") {
+      const midPoint = Math.floor(characters.length / 2);
+      return staggerDuration * Math.abs(midPoint - index);
+    } 
+    // Default "first"
+    return staggerDuration * index;
+  };
+
   return (
     <AnimatePresence mode="wait">
       <motion.span
         key={currentIndex}
         className={`inline-flex ${mainClassName}`}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.3 }}
+        initial={initial || { opacity: 0 }}
+        animate={animate || { opacity: 1 }}
+        exit={exit || { opacity: 0 }}
+        transition={transition || { duration: 0.3 }}
       >
         {characters.map((char, index) => (
-          <motion.span
-            key={`${currentIndex}-${index}`}
-            initial={{ y: '100%', opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{
-              type: 'spring',
-              stiffness: 300,
-              damping: 25,
-              delay: staggerDuration * index,
-            }}
-            className="inline-block"
-          >
-            {char === ' ' ? '\u00A0' : char}
-          </motion.span>
+          <div key={`${currentIndex}-${index}`} className={splitLevelClassName || ""}>
+            <motion.span
+              initial={initial || { y: '100%', opacity: 0 }}
+              animate={animate || { y: 0, opacity: 1 }}
+              transition={{
+                type: 'spring',
+                stiffness: 300,
+                damping: 25,
+                delay: getStaggerDelay(index),
+                ...(transition || {}),
+              }}
+              className="inline-block"
+            >
+              {char === ' ' ? '\u00A0' : char}
+            </motion.span>
+          </div>
         ))}
       </motion.span>
     </AnimatePresence>
