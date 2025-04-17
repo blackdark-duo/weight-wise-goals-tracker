@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import HeroButtons from "./hero/HeroButtons";
 import HeroRating from "./hero/HeroRating";
+import HeroImage from "./hero/HeroImage";
 import { TextRotate } from "@/components/ui/text-rotate";
 import { motion } from "framer-motion";
 
@@ -66,27 +67,9 @@ const HeroSection = () => {
             <HeroRating />
           </motion.div>
           
-          <motion.div 
-            className="relative mx-auto max-w-[500px] w-full overflow-hidden rounded-xl shadow-xl"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-brand-primary/20 to-brand-secondary/20 mix-blend-multiply z-10 rounded-xl"></div>
-            <img 
-              src="/images/weight-tracker-dashboard.png"
-              alt="Weight tracking dashboard with charts and statistics"
-              className="w-full h-auto rounded-xl shadow-lg relative z-0"
-              onError={(e) => {
-                // Handle image loading errors
-                console.error("Error loading dashboard image");
-                e.currentTarget.src = "placeholder.svg";
-                e.currentTarget.alt = "Dashboard preview unavailable";
-              }}
-            />
-            <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-black/50 to-transparent z-20 rounded-b-xl"></div>
-            <div className="absolute bottom-4 left-6 text-white text-xl font-bold z-30">WeightWise Dashboard</div>
-          </motion.div>
+          <HeroImage 
+            alt="WeightWise dashboard showing weight tracking chart and progress indicators" 
+          />
         </div>
       </div>
       

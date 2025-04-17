@@ -13,65 +13,49 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
-import { Trash2, ShieldAlert } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Shield, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
-import { useToasts } from "../ui/toast-notification";
+import { toast } from "sonner";
 
-interface DangerZoneCardProps {
+export interface DangerZoneCardProps {
   userId: string | null;
   setIsLoading: (loading: boolean) => void;
 }
 
 const DangerZoneCard = ({ userId, setIsLoading }: DangerZoneCardProps) => {
   const [isDeleting, setIsDeleting] = useState(false);
-  const navigate = useNavigate();
-  const { addToast } = useToasts();
 
   const handleDeleteData = async () => {
+    if (!userId) {
+      toast.error("User not authenticated");
+      return;
+    }
+    
+    setIsDeleting(true);
+    setIsLoading(true);
+    
     try {
-      setIsDeleting(true);
-      setIsLoading(true);
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        addToast({
-          title: "Authentication required",
-          message: "You must be logged in to delete your data",
-          variant: "error"
-        });
-        return;
-      }
-      
-      // Delete all weight entries
+      // Delete weight entries
       const { error: weightError } = await supabase
         .from("weight_entries")
         .delete()
-        .eq("user_id", user.id);
+        .eq("user_id", userId);
       
       if (weightError) throw weightError;
       
-      // Delete all goals
+      // Delete goals
       const { error: goalError } = await supabase
         .from("goals")
         .delete()
-        .eq("user_id", user.id);
+        .eq("user_id", userId);
       
       if (goalError) throw goalError;
       
-      addToast({
-        title: "Data deleted successfully",
-        message: "All your records have been permanently deleted",
-        variant: "success"
-      });
-    } catch (err: any) {
-      console.error("Data deletion error:", err);
-      addToast({
-        title: "Deletion failed",
-        message: err.message || "Failed to delete user data",
-        variant: "error"
-      });
+      toast.success("All your data has been deleted successfully");
+    } catch (error: any) {
+      console.error("Error deleting data:", error);
+      toast.error(error.message || "Failed to delete user data");
     } finally {
       setIsDeleting(false);
       setIsLoading(false);
@@ -79,27 +63,32 @@ const DangerZoneCard = ({ userId, setIsLoading }: DangerZoneCardProps) => {
   };
 
   const handleDeleteAccount = async () => {
+    if (!userId) {
+      toast.error("User not authenticated");
+      return;
+    }
+    
+    setIsDeleting(true);
+    setIsLoading(true);
+    
     try {
-      setIsDeleting(true);
-      setIsLoading(true);
+      // First delete user data
+      await handleDeleteData();
       
-      // First delete all user data
-      await handleDeleteData(); 
+      // Then delete user account
+      const { error } = await supabase.auth.admin.deleteUser(userId);
       
+      if (error) throw error;
+      
+      // Sign out after account deletion
       await supabase.auth.signOut();
-      addToast({
-        title: "Account deleted",
-        message: "Your account has been successfully deleted",
-        variant: "success"
-      });
-      navigate("/");
-    } catch (err: any) {
-      console.error("Account deletion error:", err);
-      addToast({
-        title: "Deletion failed",
-        message: err.message || "Failed to delete account",
-        variant: "error"
-      });
+      toast.success("Account deleted successfully");
+      
+      // Redirect to home page
+      window.location.href = "/";
+    } catch (error: any) {
+      console.error("Error deleting account:", error);
+      toast.error(error.message || "Failed to delete account");
     } finally {
       setIsDeleting(false);
       setIsLoading(false);
@@ -107,23 +96,26 @@ const DangerZoneCard = ({ userId, setIsLoading }: DangerZoneCardProps) => {
   };
 
   return (
-    <Card className="border-destructive/30 bg-gradient-to-r from-white to-rose-50 shadow-md">
-      <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2 text-destructive">
-          <ShieldAlert className="h-5 w-5" />
+    <Card className="border-red-200 bg-gradient-to-r from-white to-red-50/30 shadow-md">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center text-red-600 gap-2">
+          <Shield className="h-5 w-5" />
           Danger Zone
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="space-y-3 border border-destructive/20 rounded-md p-4 bg-white/80">
-          <h3 className="font-medium">Delete All My Data</h3>
-          <p className="text-sm text-muted-foreground">
+        <div className="rounded-md border border-red-200 p-4">
+          <h3 className="font-medium mb-2">Delete All My Data</h3>
+          <p className="text-sm text-muted-foreground mb-4">
             This will permanently delete all your weight entries, goals, and progress. Your account will remain active.
           </p>
           
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="outline" className="text-destructive border-destructive/50 hover:bg-destructive/10 w-full sm:w-auto bg-white">
+              <Button 
+                variant="outline" 
+                className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
+              >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete All Data
               </Button>
@@ -139,9 +131,9 @@ const DangerZoneCard = ({ userId, setIsLoading }: DangerZoneCardProps) => {
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   onClick={handleDeleteData}
                   disabled={isDeleting}
+                  className="bg-red-600 text-white hover:bg-red-700"
                 >
                   {isDeleting ? "Deleting..." : "Yes, delete all my data"}
                 </AlertDialogAction>
@@ -150,15 +142,17 @@ const DangerZoneCard = ({ userId, setIsLoading }: DangerZoneCardProps) => {
           </AlertDialog>
         </div>
         
-        <div className="space-y-3 border border-destructive rounded-md p-4 bg-destructive/5">
-          <h3 className="font-medium text-destructive">Delete Account</h3>
-          <p className="text-sm text-muted-foreground">
+        <Separator className="bg-red-100" />
+        
+        <div className="rounded-md border border-red-300 p-4">
+          <h3 className="font-medium mb-2">Delete Account</h3>
+          <p className="text-sm text-muted-foreground mb-4">
             This will permanently delete your account and all associated data. This action cannot be undone.
           </p>
           
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" className="w-full sm:w-auto">
+              <Button variant="destructive">
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete Account
               </Button>
@@ -174,9 +168,9 @@ const DangerZoneCard = ({ userId, setIsLoading }: DangerZoneCardProps) => {
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   onClick={handleDeleteAccount}
                   disabled={isDeleting}
+                  className="bg-red-600 text-white hover:bg-red-700"
                 >
                   {isDeleting ? "Deleting..." : "Yes, delete my account"}
                 </AlertDialogAction>

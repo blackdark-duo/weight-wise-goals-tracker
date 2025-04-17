@@ -1,350 +1,227 @@
 
-import React, { useState, useRef } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { convertToCSV, parseCSV } from "@/utils/csvHelpers";
-import { Download, Upload, FileText, HelpCircle, X } from "lucide-react";
+import { Database, Download, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToasts } from "../ui/toast-notification";
+import { toast } from "sonner";
 
-interface DataManagementCardProps {
+export interface DataManagementCardProps {
   userId: string | null;
   setIsLoading: (loading: boolean) => void;
 }
 
 const DataManagementCard = ({ userId, setIsLoading }: DataManagementCardProps) => {
   const [isExporting, setIsExporting] = useState(false);
-  const [importFile, setImportFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const { addToast } = useToasts();
 
   const handleExportData = async () => {
+    if (!userId) {
+      toast.error("User not authenticated");
+      return;
+    }
+    
+    setIsExporting(true);
+    setIsLoading(true);
+    
     try {
-      setIsExporting(true);
-      setIsLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        addToast({
-          title: "Authentication required",
-          message: "You must be logged in to export data",
-          variant: "error"
-        });
-        return;
-      }
-      
-      // Fetch weight entries
-      const { data: weightEntries, error: entriesError } = await supabase
+      // Get weight entries
+      const { data: weightData, error: weightError } = await supabase
         .from("weight_entries")
         .select("*")
-        .eq("user_id", user.id)
-        .order("date", { ascending: false });
-        
-      if (entriesError) throw entriesError;
+        .eq("user_id", userId);
       
-      // Fetch goals
-      const { data: goals, error: goalsError } = await supabase
+      if (weightError) throw weightError;
+      
+      // Get goals
+      const { data: goalsData, error: goalsError } = await supabase
         .from("goals")
         .select("*")
-        .eq("user_id", user.id);
-        
+        .eq("user_id", userId);
+      
       if (goalsError) throw goalsError;
       
-      // Convert to CSV
-      const weightEntriesCSV = convertToCSV(weightEntries || [], [
-        'date', 'weight', 'unit', 'time', 'description'
-      ], 'weight_entries');
+      // Combine data
+      const exportData = {
+        weight_entries: weightData || [],
+        goals: goalsData || [],
+        exported_at: new Date().toISOString(),
+      };
       
-      const goalsCSV = convertToCSV(goals || [], [
-        'target_weight', 'start_weight', 'unit', 'target_date', 'achieved'
-      ], 'goals');
+      // Create and download file
+      const dataStr = JSON.stringify(exportData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: "application/json" });
+      const url = URL.createObjectURL(dataBlob);
       
-      // Combine both CSVs with section headers
-      const combinedCSV = `# WeightWise Export\n# Date: ${new Date().toISOString()}\n\n` +
-                         `# WEIGHT ENTRIES\n${weightEntriesCSV}\n\n` +
-                         `# GOALS\n${goalsCSV}`;
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `weightwise_data_${new Date().toISOString().split("T")[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
       
-      // Create download link
-      const blob = new Blob([combinedCSV], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `weightwise-export-${new Date().toISOString().slice(0, 10)}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      
-      // Cleanup
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 100);
-      
-      addToast({
-        title: "Export successful",
-        message: "Your data has been exported as a CSV file",
-        variant: "success"
-      });
+      toast.success("Data exported successfully");
     } catch (error: any) {
       console.error("Error exporting data:", error);
-      addToast({
-        title: "Export failed",
-        message: error.message || "Failed to export data",
-        variant: "error"
-      });
+      toast.error(error.message || "Failed to export data");
     } finally {
       setIsExporting(false);
       setIsLoading(false);
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setImportFile(e.target.files[0]);
-    }
-  };
-
-  const handleImportData = async () => {
-    if (!importFile) {
-      addToast({
-        title: "No file selected",
-        message: "Please select a file to import",
-        variant: "warning"
-      });
+  const handleImportData = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!userId) {
+      toast.error("User not authenticated");
       return;
     }
     
-    if (!importFile.name.endsWith('.csv')) {
-      addToast({
-        title: "Invalid file type",
-        message: "Please select a CSV file",
-        variant: "error"
-      });
-      return;
-    }
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    setIsImporting(true);
+    setIsLoading(true);
     
     try {
-      setIsImporting(true);
-      setIsLoading(true);
+      const fileReader = new FileReader();
       
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        addToast({
-          title: "Authentication required",
-          message: "You must be logged in to import data",
-          variant: "error"
-        });
-        return;
-      }
-      
-      // Read file
-      const fileContent = await importFile.text();
-      
-      // Parse CSV
-      const importData = parseCSV(fileContent);
-      
-      if (!importData.weightEntries || importData.weightEntries.length === 0) {
-        throw new Error("No valid weight entries found in the CSV file");
-      }
-      
-      // Add user_id to entries and prepare for import
-      const weightEntries = importData.weightEntries.map(entry => ({
-        ...entry,
-        user_id: user.id,
-      }));
-      
-      // Import weight entries
-      if (weightEntries.length > 0) {
-        const { error: entriesError } = await supabase
-          .from("weight_entries")
-          .insert(weightEntries);
+      fileReader.onload = async (e) => {
+        try {
+          const result = e.target?.result;
+          if (typeof result !== "string") throw new Error("Invalid file format");
           
-        if (entriesError) throw entriesError;
-      }
-      
-      // Import goals if they exist
-      if (importData.goals && importData.goals.length > 0) {
-        const goals = importData.goals.map(goal => ({
-          ...goal,
-          user_id: user.id,
-        }));
-        
-        const { error: goalsError } = await supabase
-          .from("goals")
-          .insert(goals);
+          const importData = JSON.parse(result);
           
-        if (goalsError) throw goalsError;
-      }
+          if (!importData.weight_entries || !importData.goals) {
+            throw new Error("Invalid data format");
+          }
+          
+          // Import weight entries
+          if (importData.weight_entries.length > 0) {
+            const weightEntries = importData.weight_entries.map((entry: any) => ({
+              ...entry,
+              user_id: userId,
+              id: undefined // Let Supabase generate new IDs
+            }));
+            
+            const { error: weightError } = await supabase
+              .from("weight_entries")
+              .insert(weightEntries);
+            
+            if (weightError) throw weightError;
+          }
+          
+          // Import goals
+          if (importData.goals.length > 0) {
+            const goals = importData.goals.map((goal: any) => ({
+              ...goal,
+              user_id: userId,
+              id: undefined // Let Supabase generate new IDs
+            }));
+            
+            const { error: goalsError } = await supabase
+              .from("goals")
+              .insert(goals);
+            
+            if (goalsError) throw goalsError;
+          }
+          
+          toast.success("Data imported successfully");
+        } catch (error: any) {
+          console.error("Error processing import:", error);
+          toast.error(error.message || "Failed to import data");
+        } finally {
+          setIsImporting(false);
+          setIsLoading(false);
+        }
+      };
       
-      addToast({
-        title: "Import successful",
-        message: `Imported ${weightEntries.length} weight entries and ${importData.goals?.length || 0} goals`,
-        variant: "success"
-      });
+      fileReader.onerror = () => {
+        toast.error("Failed to read file");
+        setIsImporting(false);
+        setIsLoading(false);
+      };
       
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-      setImportFile(null);
-      
+      fileReader.readAsText(file);
     } catch (error: any) {
       console.error("Error importing data:", error);
-      addToast({
-        title: "Import failed",
-        message: error.message || "Failed to import data",
-        variant: "error"
-      });
-    } finally {
+      toast.error(error.message || "Failed to import data");
       setIsImporting(false);
       setIsLoading(false);
     }
+    
+    // Reset file input
+    event.target.value = "";
   };
 
   return (
-    <Card className="border border-brand-primary/10 bg-gradient-to-r from-white to-teal-50 shadow-md">
-      <CardHeader className="pb-4">
-        <CardTitle>Data Management</CardTitle>
-        <CardDescription>
-          Export or import your weight tracking data
-        </CardDescription>
+    <Card className="border border-teal-100 bg-gradient-to-r from-white to-teal-50/30 shadow-md">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center text-teal-700 gap-2">
+          <Database className="h-5 w-5" />
+          Data Management
+        </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="grid gap-6 sm:grid-cols-2">
-          <div className="space-y-2 p-4 border rounded-md border-teal-200 bg-teal-50/50">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="font-medium flex items-center gap-2">
-                <Download className="h-4 w-4 text-teal-600" />
-                Export Data
-              </h3>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground">
-                      <HelpCircle className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="max-w-xs">Download all your weight entries and goals in CSV format</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            <p className="text-sm text-muted-foreground mb-4">
-              Download all your weight tracking data as a CSV file for backup or transferring to another device.
-            </p>
-            <Button 
-              onClick={handleExportData} 
-              disabled={isExporting}
-              className="w-full bg-gradient-to-r from-teal-500 to-green-500 hover:from-teal-600 hover:to-green-600"
-            >
-              {isExporting ? "Exporting..." : "Export CSV Data"}
-              <Download className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
+      <CardContent className="space-y-6">
+        <div className="rounded-md border border-teal-100 p-4">
+          <h3 className="font-medium mb-2">Export Your Data</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Download all your weight entries, goals, and tracking history in JSON format.
+          </p>
           
-          <div className="space-y-2 p-4 border rounded-md border-indigo-200 bg-indigo-50/50">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="font-medium flex items-center gap-2">
-                <Upload className="h-4 w-4 text-indigo-600" />
-                Import Data
-              </h3>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground">
-                      <HelpCircle className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="max-w-xs">Import previously exported data in CSV format</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            <p className="text-sm text-muted-foreground mb-4">
-              Import previously exported weight tracking data from a CSV file.
-            </p>
-            
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600">
-                  Import CSV Data
-                  <Upload className="ml-2 h-4 w-4" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Import Weight Tracking Data</DialogTitle>
-                  <DialogDescription>
-                    Upload a previously exported CSV file to import your weight data. This will add the imported entries to your existing data.
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <div className="space-y-4 py-4">
-                  <div className="flex items-center justify-center w-full">
-                    <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/30 hover:bg-muted/50 border-brand-primary/20 hover:border-brand-primary/40 transition-colors">
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <FileText className="w-10 h-10 mb-3 text-brand-primary/60" />
-                        <p className="mb-2 text-sm text-muted-foreground">
-                          <span className="font-semibold">Click to upload</span> or drag and drop
-                        </p>
-                        <p className="text-xs text-muted-foreground">CSV files only</p>
-                      </div>
-                      <input 
-                        ref={fileInputRef}
-                        id="dropzone-file" 
-                        type="file" 
-                        accept=".csv" 
-                        className="hidden" 
-                        onChange={handleFileChange}
-                      />
-                    </label>
-                  </div>
-                  
-                  {importFile && (
-                    <div className="p-3 bg-muted/30 rounded-md flex items-center justify-between border border-brand-primary/10">
-                      <div className="flex items-center">
-                        <FileText className="h-5 w-5 mr-2 text-brand-primary" />
-                        <span className="text-sm font-medium truncate max-w-[200px]">
-                          {importFile.name}
-                        </span>
-                      </div>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => {
-                          setImportFile(null);
-                          if (fileInputRef.current) {
-                            fileInputRef.current.value = "";
-                          }
-                        }}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                
-                <DialogFooter>
-                  <Button variant="outline" type="button" className="w-full sm:w-auto" onClick={() => setImportFile(null)}>
-                    Cancel
-                  </Button>
-                  <Button 
-                    type="button" 
-                    className="w-full sm:w-auto bg-gradient-to-r from-indigo-500 to-purple-500" 
-                    disabled={!importFile || isImporting}
-                    onClick={handleImportData}
-                  >
-                    {isImporting ? "Importing..." : "Import"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+          <Button 
+            variant="outline" 
+            onClick={handleExportData}
+            disabled={isExporting}
+            className="border-teal-200 text-teal-700 hover:bg-teal-50"
+          >
+            {isExporting ? (
+              <>
+                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                Exporting...
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 h-4 w-4" />
+                Export Data
+              </>
+            )}
+          </Button>
+        </div>
+        
+        <div className="rounded-md border border-teal-100 p-4">
+          <h3 className="font-medium mb-2">Import Data</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Upload previously exported data to restore your weight entries and goals.
+          </p>
+          
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              onClick={() => document.getElementById("import-file")?.click()}
+              disabled={isImporting}
+              className="border-teal-200 text-teal-700 hover:bg-teal-50"
+            >
+              {isImporting ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                  Importing...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import Data
+                </>
+              )}
+            </Button>
+            <input
+              id="import-file"
+              type="file"
+              accept=".json"
+              className="hidden"
+              onChange={handleImportData}
+              disabled={isImporting}
+            />
           </div>
         </div>
       </CardContent>
