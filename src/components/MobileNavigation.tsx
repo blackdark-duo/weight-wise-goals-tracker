@@ -14,7 +14,7 @@ const MobileNavigation = () => {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-ui-border md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-ui-border md:hidden shadow-lg">
       <div className="grid grid-cols-4 h-16">
         {navItems.map((item) => {
           const isActive = location.pathname === item.href;
@@ -25,11 +25,12 @@ const MobileNavigation = () => {
               className={cn(
                 "flex flex-col items-center justify-center",
                 isActive 
-                  ? "text-brand-primary"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "text-brand-primary" 
+                  : "text-muted-foreground hover:text-foreground",
+                isActive && "after:content-[''] after:w-1/2 after:h-1 after:bg-brand-primary after:absolute after:bottom-0 after:rounded-t-full after:transition-all"
               )}
             >
-              <item.icon className="h-5 w-5" />
+              <item.icon className={cn("h-5 w-5", isActive && "text-brand-primary")} />
               <span className="text-xs mt-1">{item.title}</span>
             </Link>
           );

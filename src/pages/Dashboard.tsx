@@ -16,6 +16,12 @@ import {
   Trophy,
   FileBarChart,
   Scale,
+  Home,
+  Target as TargetIcon,
+  BarChart2,
+  UserCircle,
+  Plus as PlusIcon,
+  Settings
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
@@ -32,6 +38,7 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import { useUserPreferences } from "@/hooks/use-user-preferences";
+import { HamburgerMenu } from "@/components/ui/hamburger-menu";
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -82,6 +89,14 @@ type UserProfile = {
   preferred_unit: string;
   timezone?: string;
 };
+
+const dashboardNavItems = [
+  { title: "Dashboard", href: "/dashboard", icon: Home },
+  { title: "Goals", href: "/goals", icon: TargetIcon },
+  { title: "Reports", href: "/reports", icon: BarChart2 },
+  { title: "Account", href: "/account", icon: UserCircle },
+  { title: "Settings", href: "/settings", icon: Settings },
+];
 
 const Dashboard = () => {
   const { preferredUnit } = useUserPreferences();
@@ -331,10 +346,8 @@ const Dashboard = () => {
       <motion.div className="flex flex-col space-y-6" variants={staggerContainer}>
         <motion.div className="flex items-center justify-between" variants={fadeInUp}>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-            <p className="text-muted-foreground">
-              Welcome back, {userData.name}. Here's your progress so far.
-            </p>
+            <h1 className="text-2xl font-bold">Dashboard</h1>
+            <HamburgerMenu items={dashboardNavItems} />
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" asChild>
@@ -418,7 +431,7 @@ const Dashboard = () => {
                         className="w-full bg-gradient-to-r from-brand-primary to-purple-500 hover:from-brand-primary/90 hover:to-purple-500/90"
                       >
                         {isSubmitting ? "Adding..." : "Add Entry"}
-                        <Plus className="ml-2 h-4 w-4" />
+                        <PlusIcon className="ml-2 h-4 w-4" />
                       </Button>
                     </motion.div>
                   </div>

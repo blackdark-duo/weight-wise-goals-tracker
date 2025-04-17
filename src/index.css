@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -125,6 +126,31 @@
   
   .pulse {
     @apply animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite];
+  }
+  
+  /* Color utilities */
+  .text-gradient-purple {
+    @apply bg-gradient-to-r from-brand-primary to-purple-500 bg-clip-text text-transparent;
+  }
+  
+  .text-gradient-blue {
+    @apply bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent;
+  }
+  
+  .text-gradient-green {
+    @apply bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent;
+  }
+  
+  .bg-gradient-card-purple {
+    @apply bg-gradient-to-br from-white to-purple-50;
+  }
+  
+  .bg-gradient-card-blue {
+    @apply bg-gradient-to-br from-white to-blue-50;
+  }
+  
+  .bg-gradient-card-teal {
+    @apply bg-gradient-to-br from-white to-teal-50;
   }
 }
 
