@@ -1,28 +1,18 @@
-
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
   Menu, 
   X, 
-  UserCircle,
-  BarChart2,
-  Home,
-  Target,
-  Settings,
   LogOut,
   Scale,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { HamburgerMenu } from "./ui/hamburger-menu";
+import { Home, Target, BarChart2, UserCircle } from "lucide-react";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -63,7 +53,7 @@ const Navbar = () => {
     { title: "Dashboard", href: "/dashboard", icon: Home },
     { title: "Goals", href: "/goals", icon: Target },
     { title: "Reports", href: "/reports", icon: BarChart2 },
-    { title: "Account", href: "/account", icon: Settings },
+    { title: "Account", href: "/account", icon: UserCircle },
   ];
 
   return (
@@ -72,11 +62,10 @@ const Navbar = () => {
         {/* Logo */}
         <Link 
           to={session ? "/dashboard" : "/"} 
-          className="flex items-center gap-2 font-bold text-xl md:text-2xl text-brand-primary"
+          className="flex items-center gap-2 font-bold text-xl md:text-2xl text-black"
         >
-          <Scale className="h-6 w-6" />
-          <span>Weight</span>
-          <span className="text-brand-secondary">Wise</span>
+          <Scale className="h-6 w-6 text-black" strokeWidth={1.75} />
+          <span className="text-black">WeightWise</span>
         </Link>
 
         {/* Desktop Navigation for Public Site */}
@@ -97,47 +86,12 @@ const Navbar = () => {
         {/* Desktop Account/CTA */}
         <div className="flex items-center gap-4">
           {session ? (
-            <>
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full">
-                    <Menu className="h-5 w-5" />
-                    <span className="sr-only">Menu</span>
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left">
-                  <SheetHeader>
-                    <SheetTitle>
-                      <div className="flex items-center gap-2 font-bold text-xl text-brand-primary">
-                        <Scale className="h-5 w-5" />
-                        <span>WeightWise</span>
-                      </div>
-                    </SheetTitle>
-                  </SheetHeader>
-                  <nav className="mt-8 flex flex-col gap-2">
-                    {authenticatedLinks.map((link) => (
-                      <Link
-                        key={link.title}
-                        to={link.href}
-                        className="flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        <link.icon className="h-4 w-4" />
-                        <span>{link.title}</span>
-                      </Link>
-                    ))}
-                    <Button 
-                      variant="ghost" 
-                      className="flex items-center justify-start gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted"
-                      onClick={handleSignOut}
-                    >
-                      <LogOut className="h-4 w-4" />
-                      <span>Sign Out</span>
-                    </Button>
-                  </nav>
-                </SheetContent>
-              </Sheet>
-            </>
+            <HamburgerMenu 
+              items={[
+                ...authenticatedLinks,
+                { title: "Sign Out", href: "#", icon: LogOut, onClick: handleSignOut },
+              ]} 
+            />
           ) : (
             <>
               <div className="hidden md:flex items-center gap-4">

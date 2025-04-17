@@ -51,7 +51,7 @@ const HeroSection = () => {
           >
             <div className="absolute inset-0 bg-gradient-to-r from-brand-primary/20 to-brand-secondary/20 mix-blend-multiply z-10 rounded-xl"></div>
             <img 
-              src="https://images.unsplash.com/photo-1698161246695-450375feed09?q=80&w=1932&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+              src="/images/weight-tracker-dashboard.png"
               alt="Weight tracking dashboard with charts and statistics"
               className="w-full h-auto rounded-xl shadow-lg relative z-0"
             />
@@ -61,7 +61,7 @@ const HeroSection = () => {
         </div>
       </div>
       
-      <style jsx>{`
+      <style>{`
         .bg-grid-pattern-light {
           background-image: linear-gradient(to right, rgba(139, 92, 246, 0.05) 1px, transparent 1px),
                             linear-gradient(to bottom, rgba(139, 92, 246, 0.05) 1px, transparent 1px);

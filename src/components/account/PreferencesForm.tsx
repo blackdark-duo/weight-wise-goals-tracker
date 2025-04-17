@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Scale, Globe, Save } from "lucide-react";
-import { useToasts } from "../ui/toast-notification";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 // Timezone groups
 const TIMEZONE_GROUPS = {
@@ -46,42 +47,95 @@ const TIMEZONE_GROUPS = {
 };
 
 interface PreferencesFormProps {
-  preferredUnit: string;
-  timezone: string;
-  updatePreferences: (prefs: { preferredUnit?: string; timezone?: string }) => Promise<void>;
   setIsLoading: (loading: boolean) => void;
 }
 
-const PreferencesForm = ({ 
-  preferredUnit, 
-  timezone, 
-  updatePreferences,
-  setIsLoading
-}: PreferencesFormProps) => {
-  const [selectedUnit, setSelectedUnit] = useState(preferredUnit);
-  const [selectedTimezone, setSelectedTimezone] = useState(timezone);
-  const { addToast } = useToasts();
+const PreferencesForm = ({ setIsLoading }: PreferencesFormProps) => {
+  const [selectedUnit, setSelectedUnit] = useState("kg");
+  const [selectedTimezone, setSelectedTimezone] = useState("UTC");
+  const { toast } = useToast();
+
+  // Fetch user preferences on component mount
+  React.useEffect(() => {
+    const fetchPreferences = async () => {
+      setIsLoading(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          return;
+        }
+        
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("preferred_unit, timezone")
+          .eq("id", user.id)
+          .single();
+          
+        if (error) {
+          console.error("Error fetching preferences:", error);
+          return;
+        }
+        
+        if (data) {
+          setSelectedUnit(data.preferred_unit || "kg");
+          setSelectedTimezone(data.timezone || "UTC");
+        }
+      } catch (error) {
+        console.error("Error:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchPreferences();
+  }, [setIsLoading]);
 
   const handleUpdatePreferences = async () => {
     setIsLoading(true);
     
     try {
-      await updatePreferences({
-        preferredUnit: selectedUnit,
-        timezone: selectedTimezone
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          title: "Authentication error",
+          description: "You must be logged in to update preferences",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          preferred_unit: selectedUnit,
+          timezone: selectedTimezone,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", user.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Preferences updated",
+        description: "Your preferences have been saved successfully",
       });
       
-      addToast({
-        title: "Preferences updated",
-        message: "Your preferences have been saved successfully",
-        variant: "success"
-      });
+      // Update localStorage
+      localStorage.setItem("preferredUnit", selectedUnit);
+      
+      // Dispatch storage event for other components
+      window.dispatchEvent(new StorageEvent("storage", {
+        key: "preferredUnit",
+        newValue: selectedUnit
+      }));
     } catch (error: any) {
       console.error("Error updating preferences:", error);
-      addToast({
+      toast({
         title: "Update failed",
-        message: error.message || "Failed to update preferences",
-        variant: "error"
+        description: error.message || "Failed to update preferences",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -89,18 +143,21 @@ const PreferencesForm = ({
   };
 
   return (
-    <Card className="border border-brand-primary/10 bg-gradient-to-r from-white to-blue-50 shadow-md">
+    <Card className="border border-brand-primary/10 bg-gradient-to-r from-white to-blue-50 shadow-md transition-all hover:shadow-lg">
       <CardHeader className="pb-4">
-        <CardTitle>User Preferences</CardTitle>
+        <div className="flex items-center gap-2">
+          <Scale className="h-5 w-5 text-brand-primary" />
+          <CardTitle>User Preferences</CardTitle>
+        </div>
         <CardDescription>
           Customize your weight tracking experience
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-6 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="preferred-unit" className="flex items-center gap-2">
-              <Scale className="h-4 w-4 text-weight-loss" />
+              <Scale className="h-4 w-4 text-brand-primary" />
               Preferred Weight Unit
             </Label>
             <Select value={selectedUnit} onValueChange={setSelectedUnit}>
@@ -126,7 +183,7 @@ const PreferencesForm = ({
               <SelectTrigger id="timezone" className="border-brand-primary/20 focus-visible:ring-brand-primary/30">
                 <SelectValue placeholder="Select timezone" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-[300px]">
                 {Object.entries(TIMEZONE_GROUPS).map(([groupName, timezones]) => (
                   <SelectGroup key={groupName}>
                     <SelectLabel>{groupName}</SelectLabel>
@@ -147,7 +204,7 @@ const PreferencesForm = ({
         
         <Button 
           onClick={handleUpdatePreferences} 
-          className="mt-4 w-full md:w-auto bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600"
+          className="mt-6 w-full md:w-auto bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 transition-all"
         >
           <Save className="mr-2 h-4 w-4" />
           Save Preferences
