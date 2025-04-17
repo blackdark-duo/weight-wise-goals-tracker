@@ -1,6 +1,5 @@
 
-import { Toast, ToastDescription, ToastTitle } from "@/components/ui/toast";
-import { Toaster as ToastProvider } from "@/components/ui/toast";
+import { Toast, ToastDescription, ToastTitle, ToastProvider } from "@/components/ui/toast";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createContext, useState, useEffect, useContext } from "react";
