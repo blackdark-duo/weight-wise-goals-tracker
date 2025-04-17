@@ -10,34 +10,20 @@ import { toast } from "sonner";
 
 interface AccountProfileProps {
   userName: string | null;
-  setUserName: (name: string | null) => void;
+  email: string | null;
+  userId: string | null;
   setIsLoading: (loading: boolean) => void;
 }
 
-const AccountProfile = ({ userName, setUserName, setIsLoading }: AccountProfileProps) => {
+const AccountProfile = ({ userName, email, userId, setIsLoading }: AccountProfileProps) => {
   const [displayName, setDisplayName] = useState(userName || "");
-  const [email, setEmail] = useState("");
-  
-  // Get email from auth on component mount
-  React.useEffect(() => {
-    const getEmail = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setEmail(user.email || "");
-      }
-    };
-    
-    getEmail();
-  }, []);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
+      if (!userId) {
         toast.error("You must be logged in to update profile");
         return;
       }
@@ -48,11 +34,10 @@ const AccountProfile = ({ userName, setUserName, setIsLoading }: AccountProfileP
           display_name: displayName,
           updated_at: new Date().toISOString()
         })
-        .eq("id", user.id);
+        .eq("id", userId);
         
       if (error) throw error;
       
-      setUserName(displayName);
       toast.success("Profile updated successfully");
     } catch (err: any) {
       console.error("Error updating profile:", err);
@@ -89,7 +74,7 @@ const AccountProfile = ({ userName, setUserName, setIsLoading }: AccountProfileP
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
-              value={email}
+              value={email || ""}
               disabled
               className="bg-muted"
             />

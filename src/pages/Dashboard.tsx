@@ -40,6 +40,7 @@ import {
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { HamburgerMenu } from "@/components/ui/hamburger-menu";
 import WeightJourneyInsights from "@/components/WeightJourneyInsights";
+import MobileNavigation from "@/components/MobileNavigation";
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -493,7 +494,6 @@ const Dashboard = () => {
           </Card>
         </motion.div>
 
-        {/* Add Weight Journey Insights right below add weight section */}
         {chartData.length > 1 && (
           <motion.div variants={fadeInUp}>
             <WeightJourneyInsights 
