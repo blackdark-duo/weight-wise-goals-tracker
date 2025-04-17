@@ -5,22 +5,29 @@ import Navbar from "@/components/Navbar";
 import MobileNavigation from "@/components/MobileNavigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import ProfileForm from "@/components/account/ProfileForm";
-import PreferencesForm from "@/components/account/PreferencesForm";
-import DataManagementCard from "@/components/account/DataManagementCard";
-import DangerZoneCard from "@/components/account/DangerZoneCard";
-import { Shield, User, Settings, Database } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
+import { toast } from "sonner";
+import { Shield, User, Settings, Database } from "lucide-react";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
+import AccountProfile from "@/components/account/AccountProfile";
+import AccountPreferences from "@/components/account/AccountPreferences";
+import AccountDataManagement from "@/components/account/AccountDataManagement";
+import AccountDangerZone from "@/components/account/AccountDangerZone";
 
 const Account = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [userName, setUserName] = useState<string | null>(null);
-  const [email, setEmail] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [userData, setUserData] = useState({
+    userName: null as string | null,
+    email: null as string | null,
+    userId: null as string | null
+  });
   const navigate = useNavigate();
+  const { preferredUnit } = useUserPreferences();
 
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
+        setIsLoading(true);
         const { data: { user } } = await supabase.auth.getUser();
         
         if (!user) {
@@ -28,19 +35,34 @@ const Account = () => {
           return;
         }
         
-        setEmail(user.email || null);
+        setUserData(prev => ({
+          ...prev,
+          email: user.email || null,
+          userId: user.id
+        }));
         
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("profiles")
           .select("display_name")
           .eq("id", user.id)
-          .single();
+          .maybeSingle();
           
+        if (error) {
+          console.error("Error fetching profile:", error);
+          toast.error("Failed to load profile. Please refresh the page.");
+        }
+
         if (data) {
-          setUserName(data.display_name || null);
+          setUserData(prev => ({
+            ...prev,
+            userName: data.display_name || null
+          }));
         }
       } catch (error) {
         console.error("Error fetching profile:", error);
+        toast.error("Something went wrong. Please try again later.");
+      } finally {
+        setIsLoading(false);
       }
     };
     
@@ -59,9 +81,9 @@ const Account = () => {
             )}
           </h1>
           
-          {userName && (
+          {userData.userName && (
             <div className="text-muted-foreground bg-white/70 px-3 py-1 rounded-full shadow-sm border border-brand-primary/10">
-              Welcome, {userName}
+              Welcome, {userData.userName}
             </div>
           )}
         </div>
@@ -87,24 +109,34 @@ const Account = () => {
           </TabsList>
           
           <TabsContent value="profile" className="space-y-4 focus-visible:outline-none focus-visible:ring-0">
-            <ProfileForm 
-              userName={userName} 
-              email={email}
-              setUserName={setUserName} 
+            <AccountProfile 
+              userName={userData.userName} 
+              email={userData.email}
+              userId={userData.userId}
               setIsLoading={setIsLoading} 
             />
           </TabsContent>
           
           <TabsContent value="preferences" className="space-y-4 focus-visible:outline-none focus-visible:ring-0">
-            <PreferencesForm setIsLoading={setIsLoading} />
+            <AccountPreferences 
+              userId={userData.userId}
+              preferredUnit={preferredUnit}
+              setIsLoading={setIsLoading} 
+            />
           </TabsContent>
           
           <TabsContent value="data" className="space-y-4 focus-visible:outline-none focus-visible:ring-0">
-            <DataManagementCard setIsLoading={setIsLoading} />
+            <AccountDataManagement 
+              userId={userData.userId} 
+              setIsLoading={setIsLoading} 
+            />
           </TabsContent>
           
           <TabsContent value="danger" className="space-y-4 focus-visible:outline-none focus-visible:ring-0">
-            <DangerZoneCard setIsLoading={setIsLoading} />
+            <AccountDangerZone 
+              userId={userData.userId}
+              setIsLoading={setIsLoading} 
+            />
           </TabsContent>
         </Tabs>
       </div>

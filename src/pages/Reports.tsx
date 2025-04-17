@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Card, 
@@ -27,9 +26,10 @@ import { Label } from "@/components/ui/label";
 import { format, subDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
+import MobileNavigation from "@/components/MobileNavigation";
 import { FileBarChart, Calendar, RefreshCw, TrendingDown, TrendingUp } from "lucide-react";
+import { Toaster } from "@/components/ui/toaster";
 
-// Type for weight entry data
 type WeightEntry = {
   id: string;
   weight: number;
@@ -55,7 +55,6 @@ const Reports = () => {
     isIncreasing: false
   });
 
-  // Fetch weight data from Supabase
   useEffect(() => {
     const fetchWeightData = async () => {
       setIsLoading(true);
@@ -64,7 +63,6 @@ const Reports = () => {
         
         if (!user) return;
         
-        // Determine date range for the query
         let rangeStart;
         if (dateRange === "custom") {
           rangeStart = startDate;
@@ -72,7 +70,6 @@ const Reports = () => {
           rangeStart = format(subDays(new Date(), parseInt(dateRange)), "yyyy-MM-dd");
         }
         
-        // Query weight entries
         const { data, error } = await supabase
           .from("weight_entries")
           .select("*")
@@ -97,7 +94,6 @@ const Reports = () => {
     fetchWeightData();
   }, [dateRange, startDate, endDate]);
   
-  // Process weight data for charts and statistics
   const processWeightData = (data: WeightEntry[]) => {
     if (!data.length) {
       setProcessedData([]);
@@ -112,14 +108,12 @@ const Reports = () => {
       return;
     }
     
-    // Group entries by date (taking the last entry for each date)
     const groupedByDate = data.reduce((acc, entry) => {
       const date = entry.date;
       acc[date] = entry;
       return acc;
     }, {} as Record<string, WeightEntry>);
     
-    // Convert to array and sort by date
     const processed = Object.values(groupedByDate).map(entry => ({
       date: format(new Date(entry.date), "MMM dd"),
       weight: entry.weight,
@@ -129,7 +123,6 @@ const Reports = () => {
     
     setProcessedData(processed);
     
-    // Calculate statistics
     if (processed.length >= 2) {
       const firstWeight = processed[0].weight;
       const lastWeight = processed[processed.length - 1].weight;
@@ -150,7 +143,6 @@ const Reports = () => {
     }
   };
   
-  // Function to handle date range selection
   const handleDateRangeChange = (value: string) => {
     setDateRange(value);
     if (value !== "custom") {
@@ -159,7 +151,6 @@ const Reports = () => {
     }
   };
   
-  // Custom tooltip formatting
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
@@ -262,7 +253,6 @@ const Reports = () => {
           </Card>
         ) : (
           <>
-            {/* Stats Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <Card className="overflow-hidden">
                 <div className="h-1 bg-gradient-to-r from-blue-400 to-blue-600"></div>
@@ -331,7 +321,6 @@ const Reports = () => {
               </Card>
             </div>
           
-            {/* Main Line Chart */}
             <Card className="overflow-hidden mb-6">
               <div className="h-1 bg-gradient-to-r from-indigo-400 to-purple-600"></div>
               <CardHeader>
@@ -353,7 +342,10 @@ const Reports = () => {
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                       <XAxis dataKey="date" tick={{ fontSize: 12 }} className="text-xs" />
                       <YAxis 
-                        domain={['auto', 'auto']} 
+                        domain={[
+                          (dataMin: number) => Math.floor(dataMin * 0.99), 
+                          (dataMax: number) => Math.ceil(dataMax * 1.01)
+                        ]} 
                         tick={{ fontSize: 12 }}
                         className="text-xs"
                       />
@@ -372,7 +364,6 @@ const Reports = () => {
               </CardContent>
             </Card>
             
-            {/* Additional Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
               <Card className="overflow-hidden">
                 <div className="h-1 bg-gradient-to-r from-cyan-400 to-blue-600"></div>
@@ -388,7 +379,13 @@ const Reports = () => {
                       <BarChart data={processedData} margin={{ top: 20, right: 10, left: 0, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                         <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                        <YAxis tick={{ fontSize: 12 }} />
+                        <YAxis 
+                          domain={[
+                            (dataMin: number) => Math.floor(dataMin * 0.99), 
+                            (dataMax: number) => Math.ceil(dataMax * 1.01)
+                          ]} 
+                          tick={{ fontSize: 12 }} 
+                        />
                         <Tooltip content={<CustomTooltip />} />
                         <defs>
                           <linearGradient id="barColor" x1="0" y1="0" x2="0" y2="1">
@@ -421,7 +418,13 @@ const Reports = () => {
                       <LineChart data={processedData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                         <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                        <YAxis domain={['auto', 'auto']} tick={{ fontSize: 12 }} />
+                        <YAxis 
+                          domain={[
+                            (dataMin: number) => Math.floor(dataMin * 0.99), 
+                            (dataMax: number) => Math.ceil(dataMax * 1.01)
+                          ]} 
+                          tick={{ fontSize: 12 }} 
+                        />
                         <Tooltip content={<CustomTooltip />} />
                         <defs>
                           <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
@@ -443,54 +446,11 @@ const Reports = () => {
                 </CardContent>
               </Card>
             </div>
-            
-            {/* Analytics Insights */}
-            <Card className="overflow-hidden bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20">
-              <CardHeader>
-                <CardTitle>Weight Journey Insights</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <p className="text-muted-foreground">
-                    {processedData.length < 2 ? (
-                      "Add more weight entries to see insights about your progress."
-                    ) : stats.isIncreasing ? (
-                      `Over this period, your weight has increased by ${Math.abs(stats.change).toFixed(1)} ${processedData[0]?.unit} (${Math.abs(stats.percentChange).toFixed(1)}%). You're averaging a gain of ${Math.abs(stats.avgWeeklyChange).toFixed(1)} ${processedData[0]?.unit} per week.`
-                    ) : (
-                      `Over this period, your weight has decreased by ${Math.abs(stats.change).toFixed(1)} ${processedData[0]?.unit} (${Math.abs(stats.percentChange).toFixed(1)}%). You're averaging a loss of ${Math.abs(stats.avgWeeklyChange).toFixed(1)} ${processedData[0]?.unit} per week.`
-                    )}
-                  </p>
-                  
-                  {processedData.length >= 7 && (
-                    <div className="p-4 bg-background rounded-md shadow-sm">
-                      <h4 className="font-semibold mb-2">Trend Analysis</h4>
-                      <ul className="space-y-2 list-disc list-inside text-sm text-muted-foreground">
-                        {stats.avgWeeklyChange !== 0 && (
-                          <li>
-                            At your current rate, you'll {stats.isIncreasing ? 'gain' : 'lose'} approximately {
-                              (Math.abs(stats.avgWeeklyChange) * 4).toFixed(1)
-                            } {processedData[0]?.unit} over the next month.
-                          </li>
-                        )}
-                        <li>
-                          Your minimum recorded weight during this period was {
-                            Math.min(...processedData.map(d => d.weight)).toFixed(1)
-                          } {processedData[0]?.unit}.
-                        </li>
-                        <li>
-                          Your maximum recorded weight during this period was {
-                            Math.max(...processedData.map(d => d.weight)).toFixed(1)
-                          } {processedData[0]?.unit}.
-                        </li>
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
           </>
         )}
       </div>
+      <MobileNavigation />
+      <Toaster />
     </div>
   );
 };

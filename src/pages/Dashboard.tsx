@@ -24,7 +24,7 @@ import {
   Settings
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -39,6 +39,7 @@ import {
 } from 'recharts';
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { HamburgerMenu } from "@/components/ui/hamburger-menu";
+import WeightJourneyInsights from "@/components/WeightJourneyInsights";
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -122,6 +123,16 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [stats, setStats] = useState({
+    firstWeight: 0,
+    lastWeight: 0,
+    change: 0,
+    percentChange: 0,
+    avgWeeklyChange: 0,
+    isIncreasing: false
+  });
+  const [minWeight, setMinWeight] = useState<number | undefined>(undefined);
+  const [maxWeight, setMaxWeight] = useState<number | undefined>(undefined);
   
   const navigate = useNavigate();
 
@@ -206,13 +217,43 @@ const Dashboard = () => {
               return acc;
             }, {} as Record<string, WeightEntry>);
             
-            const chartData = Object.values(groupedByDate).map(entry => ({
+            const formattedChartData = Object.values(groupedByDate).map(entry => ({
               date: format(new Date(entry.date), "MMM dd"),
               weight: entry.weight,
-              unit: entry.unit
+              unit: entry.unit,
+              fullDate: entry.date
             }));
             
-            setChartData(chartData);
+            setChartData(formattedChartData);
+            
+            // Calculate min and max weights
+            const weights = formattedChartData.map(entry => entry.weight);
+            setMinWeight(Math.min(...weights));
+            setMaxWeight(Math.max(...weights));
+            
+            // Calculate statistics for insights
+            if (formattedChartData.length >= 2) {
+              const firstWeight = formattedChartData[0].weight;
+              const lastWeight = formattedChartData[formattedChartData.length - 1].weight;
+              const change = lastWeight - firstWeight;
+              const percentChange = (change / firstWeight) * 100;
+              
+              // Calculate days between first and last entry for accurate weekly average
+              const daysDiff = Math.max(1, 
+                (new Date(formattedChartData[formattedChartData.length - 1].fullDate).getTime() - 
+                 new Date(formattedChartData[0].fullDate).getTime()) / (1000 * 60 * 60 * 24));
+                 
+              const avgWeeklyChange = (change / daysDiff) * 7;
+              
+              setStats({
+                firstWeight,
+                lastWeight,
+                change,
+                percentChange,
+                avgWeeklyChange,
+                isIncreasing: change > 0
+              });
+            }
           }
           
           let progress = 0;
@@ -452,6 +493,19 @@ const Dashboard = () => {
           </Card>
         </motion.div>
 
+        {/* Add Weight Journey Insights right below add weight section */}
+        {chartData.length > 1 && (
+          <motion.div variants={fadeInUp}>
+            <WeightJourneyInsights 
+              stats={stats}
+              unit={chartData[0]?.unit || preferredUnit}
+              dataLength={chartData.length}
+              minWeight={minWeight}
+              maxWeight={maxWeight}
+            />
+          </motion.div>
+        )}
+
         <motion.div 
           className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
           variants={staggerContainer}
@@ -627,7 +681,12 @@ const Dashboard = () => {
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                       <XAxis dataKey="date" />
-                      <YAxis domain={['auto', 'auto']} />
+                      <YAxis 
+                        domain={[
+                          (dataMin: number) => Math.floor(dataMin * 0.99), 
+                          (dataMax: number) => Math.ceil(dataMax * 1.01)
+                        ]} 
+                      />
                       <Tooltip content={<CustomTooltip />} />
                       <Area 
                         type="monotone" 
@@ -754,6 +813,7 @@ const Dashboard = () => {
           </Card>
         </motion.div>
       </motion.div>
+      <MobileNavigation />
     </motion.div>
   );
 };
