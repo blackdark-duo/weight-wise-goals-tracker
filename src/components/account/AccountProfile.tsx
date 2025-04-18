@@ -18,13 +18,21 @@ const AccountProfile: React.FC<AccountProfileProps> = ({
 }) => {
   const [displayName, setDisplayName] = useState<string | null>(userName);
   
+  // Create a function to update profile that will be passed to ProfileForm
+  const updateProfile = (data: { userName?: string | null }) => {
+    if (data.userName !== undefined) {
+      setDisplayName(data.userName);
+    }
+  };
+  
   return (
     <div className="space-y-6">
       <ProfileForm 
         userName={displayName} 
         email={email}
-        setUserName={setDisplayName}
-        setIsLoading={setIsLoading} 
+        userId={userId}
+        setIsLoading={setIsLoading}
+        updateProfile={updateProfile}
       />
       <PasswordForm setIsLoading={setIsLoading} />
     </div>
