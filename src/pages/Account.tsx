@@ -5,26 +5,32 @@ import Navbar from "@/components/Navbar";
 import MobileNavigation from "@/components/MobileNavigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { Toaster } from "@/components/ui/toaster";
 import { toast } from "sonner";
 import { Shield, User, Settings, Database } from "lucide-react";
-import { useUserPreferences } from "@/hooks/use-user-preferences";
-import AccountProfile from "@/components/account/AccountProfile";
-import AccountPreferences from "@/components/account/AccountPreferences";
-import AccountDataManagement from "@/components/account/AccountDataManagement";
-import AccountDangerZone from "@/components/account/AccountDangerZone";
+import ProfileSection from "@/components/account/ProfileSection";
+import PreferencesSection from "@/components/account/PreferencesSection";
+import DataManagementSection from "@/components/account/DataManagementSection";
+import DangerZoneSection from "@/components/account/DangerZoneSection";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Loader2 } from "lucide-react";
 
 const Account = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [userData, setUserData] = useState({
-    userName: null as string | null,
-    email: null as string | null,
-    userId: null as string | null
+  const [profile, setProfile] = useState<{
+    userId: string | null;
+    userName: string | null;
+    email: string | null;
+    preferredUnit: string;
+    timezone: string;
+  }>({
+    userId: null,
+    userName: null,
+    email: null,
+    preferredUnit: 'kg',
+    timezone: 'UTC'
   });
   const navigate = useNavigate();
-  const { preferredUnit } = useUserPreferences();
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -32,26 +38,27 @@ const Account = () => {
         setIsLoading(true);
         setError(null);
         
+        // Check if user is authenticated
         const { data: { user }, error: userError } = await supabase.auth.getUser();
         
-        if (userError) {
-          throw userError;
-        }
+        if (userError) throw userError;
         
         if (!user) {
           navigate('/signin');
           return;
         }
         
-        setUserData(prev => ({
+        // Set user email and ID
+        setProfile(prev => ({
           ...prev,
           email: user.email || null,
           userId: user.id
         }));
         
+        // Fetch profile data from profiles table
         const { data, error: profileError } = await supabase
           .from("profiles")
-          .select("display_name")
+          .select("display_name, preferred_unit, timezone")
           .eq("id", user.id)
           .maybeSingle();
           
@@ -61,9 +68,11 @@ const Account = () => {
         }
 
         if (data) {
-          setUserData(prev => ({
+          setProfile(prev => ({
             ...prev,
-            userName: data.display_name || null
+            userName: data.display_name || null,
+            preferredUnit: data.preferred_unit || 'kg',
+            timezone: data.timezone || 'UTC'
           }));
         }
       } catch (error: any) {
@@ -78,6 +87,10 @@ const Account = () => {
     fetchUserProfile();
   }, [navigate]);
 
+  const updateProfile = (newData: Partial<typeof profile>) => {
+    setProfile(prev => ({ ...prev, ...newData }));
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-purple-50/30 to-blue-50/30">
       <Navbar />
@@ -86,13 +99,13 @@ const Account = () => {
           <h1 className="text-2xl font-bold flex items-center gap-2 bg-gradient-to-r from-brand-primary to-blue-600 bg-clip-text text-transparent">
             Account Settings
             {isLoading && (
-              <div className="animate-spin h-4 w-4 border-2 border-primary border-opacity-50 border-t-primary rounded-full"></div>
+              <Loader2 className="ml-2 h-4 w-4 animate-spin text-brand-primary" />
             )}
           </h1>
           
-          {userData.userName && (
+          {profile.userName && (
             <div className="text-muted-foreground bg-white/70 px-3 py-1 rounded-full shadow-sm border border-brand-primary/10">
-              Welcome, {userData.userName}
+              Welcome, {profile.userName}
             </div>
           )}
         </div>
@@ -126,32 +139,35 @@ const Account = () => {
             </TabsList>
             
             <TabsContent value="profile" className="space-y-4 focus-visible:outline-none focus-visible:ring-0">
-              <AccountProfile 
-                userName={userData.userName} 
-                email={userData.email}
-                userId={userData.userId}
-                setIsLoading={setIsLoading} 
+              <ProfileSection 
+                userName={profile.userName} 
+                email={profile.email}
+                userId={profile.userId}
+                setIsLoading={setIsLoading}
+                updateProfile={updateProfile}
               />
             </TabsContent>
             
             <TabsContent value="preferences" className="space-y-4 focus-visible:outline-none focus-visible:ring-0">
-              <AccountPreferences 
-                userId={userData.userId}
-                preferredUnit={preferredUnit}
-                setIsLoading={setIsLoading} 
+              <PreferencesSection 
+                userId={profile.userId}
+                preferredUnit={profile.preferredUnit}
+                timezone={profile.timezone}
+                setIsLoading={setIsLoading}
+                updateProfile={updateProfile}
               />
             </TabsContent>
             
             <TabsContent value="data" className="space-y-4 focus-visible:outline-none focus-visible:ring-0">
-              <AccountDataManagement 
-                userId={userData.userId} 
+              <DataManagementSection 
+                userId={profile.userId} 
                 setIsLoading={setIsLoading} 
               />
             </TabsContent>
             
             <TabsContent value="danger" className="space-y-4 focus-visible:outline-none focus-visible:ring-0">
-              <AccountDangerZone 
-                userId={userData.userId}
+              <DangerZoneSection 
+                userId={profile.userId}
                 setIsLoading={setIsLoading} 
               />
             </TabsContent>
@@ -159,7 +175,6 @@ const Account = () => {
         )}
       </div>
       <MobileNavigation />
-      <Toaster />
     </div>
   );
 };

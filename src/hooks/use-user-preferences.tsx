@@ -47,7 +47,7 @@ export const UserPreferencesProvider = ({ children }: { children: React.ReactNod
             .from("profiles")
             .select("preferred_unit, timezone")
             .eq("id", user.id)
-            .single();
+            .maybeSingle();
             
           if (data && !error) {
             setPreferences({
@@ -73,6 +73,19 @@ export const UserPreferencesProvider = ({ children }: { children: React.ReactNod
     // Initial load
     loadPreferences();
     
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        loadPreferences();
+      } else if (event === 'SIGNED_OUT') {
+        setPreferences({
+          preferredUnit: "kg",
+          timezone: "UTC",
+          isLoading: false
+        });
+      }
+    });
+    
     // Listen for localStorage changes
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === "preferredUnit" && e.newValue) {
@@ -85,7 +98,10 @@ export const UserPreferencesProvider = ({ children }: { children: React.ReactNod
     
     window.addEventListener("storage", handleStorageChange);
     
-    return () => window.removeEventListener("storage", handleStorageChange);
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener("storage", handleStorageChange);
+    };
   }, []);
   
   // Function to update preferences
@@ -122,10 +138,12 @@ export const UserPreferencesProvider = ({ children }: { children: React.ReactNod
           newValue: prefs.preferredUnit
         }));
       }
-    } catch (error) {
+      
+      return Promise.resolve();
+    } catch (error: any) {
       console.error("Error updating preferences:", error);
       toast.error("Failed to update preferences. Please try again.");
-      throw error;
+      return Promise.reject(error);
     }
   };
   

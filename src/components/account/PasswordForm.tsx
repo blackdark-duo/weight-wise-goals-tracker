@@ -4,80 +4,55 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Lock, Save } from "lucide-react";
+import { KeyRound, AlertCircle, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useToasts } from "../ui/toast-notification";
 
 interface PasswordFormProps {
   setIsLoading: (loading: boolean) => void;
 }
 
-const PasswordForm = ({ setIsLoading }: PasswordFormProps) => {
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
+const PasswordForm: React.FC<PasswordFormProps> = ({ setIsLoading }) => {
+  const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const { addToast } = useToasts();
+  const [error, setError] = useState<string | null>(null);
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Basic validation
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      addToast({
-        title: "Missing fields",
-        message: "Please fill in all password fields",
-        variant: "warning"
-      });
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long");
       return;
     }
     
-    if (newPassword !== confirmPassword) {
-      addToast({
-        title: "Passwords don't match",
-        message: "New password and confirmation must match",
-        variant: "error"
-      });
-      return;
-    }
-    
-    if (newPassword.length < 6) {
-      addToast({
-        title: "Password too short",
-        message: "Password must be at least 6 characters long",
-        variant: "warning"
-      });
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
       return;
     }
     
     setIsSaving(true);
     setIsLoading(true);
+    setError(null);
     
     try {
       const { error } = await supabase.auth.updateUser({
-        password: newPassword
+        password
       });
       
       if (error) throw error;
       
-      // Clear form
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      
-      addToast({
-        title: "Password updated",
-        message: "Your password has been updated successfully",
-        variant: "success"
+      toast.success("Password updated successfully", {
+        icon: <Check className="h-4 w-4 text-green-500" />
       });
+      
+      // Clear form after successful update
+      setPassword("");
+      setConfirmPassword("");
     } catch (err: any) {
       console.error("Error updating password:", err);
-      addToast({
-        title: "Update failed",
-        message: err.message || "Failed to update password",
-        variant: "error"
-      });
+      setError(err.message || "Failed to update password");
+      toast.error("Failed to update password. Please try again.");
     } finally {
       setIsSaving(false);
       setIsLoading(false);
@@ -85,66 +60,61 @@ const PasswordForm = ({ setIsLoading }: PasswordFormProps) => {
   };
 
   return (
-    <Card className="border border-brand-primary/10 bg-gradient-to-r from-white to-purple-50/50 shadow-md">
+    <Card className="border border-brand-primary/10 bg-gradient-to-r from-white to-blue-50 shadow-md">
       <CardHeader className="pb-4">
         <div className="flex items-center gap-2">
-          <Lock className="h-5 w-5 text-brand-primary" />
-          <CardTitle>Password</CardTitle>
+          <KeyRound className="h-5 w-5 text-blue-500" />
+          <CardTitle>Change Password</CardTitle>
         </div>
         <CardDescription>
           Update your password to keep your account secure
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {error && (
+          <div className="mb-4 flex items-center gap-2 rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4" />
+            <span>{error}</span>
+          </div>
+        )}
+
         <form onSubmit={handleUpdatePassword} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="current-password">Current Password</Label>
+            <Label htmlFor="password">New Password</Label>
             <Input
-              id="current-password"
+              id="password"
               type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="New password"
               className="border-brand-primary/20 focus-visible:ring-brand-primary/30"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="new-password">New Password</Label>
+            <Label htmlFor="confirmPassword">Confirm Password</Label>
             <Input
-              id="new-password"
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="border-brand-primary/20 focus-visible:ring-brand-primary/30"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="confirm-password">Confirm New Password</Label>
-            <Input
-              id="confirm-password"
+              id="confirmPassword"
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm new password"
               className="border-brand-primary/20 focus-visible:ring-brand-primary/30"
             />
           </div>
           
           <Button 
             type="submit" 
+            className="w-full md:w-auto bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
             disabled={isSaving}
-            className="w-full md:w-auto bg-gradient-to-r from-brand-primary to-brand-primary/80 hover:from-brand-primary/90 hover:to-brand-primary"
           >
             {isSaving ? (
               <>
-                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
                 Updating...
               </>
             ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                Update Password
-              </>
+              "Update Password"
             )}
           </Button>
         </form>

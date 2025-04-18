@@ -4,58 +4,61 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserCircle, Save } from "lucide-react";
+import { UserCircle, Save, AlertCircle, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useToasts } from "../ui/toast-notification";
 
 interface ProfileFormProps {
   userName: string | null;
   email: string | null;
-  setUserName: (name: string | null) => void;
+  userId: string | null;
   setIsLoading: (loading: boolean) => void;
+  updateProfile: (data: { userName?: string | null }) => void;
 }
 
-const ProfileForm = ({ userName, email, setUserName, setIsLoading }: ProfileFormProps) => {
+const ProfileForm: React.FC<ProfileFormProps> = ({ 
+  userName, 
+  email, 
+  userId,
+  setIsLoading,
+  updateProfile
+}) => {
   const [displayName, setDisplayName] = useState(userName || "");
-  const { addToast } = useToasts();
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!userId) {
+      toast.error("You must be logged in to update your profile");
+      return;
+    }
+
+    setIsSaving(true);
     setIsLoading(true);
+    setError(null);
     
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        toast.error("You must be logged in to update profile");
-        return;
-      }
-      
       const { error } = await supabase
         .from("profiles")
         .update({
           display_name: displayName,
           updated_at: new Date().toISOString()
         })
-        .eq("id", user.id);
+        .eq("id", userId);
         
       if (error) throw error;
       
-      setUserName(displayName);
-      addToast({
-        title: "Profile updated",
-        message: "Your profile information has been updated successfully",
-        variant: "success"
+      updateProfile({ userName: displayName });
+      toast.success("Profile updated successfully", {
+        icon: <Check className="h-4 w-4 text-green-500" />
       });
     } catch (err: any) {
       console.error("Error updating profile:", err);
-      addToast({
-        title: "Update failed",
-        message: err.message || "Failed to update profile",
-        variant: "error"
-      });
+      setError(err.message || "Failed to update profile");
+      toast.error("Failed to update profile. Please try again.");
     } finally {
+      setIsSaving(false);
       setIsLoading(false);
     }
   };
@@ -72,6 +75,13 @@ const ProfileForm = ({ userName, email, setUserName, setIsLoading }: ProfileForm
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {error && (
+          <div className="mb-4 flex items-center gap-2 rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4" />
+            <span>{error}</span>
+          </div>
+        )}
+
         <form onSubmit={handleUpdateProfile} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="displayName">Display Name</Label>
@@ -97,9 +107,22 @@ const ProfileForm = ({ userName, email, setUserName, setIsLoading }: ProfileForm
             </p>
           </div>
           
-          <Button type="submit" className="w-full md:w-auto bg-gradient-to-r from-brand-primary to-brand-primary/80 hover:from-brand-primary/90 hover:to-brand-primary">
-            <Save className="mr-2 h-4 w-4" />
-            Save Changes
+          <Button 
+            type="submit" 
+            className="w-full md:w-auto bg-gradient-to-r from-brand-primary to-brand-primary/80 hover:from-brand-primary/90 hover:to-brand-primary"
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <>
+                <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Save Changes
+              </>
+            )}
           </Button>
         </form>
       </CardContent>

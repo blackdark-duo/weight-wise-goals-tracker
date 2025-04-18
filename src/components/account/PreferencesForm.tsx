@@ -1,111 +1,71 @@
 
 import React, { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Scale, Globe, Save } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Globe, Scale, Save, AlertCircle, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-// Timezone groups
-const TIMEZONE_GROUPS = {
-  "Asia": [
-    { value: "Asia/Kolkata", label: "India (UTC+5:30)" },
-    { value: "Asia/Tokyo", label: "Japan (UTC+9:00)" },
-    { value: "Asia/Dubai", label: "UAE (UTC+4:00)" },
-    { value: "Asia/Singapore", label: "Singapore (UTC+8:00)" },
-    { value: "Asia/Shanghai", label: "China (UTC+8:00)" },
-  ],
-  "America": [
-    { value: "America/New_York", label: "Eastern (UTC-5:00)" },
-    { value: "America/Chicago", label: "Central (UTC-6:00)" },
-    { value: "America/Denver", label: "Mountain (UTC-7:00)" },
-    { value: "America/Los_Angeles", label: "Pacific (UTC-8:00)" },
-    { value: "America/Sao_Paulo", label: "Brazil (UTC-3:00)" },
-  ],
-  "Europe": [
-    { value: "Europe/London", label: "UK (UTC+0:00)" },
-    { value: "Europe/Paris", label: "Central Europe (UTC+1:00)" },
-    { value: "Europe/Moscow", label: "Russia (UTC+3:00)" },
-    { value: "Europe/Berlin", label: "Germany (UTC+1:00)" },
-    { value: "Europe/Rome", label: "Italy (UTC+1:00)" },
-  ],
-  "Oceania": [
-    { value: "Australia/Sydney", label: "Eastern Australia (UTC+10:00)" },
-    { value: "Pacific/Auckland", label: "New Zealand (UTC+12:00)" },
-    { value: "Australia/Perth", label: "Western Australia (UTC+8:00)" },
-  ],
-  "Africa": [
-    { value: "Africa/Cairo", label: "Egypt (UTC+2:00)" },
-    { value: "Africa/Johannesburg", label: "South Africa (UTC+2:00)" },
-    { value: "Africa/Lagos", label: "Nigeria (UTC+1:00)" },
-  ],
-  "Other": [
-    { value: "UTC", label: "Coordinated Universal Time (UTC)" },
-  ]
-};
+// Define list of timezones for the dropdown
+const TIMEZONES = [
+  "UTC",
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "Europe/London",
+  "Europe/Paris",
+  "Europe/Berlin",
+  "Asia/Tokyo",
+  "Asia/Singapore",
+  "Australia/Sydney",
+  "Pacific/Auckland"
+];
 
 interface PreferencesFormProps {
+  userId: string | null;
+  preferredUnit: string;
+  timezone: string;
   setIsLoading: (loading: boolean) => void;
+  updateProfile: (data: { preferredUnit?: string, timezone?: string }) => void;
 }
 
-const PreferencesForm = ({ setIsLoading }: PreferencesFormProps) => {
-  const [selectedUnit, setSelectedUnit] = useState("kg");
-  const [selectedTimezone, setSelectedTimezone] = useState("UTC");
-  const { toast } = useToast();
+const PreferencesForm: React.FC<PreferencesFormProps> = ({ 
+  userId, 
+  preferredUnit, 
+  timezone,
+  setIsLoading,
+  updateProfile
+}) => {
+  const [selectedUnit, setSelectedUnit] = useState<string>(preferredUnit);
+  const [selectedTimezone, setSelectedTimezone] = useState<string>(timezone);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
 
-  // Fetch user preferences on component mount
+  // Track changes
   React.useEffect(() => {
-    const fetchPreferences = async () => {
-      setIsLoading(true);
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) {
-          return;
-        }
-        
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("preferred_unit, timezone")
-          .eq("id", user.id)
-          .single();
-          
-        if (error) {
-          console.error("Error fetching preferences:", error);
-          return;
-        }
-        
-        if (data) {
-          setSelectedUnit(data.preferred_unit || "kg");
-          setSelectedTimezone(data.timezone || "UTC");
-        }
-      } catch (error) {
-        console.error("Error:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchPreferences();
-  }, [setIsLoading]);
+    if (preferredUnit !== selectedUnit || timezone !== selectedTimezone) {
+      setHasChanges(true);
+    } else {
+      setHasChanges(false);
+    }
+  }, [selectedUnit, selectedTimezone, preferredUnit, timezone]);
 
-  const handleUpdatePreferences = async () => {
+  const handleSavePreferences = async () => {
+    if (!userId) {
+      toast.error("You must be logged in to update preferences");
+      return;
+    }
+    
+    setIsSaving(true);
     setIsLoading(true);
+    setError(null);
     
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        toast({
-          title: "Authentication error",
-          description: "You must be logged in to update preferences",
-          variant: "destructive",
-        });
-        return;
-      }
-      
+      // Update profile in Supabase
       const { error } = await supabase
         .from("profiles")
         .update({
@@ -113,55 +73,64 @@ const PreferencesForm = ({ setIsLoading }: PreferencesFormProps) => {
           timezone: selectedTimezone,
           updated_at: new Date().toISOString()
         })
-        .eq("id", user.id);
-      
+        .eq("id", userId);
+        
       if (error) throw error;
       
-      toast({
-        title: "Preferences updated",
-        description: "Your preferences have been saved successfully",
-      });
-      
-      // Update localStorage
+      // Update localStorage for immediate use in the app
       localStorage.setItem("preferredUnit", selectedUnit);
       
-      // Dispatch storage event for other components
+      // Trigger a storage event to notify other components
       window.dispatchEvent(new StorageEvent("storage", {
         key: "preferredUnit",
         newValue: selectedUnit
       }));
-    } catch (error: any) {
-      console.error("Error updating preferences:", error);
-      toast({
-        title: "Update failed",
-        description: error.message || "Failed to update preferences",
-        variant: "destructive",
+      
+      // Update the parent component state
+      updateProfile({
+        preferredUnit: selectedUnit,
+        timezone: selectedTimezone
       });
+      
+      toast.success("Preferences updated successfully!", {
+        icon: <Check className="h-4 w-4 text-green-500" />
+      });
+      setHasChanges(false);
+    } catch (err: any) {
+      console.error("Error saving preferences:", err);
+      setError(err.message || "Failed to update preferences");
+      toast.error("Failed to update preferences. Please try again.");
     } finally {
+      setIsSaving(false);
       setIsLoading(false);
     }
   };
 
   return (
-    <Card className="border border-brand-primary/10 bg-gradient-to-r from-white to-blue-50 shadow-md transition-all hover:shadow-lg">
+    <Card className="overflow-hidden shadow-sm border border-brand-primary/5">
+      <div className="h-1 bg-gradient-to-r from-blue-400 to-indigo-500"></div>
       <CardHeader className="pb-4">
-        <div className="flex items-center gap-2">
-          <Scale className="h-5 w-5 text-brand-primary" />
-          <CardTitle>User Preferences</CardTitle>
-        </div>
-        <CardDescription>
-          Customize your weight tracking experience
-        </CardDescription>
+        <CardTitle className="flex items-center gap-2 text-xl">
+          <Scale className="h-5 w-5 text-blue-500" />
+          Application Preferences
+        </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="grid gap-6 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="preferred-unit" className="flex items-center gap-2">
+      <CardContent className="space-y-6">
+        {error && (
+          <div className="flex items-center gap-2 rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            <Label htmlFor="preferredUnit" className="flex items-center gap-2 text-base">
               <Scale className="h-4 w-4 text-brand-primary" />
-              Preferred Weight Unit
+              Weight Unit
             </Label>
             <Select value={selectedUnit} onValueChange={setSelectedUnit}>
-              <SelectTrigger id="preferred-unit" className="border-brand-primary/20 focus-visible:ring-brand-primary/30">
+              <SelectTrigger id="preferredUnit" className="w-full">
                 <SelectValue placeholder="Select unit" />
               </SelectTrigger>
               <SelectContent>
@@ -170,45 +139,52 @@ const PreferencesForm = ({ setIsLoading }: PreferencesFormProps) => {
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              This will be used as the default unit for weight entries and goals
+              This will be used as the default unit for all weight entries and goals.
             </p>
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="timezone" className="flex items-center gap-2">
+          <div className="space-y-3">
+            <Label htmlFor="timezone" className="flex items-center gap-2 text-base">
               <Globe className="h-4 w-4 text-blue-500" />
               Timezone
             </Label>
             <Select value={selectedTimezone} onValueChange={setSelectedTimezone}>
-              <SelectTrigger id="timezone" className="border-brand-primary/20 focus-visible:ring-brand-primary/30">
+              <SelectTrigger id="timezone" className="w-full">
                 <SelectValue placeholder="Select timezone" />
               </SelectTrigger>
-              <SelectContent className="max-h-[300px]">
-                {Object.entries(TIMEZONE_GROUPS).map(([groupName, timezones]) => (
-                  <SelectGroup key={groupName}>
-                    <SelectLabel>{groupName}</SelectLabel>
-                    {timezones.map((tz) => (
-                      <SelectItem key={tz.value} value={tz.value}>
-                        {tz.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
+              <SelectContent>
+                {TIMEZONES.map((tz) => (
+                  <SelectItem key={tz} value={tz}>
+                    {tz.replace("_", " ")}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Used for displaying dates and times correctly
+              This will be used for displaying dates and times across the application.
             </p>
           </div>
         </div>
         
-        <Button 
-          onClick={handleUpdatePreferences} 
-          className="mt-6 w-full md:w-auto bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 transition-all"
-        >
-          <Save className="mr-2 h-4 w-4" />
-          Save Preferences
-        </Button>
+        <div className="flex justify-end pt-4">
+          <Button 
+            onClick={handleSavePreferences} 
+            disabled={isSaving || !hasChanges}
+            className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white"
+          >
+            {isSaving ? (
+              <>
+                <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Save Preferences
+              </>
+            )}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
