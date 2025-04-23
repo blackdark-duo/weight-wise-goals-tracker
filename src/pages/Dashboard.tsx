@@ -391,18 +391,11 @@ const Dashboard = () => {
   };
 
   const daysToGoal = (() => {
-    // Try to extract goalData from state (if fetched above)
-    // fallback: you can find the latest goal in recentEntries if not loaded, but ideally use the data loaded for cards
     let goalTargetDate: string | undefined = undefined;
     if (userData && userData.goalWeight && userProfile && userProfile.target_date) {
       goalTargetDate = userProfile.target_date;
     }
-    // Also try to use fetched goalData at any place it's loaded as variable.
-    // Prefer the latest achieved=false goal's target_date if available
-    // For simplicity, pull date from whatever goalData variable is present in your fetchUserData
-  
-    // For this code, let's assume you have access to goalData with a target_date field
-    // If not, daysToGoal will return null and nothing extra is shown
+    
     if (typeof goalData !== "undefined" && goalData && goalData.target_date) {
       const today = new Date();
       const target = new Date(goalData.target_date);
@@ -413,14 +406,9 @@ const Dashboard = () => {
   })();
 
   return (
-    <motion.div 
-      className="container py-8"
-      initial="hidden"
-      animate="visible"
-      variants={staggerContainer}
-    >
-      <motion.div className="flex flex-col space-y-6" variants={staggerContainer}>
-        <motion.div className="flex items-center justify-between" variants={fadeInUp}>
+    <div className="container py-8">
+      <div className="flex flex-col space-y-6">
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Dashboard</h1>
             <HamburgerMenu items={dashboardNavItems} />
@@ -433,9 +421,9 @@ const Dashboard = () => {
               </Link>
             </Button>
           </div>
-        </motion.div>
+        </div>
 
-        <motion.div variants={popIn}>
+        <div>
           <Card className="overflow-hidden">
             <div className="h-1 bg-gradient-to-r from-brand-primary to-purple-500"></div>
             <CardHeader>
@@ -496,11 +484,7 @@ const Dashboard = () => {
                   </div>
                   
                   <div className="flex items-end">
-                    <motion.div 
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      className="w-full"
-                    >
+                    <div className="w-full">
                       <Button 
                         type="submit" 
                         disabled={isSubmitting}
@@ -509,7 +493,7 @@ const Dashboard = () => {
                         {isSubmitting ? "Adding..." : "Add Entry"}
                         <PlusIcon className="ml-2 h-4 w-4" />
                       </Button>
-                    </motion.div>
+                    </div>
                   </div>
                 </div>
                 
@@ -526,10 +510,10 @@ const Dashboard = () => {
               </form>
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
 
         {chartData.length > 1 && (
-          <motion.div variants={fadeInUp}>
+          <div>
             <WeightJourneyInsights 
               stats={stats}
               unit={chartData[0]?.unit || preferredUnit}
@@ -537,16 +521,11 @@ const Dashboard = () => {
               minWeight={minWeight}
               maxWeight={maxWeight}
             />
-          </motion.div>
+          </div>
         )}
 
-        <motion.div 
-          className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
-          variants={staggerContainer}
-        >
-          
-          
-          <motion.div variants={popIn} className="md:col-span-2">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="md:col-span-2">
             <Card className="overflow-hidden">
               <div className="h-1 bg-gradient-to-r from-yellow-400 to-amber-600"></div>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -558,250 +537,240 @@ const Dashboard = () => {
               <CardContent>
                 {userData.goalWeight ? (
                   <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">{userData.currentWeight} {userData.unit}</span>
+                      <span className="text-sm font-medium">{Math.round(userData.progress * 100)}%</span>
+                      <span className="text-sm">{userData.goalWeight} {userData.unit}</span>
+                    </div>
                     
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">{userData.currentWeight} {userData.unit}</span>
-                  <span className="text-sm font-medium">{Math.round(userData.progress * 100)}%</span>
-                  <span className="text-sm">{userData.goalWeight} {userData.unit}</span>
-                </div>
-
-                
-                <div className="relative h-8 w-full bg-muted rounded-full overflow-hidden">
-                  <motion.div
-                    className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-brand-primary to-brand-primary/70"
-                    style={{ width: `${userData.progress * 100}%` }}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${userData.progress * 100}%` }}
-                    transition={{ duration: 1, ease: "easeOut" }}
-                  />
-                  <div 
-                    className="absolute top-0 h-full"
-                    style={{ 
-                      left: `${userData.progress * 100}%`,
-                      transform: 'translateX(-50%)'
-                    }}
-                  >
-                    <div className="h-8 w-2 bg-white border border-gray-300 rounded-full" />
-                  </div>
-                  {[0.25, 0.5, 0.75].map((milestone) => {
-                    const milestonePosition = `${milestone * 100}%`;
-                    
-                    const milestoneWeight = userData.initialWeight > userData.goalWeight
-                      ? userData.initialWeight - (milestone * (userData.initialWeight - userData.goalWeight))
-                      : userData.initialWeight + (milestone * (userData.goalWeight - userData.initialWeight));
-                      
-                    const isReached = userData.initialWeight > userData.goalWeight
-                      ? userData.currentWeight <= milestoneWeight
-                      : userData.currentWeight >= milestoneWeight;
-                      
-                    return (
+                    <div className="relative h-8 w-full bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-brand-primary to-brand-primary/70"
+                        style={{ width: `${userData.progress * 100}%` }}
+                      />
                       <div 
-                        key={milestone}
-                        className="absolute top-0 h-full flex flex-col items-center"
+                        className="absolute top-0 h-full"
                         style={{ 
-                          left: milestonePosition,
+                          left: `${userData.progress * 100}%`,
+                          transform: 'translateX(-50%)'
                         }}
                       >
-                        <div 
-                          className={`h-8 w-0.5 ${isReached ? 'bg-white' : 'bg-gray-400'}`}
-                        />
-                        <span className="text-xs mt-1">{milestoneWeight.toFixed(1)}</span>
+                        <div className="h-8 w-2 bg-white border border-gray-300 rounded-full" />
                       </div>
-                    );
-                  })}
-                </div>
+                      {[0.25, 0.5, 0.75].map((milestone) => {
+                        const milestonePosition = `${milestone * 100}%`;
+                        
+                        const milestoneWeight = userData.initialWeight > userData.goalWeight
+                          ? userData.initialWeight - (milestone * (userData.initialWeight - userData.goalWeight))
+                          : userData.initialWeight + (milestone * (userData.goalWeight - userData.initialWeight));
+                          
+                        const isReached = userData.initialWeight > userData.goalWeight
+                          ? userData.currentWeight <= milestoneWeight
+                          : userData.currentWeight >= milestoneWeight;
+                          
+                        return (
+                          <div 
+                            key={milestone}
+                            className="absolute top-0 h-full flex flex-col items-center"
+                            style={{ 
+                              left: milestonePosition,
+                            }}
+                          >
+                            <div 
+                              className={`h-8 w-0.5 ${isReached ? 'bg-white' : 'bg-gray-400'}`}
+                            />
+                            <span className="text-xs mt-1">{milestoneWeight.toFixed(1)}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
 
-                <p className="text-center text-sm text-muted-foreground mt-2">
-                  {userData.currentWeight > userData.goalWeight
-                    ? `${(userData.currentWeight - userData.goalWeight).toFixed(1)} ${userData.unit} left to lose`
-                    : `${(userData.goalWeight - userData.currentWeight).toFixed(1)} ${userData.unit} left to gain`}
-                </p>
-                {daysToGoal !== null && daysToGoal !== undefined && (
-                  <p className="text-center text-xs text-brand-primary mt-1">
-                    {daysToGoal} day{daysToGoal === 1 ? "" : "s"} left to goal
-                  </p>
+                    <p className="text-center text-sm text-muted-foreground mt-2">
+                      {userData.currentWeight > userData.goalWeight
+                        ? `${(userData.currentWeight - userData.goalWeight).toFixed(1)} ${userData.unit} left to lose`
+                        : `${(userData.goalWeight - userData.currentWeight).toFixed(1)} ${userData.unit} left to gain`}
+                    </p>
+                    {daysToGoal !== null && daysToGoal !== undefined && (
+                      <p className="text-center text-xs text-brand-primary mt-1">
+                        {daysToGoal} day{daysToGoal === 1 ? "" : "s"} left to goal
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-4">
+                    <p className="text-muted-foreground">No goal set yet</p>
+                    <Button variant="outline" size="sm" className="mt-2" asChild>
+                      <Link to="/goals">
+                        <Trophy className="mr-2 h-4 w-4" />
+                        Set Weight Goal
+                      </Link>
+                    </Button>
+                  </div>
                 )}
-              </div>
-            ) : (
-              
-              <div className="flex flex-col items-center justify-center p-4">
-                <p className="text-muted-foreground">No goal set yet</p>
-                <Button variant="outline" size="sm" className="mt-2" asChild>
-                  <Link to="/goals">
-                    <Trophy className="mr-2 h-4 w-4" />
-                    Set Weight Goal
-                  </Link>
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
+              </CardContent>
+            </Card>
+          </div>
 
-      
-
-        <motion.div variants={fadeInUp}>
-          <Card className="overflow-hidden">
-            <div className="h-1 bg-gradient-to-r from-indigo-400 to-purple-600"></div>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Last 7 Days</CardTitle>
-                <CardDescription>Your recent weight trend</CardDescription>
-              </div>
-              <Button variant="outline" size="sm" asChild>
-                <Link to="/reports">
-                  <FileBarChart className="mr-2 h-4 w-4" />
-                  View Reports
-                </Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {chartData.length > 1 ? (
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#9b87f5" stopOpacity={0.8}/>
-                          <stop offset="95%" stopColor="#D6BCFA" stopOpacity={0.2}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="date" />
-                      <YAxis 
-                        domain={[
-                          (dataMin: number) => Math.floor(dataMin * 0.99), 
-                          (dataMax: number) => Math.ceil(dataMax * 1.01)
-                        ]} 
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Area 
-                        type="monotone" 
-                        dataKey="weight" 
-                        stroke="#9b87f5" 
-                        fillOpacity={1}
-                        fill="url(#colorWeight)" 
-                        strokeWidth={2}
-                        activeDot={{ r: 8 }}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
+          <div className="md:col-span-2 lg:col-span-4">
+            <Card className="overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-indigo-400 to-purple-600"></div>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Last 7 Days</CardTitle>
+                  <CardDescription>Your recent weight trend</CardDescription>
                 </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-[300px] text-center">
-                  <LineChart className="h-16 w-16 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Not enough data</h3>
-                  <p className="text-muted-foreground max-w-md">
-                    Add at least two weight entries to see your trend chart.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div variants={fadeInUp}>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Recent Entries</CardTitle>
-                <CardDescription>Your latest weight measurements</CardDescription>
-              </div>
-              <Button variant="outline" size="sm" asChild>
-                <Link to="/reports">
-                  <Calendar className="mr-2 h-4 w-4" />
-                  View All
-                </Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {recentEntries.length > 0 ? (
-                <div className="space-y-1">
-                  {recentEntries.slice(0, 5).map((entry, i) => (
-                    <motion.div 
-                      key={entry.id}
-                      className="flex items-center justify-between border-b py-3 last:border-0 last:pb-0"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.05 }}
-                    >
-                      <div className="flex items-center">
-                        <div>
-                          <p className="text-sm font-medium">
-                            {format(new Date(entry.date), "MMM dd, yyyy")}
-                            <span className="text-xs text-muted-foreground ml-2">
-                              {entry.time.slice(0, 5)}
-                            </span>
-                          </p>
-                          {entry.description && (
-                            <p className="text-xs text-muted-foreground mt-1 italic">
-                              "{entry.description}"
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center">
-                        <p className="mr-2 text-sm font-semibold">{entry.weight} {entry.unit}</p>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-32 text-center">
-                  <p className="text-muted-foreground">
-                    No weight entries yet. Add your first entry above.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div variants={fadeInUp} className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Goals</CardTitle>
-              <CardDescription>Set and track your weight goals</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col">
-                <p className="text-muted-foreground mb-4">
-                  Set weight goals to stay motivated and track your progress over time.
-                </p>
-                <Button asChild>
-                  <Link to="/goals">
-                    <Target className="mr-2 h-4 w-4" />
-                    Manage Goals
-                  </Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Reports</CardTitle>
-              <CardDescription>View detailed weight analytics</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col">
-                <p className="text-muted-foreground mb-4">
-                  Access comprehensive reports and insights about your weight journey.
-                </p>
-                <Button asChild>
+                <Button variant="outline" size="sm" asChild>
                   <Link to="/reports">
-                    <BarChart3 className="mr-2 h-4 w-4" />
+                    <FileBarChart className="mr-2 h-4 w-4" />
                     View Reports
                   </Link>
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </motion.div>
+              </CardHeader>
+              <CardContent>
+                {chartData.length > 1 ? (
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#9b87f5" stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor="#D6BCFA" stopOpacity={0.2}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis dataKey="date" />
+                        <YAxis 
+                          domain={[
+                            (dataMin: number) => Math.floor(dataMin * 0.99), 
+                            (dataMax: number) => Math.ceil(dataMax * 1.01)
+                          ]} 
+                        />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Area 
+                          type="monotone" 
+                          dataKey="weight" 
+                          stroke="#9b87f5" 
+                          fillOpacity={1}
+                          fill="url(#colorWeight)" 
+                          strokeWidth={2}
+                          activeDot={{ r: 8 }}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-[300px] text-center">
+                    <LineChart className="h-16 w-16 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium mb-2">Not enough data</h3>
+                    <p className="text-muted-foreground max-w-md">
+                      Add at least two weight entries to see your trend chart.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="md:col-span-2 lg:col-span-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Recent Entries</CardTitle>
+                  <CardDescription>Your latest weight measurements</CardDescription>
+                </div>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/reports">
+                    <Calendar className="mr-2 h-4 w-4" />
+                    View All
+                  </Link>
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {recentEntries.length > 0 ? (
+                  <div className="space-y-1">
+                    {recentEntries.slice(0, 5).map((entry, i) => (
+                      <div 
+                        key={entry.id}
+                        className="flex items-center justify-between border-b py-3 last:border-0 last:pb-0"
+                      >
+                        <div className="flex items-center">
+                          <div>
+                            <p className="text-sm font-medium">
+                              {format(new Date(entry.date), "MMM dd, yyyy")}
+                              <span className="text-xs text-muted-foreground ml-2">
+                                {entry.time.slice(0, 5)}
+                              </span>
+                            </p>
+                            {entry.description && (
+                              <p className="text-xs text-muted-foreground mt-1 italic">
+                                "{entry.description}"
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center">
+                          <p className="mr-2 text-sm font-semibold">{entry.weight} {entry.unit}</p>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-32 text-center">
+                    <p className="text-muted-foreground">
+                      No weight entries yet. Add your first entry above.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 lg:col-span-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Goals</CardTitle>
+                <CardDescription>Set and track your weight goals</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col">
+                  <p className="text-muted-foreground mb-4">
+                    Set weight goals to stay motivated and track your progress over time.
+                  </p>
+                  <Button asChild>
+                    <Link to="/goals">
+                      <Target className="mr-2 h-4 w-4" />
+                      Manage Goals
+                    </Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Reports</CardTitle>
+                <CardDescription>View detailed weight analytics</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col">
+                  <p className="text-muted-foreground mb-4">
+                    Access comprehensive reports and insights about your weight journey.
+                  </p>
+                  <Button asChild>
+                    <Link to="/reports">
+                      <BarChart3 className="mr-2 h-4 w-4" />
+                      View Reports
+                    </Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
       <MobileNavigation />
-    </motion.div>
+    </div>
   );
 };
 
