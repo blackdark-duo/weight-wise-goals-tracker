@@ -6,11 +6,12 @@ import MobileNavigation from "@/components/MobileNavigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Shield, User, Settings, Database } from "lucide-react";
+import { Shield, User, Settings, Database, Webhook } from "lucide-react";
 import ProfileSection from "@/components/account/ProfileSection";
 import PreferencesSection from "@/components/account/PreferencesSection";
 import DataManagementSection from "@/components/account/DataManagementSection";
 import DangerZoneSection from "@/components/account/DangerZoneSection";
+import WebhookSettings from "@/components/account/WebhookSettings";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
 
@@ -119,7 +120,7 @@ const Account = () => {
         
         {!isLoading && !error && (
           <Tabs defaultValue="profile" className="space-y-6">
-            <TabsList className="grid grid-cols-4 md:w-auto w-full bg-white/80 border border-brand-primary/10 p-1">
+            <TabsList className="grid grid-cols-5 md:w-auto w-full bg-white/80 border border-brand-primary/10 p-1">
               <TabsTrigger value="profile" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-brand-primary/10 data-[state=active]:to-brand-primary/5">
                 <User className="h-4 w-4 mr-2" strokeWidth={1.75} />
                 <span className="hidden sm:inline">Profile</span>
@@ -127,6 +128,10 @@ const Account = () => {
               <TabsTrigger value="preferences" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500/10 data-[state=active]:to-blue-500/5">
                 <Settings className="h-4 w-4 mr-2" strokeWidth={1.75} />
                 <span className="hidden sm:inline">Preferences</span>
+              </TabsTrigger>
+              <TabsTrigger value="webhook" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500/10 data-[state=active]:to-emerald-500/5">
+                <Webhook className="h-4 w-4 mr-2" strokeWidth={1.75} />
+                <span className="hidden sm:inline">Webhook</span>
               </TabsTrigger>
               <TabsTrigger value="data" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500/10 data-[state=active]:to-teal-500/5">
                 <Database className="h-4 w-4 mr-2" strokeWidth={1.75} />
@@ -156,6 +161,10 @@ const Account = () => {
                 setIsLoading={setIsLoading}
                 updateProfile={updateProfile}
               />
+            </TabsContent>
+            
+            <TabsContent value="webhook" className="space-y-4 focus-visible:outline-none focus-visible:ring-0">
+              <WebhookSettings userId={profile.userId} />
             </TabsContent>
             
             <TabsContent value="data" className="space-y-4 focus-visible:outline-none focus-visible:ring-0">

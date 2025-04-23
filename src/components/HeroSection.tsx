@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import HeroButtons from "./hero/HeroButtons";
 import HeroRating from "./hero/HeroRating";
@@ -37,18 +38,18 @@ const HeroSection = () => {
                   exit={{ y: "-100%" }}
                 />
               </span>
-              {" "}With Style
+              {" "}With Weight Wise
             </h1>
             <p className="text-muted-foreground md:text-xl max-w-[600px]">
-              FitCozy is Your Personal Companion for a Healthier, More Vibrant Lifestyle. Track, Achieve, and Celebrate Your Wellness Milestones.
+              Weight Wise is Your Personal Companion for a Healthier, More Vibrant Lifestyle. Track, Achieve, and Celebrate Your Wellness Milestones.
             </p>
             <HeroButtons />
             <HeroRating />
           </motion.div>
           
           <HeroImage 
-            src="/lovable-uploads/fitcozy-hero.png"
-            alt="FitCozy dashboard showcasing intuitive fitness tracking and wellness insights" 
+            src="/lovable-uploads/weight-wise-hero.png"
+            alt="Weight Wise dashboard showcasing intuitive fitness tracking and wellness insights" 
           />
         </div>
       </div>

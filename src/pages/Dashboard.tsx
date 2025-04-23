@@ -23,7 +23,6 @@ import {
   Plus as PlusIcon,
   Settings
 } from "lucide-react";
-import { motion } from "framer-motion";
 import { format, subDays } from "date-fns";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,6 +40,7 @@ import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { HamburgerMenu } from "@/components/ui/hamburger-menu";
 import WeightJourneyInsights from "@/components/WeightJourneyInsights";
 import MobileNavigation from "@/components/MobileNavigation";
+import AIInsights from "@/components/dashboard/AIInsights";
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -146,6 +146,7 @@ const Dashboard = () => {
   
   const navigate = useNavigate();
   const [goalData, setGoalData] = useState<any | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     setWeightUnit(preferredUnit);
@@ -161,6 +162,8 @@ const Dashboard = () => {
           navigate("/signin");
           return;
         }
+        
+        setUserId(user.id);
         
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
@@ -498,7 +501,7 @@ const Dashboard = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="description">notes (diet related)</Label>
+                  <Label htmlFor="description">Notes (Diet Related)</Label>
                   <Textarea
                     id="description"
                     placeholder="Add any notes about this weight entry..."
@@ -510,6 +513,10 @@ const Dashboard = () => {
               </form>
             </CardContent>
           </Card>
+        </div>
+        
+        <div>
+          <AIInsights userId={userId} />
         </div>
 
         {chartData.length > 1 && (

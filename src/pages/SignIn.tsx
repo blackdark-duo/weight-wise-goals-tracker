@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -61,7 +62,7 @@ const SignIn = () => {
     <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-ui-background p-4">
       <Card className="mx-auto max-w-md w-full">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Sign in to FitCozy</CardTitle>
+          <CardTitle className="text-2xl font-bold">Sign in to Weight Wise</CardTitle>
           <CardDescription>
             Enter your credentials to access your account
           </CardDescription>
