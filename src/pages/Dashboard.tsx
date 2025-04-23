@@ -90,6 +90,7 @@ type UserProfile = {
   display_name: string;
   preferred_unit: string;
   timezone?: string;
+  target_date?: string;
 };
 
 const dashboardNavItems = [
@@ -98,6 +99,14 @@ const dashboardNavItems = [
   { title: "Reports", href: "/reports", icon: BarChart2 },
   { title: "Account", href: "/account", icon: UserCircle },
   { title: "Settings", href: "/settings", icon: Settings },
+];
+
+const UTC_TIMEZONES = [
+  "UTC−12:00", "UTC−11:00", "UTC−10:00", "UTC−09:00", "UTC−08:00",
+  "UTC−07:00", "UTC−06:00", "UTC−05:00", "UTC−04:00", "UTC−03:00",
+  "UTC−02:00", "UTC−01:00", "UTC±00:00", "UTC+01:00", "UTC+02:00",
+  "UTC+03:00", "UTC+04:00", "UTC+05:00", "UTC+06:00", "UTC+07:00",
+  "UTC+08:00", "UTC+09:00", "UTC+10:00", "UTC+11:00", "UTC+12:00"
 ];
 
 const Dashboard = () => {
@@ -136,6 +145,7 @@ const Dashboard = () => {
   const [maxWeight, setMaxWeight] = useState<number | undefined>(undefined);
   
   const navigate = useNavigate();
+  const [goalData, setGoalData] = useState<any | null>(null);
 
   useEffect(() => {
     setWeightUnit(preferredUnit);
@@ -199,6 +209,8 @@ const Dashboard = () => {
             .order("created_at", { ascending: false })
             .limit(1)
             .maybeSingle();
+            
+          setGoalData(goalData);
             
           const sevenDaysAgo = new Date();
           sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -378,6 +390,28 @@ const Dashboard = () => {
     return null;
   };
 
+  const daysToGoal = (() => {
+    // Try to extract goalData from state (if fetched above)
+    // fallback: you can find the latest goal in recentEntries if not loaded, but ideally use the data loaded for cards
+    let goalTargetDate: string | undefined = undefined;
+    if (userData && userData.goalWeight && userProfile && userProfile.target_date) {
+      goalTargetDate = userProfile.target_date;
+    }
+    // Also try to use fetched goalData at any place it's loaded as variable.
+    // Prefer the latest achieved=false goal's target_date if available
+    // For simplicity, pull date from whatever goalData variable is present in your fetchUserData
+  
+    // For this code, let's assume you have access to goalData with a target_date field
+    // If not, daysToGoal will return null and nothing extra is shown
+    if (typeof goalData !== "undefined" && goalData && goalData.target_date) {
+      const today = new Date();
+      const target = new Date(goalData.target_date);
+      const diff = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      return diff >= 0 ? diff : null;
+    }
+    return null;
+  })();
+
   return (
     <motion.div 
       className="container py-8"
@@ -480,7 +514,7 @@ const Dashboard = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="description">Notes (optional)</Label>
+                  <Label htmlFor="description">notes (diet related)</Label>
                   <Textarea
                     id="description"
                     placeholder="Add any notes about this weight entry..."
@@ -510,57 +544,7 @@ const Dashboard = () => {
           className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
           variants={staggerContainer}
         >
-          <motion.div variants={popIn}>
-            <Card className="overflow-hidden">
-              <div className="h-1 bg-gradient-to-r from-green-400 to-green-600"></div>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Current Weight
-                </CardTitle>
-                <TrendingDown className="h-4 w-4 text-weight-loss" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{userData.currentWeight} {userData.unit}</div>
-                <p className="text-xs text-weight-loss">
-                  {userData.initialWeight > userData.currentWeight 
-                    ? `↓ ${(userData.initialWeight - userData.currentWeight).toFixed(1)} ${userData.unit} since start`
-                    : userData.initialWeight < userData.currentWeight
-                    ? `↑ ${(userData.currentWeight - userData.initialWeight).toFixed(1)} ${userData.unit} since start`
-                    : "No change since start"}
-                </p>
-              </CardContent>
-            </Card>
-          </motion.div>
           
-          <motion.div variants={popIn}>
-            <Card className="overflow-hidden">
-              <div className="h-1 bg-gradient-to-r from-purple-400 to-purple-600"></div>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Goal Weight
-                </CardTitle>
-                <Target className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {userData.goalWeight ? `${userData.goalWeight} ${userData.unit}` : "Not set"}
-                </div>
-                {userData.goalWeight ? (
-                  <p className="text-xs text-muted-foreground">
-                    {userData.currentWeight > userData.goalWeight
-                      ? `${(userData.currentWeight - userData.goalWeight).toFixed(1)} ${userData.unit} to go`
-                      : userData.currentWeight < userData.goalWeight
-                      ? `${(userData.goalWeight - userData.currentWeight).toFixed(1)} ${userData.unit} to go`
-                      : "Goal achieved!"}
-                  </p>
-                ) : (
-                  <p className="text-xs text-brand-primary cursor-pointer hover:underline">
-                    <Link to="/goals">Set a goal weight to track progress</Link>
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
           
           <motion.div variants={popIn} className="md:col-span-2">
             <Card className="overflow-hidden">
@@ -574,84 +558,87 @@ const Dashboard = () => {
               <CardContent>
                 {userData.goalWeight ? (
                   <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">{userData.currentWeight} {userData.unit}</span>
-                      <span className="text-sm font-medium">{Math.round(userData.progress * 100)}%</span>
-                      <span className="text-sm">{userData.goalWeight} {userData.unit}</span>
-                    </div>
                     
-                    <div className="relative h-8 w-full bg-muted rounded-full overflow-hidden">
-                      <motion.div
-                        className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-brand-primary to-brand-primary/70"
-                        style={{ width: `${userData.progress * 100}%` }}
-                        initial={{ width: 0 }}
-                        animate={{ width: `${userData.progress * 100}%` }}
-                        transition={{ duration: 1, ease: "easeOut" }}
-                      />
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">{userData.currentWeight} {userData.unit}</span>
+                  <span className="text-sm font-medium">{Math.round(userData.progress * 100)}%</span>
+                  <span className="text-sm">{userData.goalWeight} {userData.unit}</span>
+                </div>
+
+                
+                <div className="relative h-8 w-full bg-muted rounded-full overflow-hidden">
+                  <motion.div
+                    className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-brand-primary to-brand-primary/70"
+                    style={{ width: `${userData.progress * 100}%` }}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${userData.progress * 100}%` }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                  />
+                  <div 
+                    className="absolute top-0 h-full"
+                    style={{ 
+                      left: `${userData.progress * 100}%`,
+                      transform: 'translateX(-50%)'
+                    }}
+                  >
+                    <div className="h-8 w-2 bg-white border border-gray-300 rounded-full" />
+                  </div>
+                  {[0.25, 0.5, 0.75].map((milestone) => {
+                    const milestonePosition = `${milestone * 100}%`;
+                    
+                    const milestoneWeight = userData.initialWeight > userData.goalWeight
+                      ? userData.initialWeight - (milestone * (userData.initialWeight - userData.goalWeight))
+                      : userData.initialWeight + (milestone * (userData.goalWeight - userData.initialWeight));
                       
+                    const isReached = userData.initialWeight > userData.goalWeight
+                      ? userData.currentWeight <= milestoneWeight
+                      : userData.currentWeight >= milestoneWeight;
+                      
+                    return (
                       <div 
-                        className="absolute top-0 h-full"
+                        key={milestone}
+                        className="absolute top-0 h-full flex flex-col items-center"
                         style={{ 
-                          left: `${userData.progress * 100}%`,
-                          transform: 'translateX(-50%)'
+                          left: milestonePosition,
                         }}
                       >
-                        <div className="h-8 w-2 bg-white border border-gray-300 rounded-full" />
+                        <div 
+                          className={`h-8 w-0.5 ${isReached ? 'bg-white' : 'bg-gray-400'}`}
+                        />
+                        <span className="text-xs mt-1">{milestoneWeight.toFixed(1)}</span>
                       </div>
-                      
-                      {userData.initialWeight !== userData.goalWeight && (
-                        <>
-                          {[0.25, 0.5, 0.75].map((milestone) => {
-                            const milestonePosition = `${milestone * 100}%`;
-                            
-                            const milestoneWeight = userData.initialWeight > userData.goalWeight
-                              ? userData.initialWeight - (milestone * (userData.initialWeight - userData.goalWeight))
-                              : userData.initialWeight + (milestone * (userData.goalWeight - userData.initialWeight));
-                              
-                            const isReached = userData.initialWeight > userData.goalWeight
-                              ? userData.currentWeight <= milestoneWeight
-                              : userData.currentWeight >= milestoneWeight;
-                              
-                            return (
-                              <div 
-                                key={milestone}
-                                className="absolute top-0 h-full flex flex-col items-center"
-                                style={{ 
-                                  left: milestonePosition,
-                                }}
-                              >
-                                <div 
-                                  className={`h-8 w-0.5 ${isReached ? 'bg-white' : 'bg-gray-400'}`}
-                                />
-                                <span className="text-xs mt-1">{milestoneWeight.toFixed(1)}</span>
-                              </div>
-                            );
-                          })}
-                        </>
-                      )}
-                    </div>
-                    
-                    <p className="text-center text-sm text-muted-foreground mt-2">
-                      {userData.currentWeight > userData.goalWeight
-                        ? `${(userData.currentWeight - userData.goalWeight).toFixed(1)} ${userData.unit} left to lose`
-                        : `${(userData.goalWeight - userData.currentWeight).toFixed(1)} ${userData.unit} left to gain`}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center p-4">
-                    <p className="text-muted-foreground">No goal set yet</p>
-                    <Button variant="outline" size="sm" className="mt-2" asChild>
-                      <Link to="/goals">
-                        <Target className="mr-2 h-4 w-4" />
-                        Set Weight Goal
-                      </Link>
-                    </Button>
-                  </div>
+                    );
+                  })}
+                </div>
+
+                <p className="text-center text-sm text-muted-foreground mt-2">
+                  {userData.currentWeight > userData.goalWeight
+                    ? `${(userData.currentWeight - userData.goalWeight).toFixed(1)} ${userData.unit} left to lose`
+                    : `${(userData.goalWeight - userData.currentWeight).toFixed(1)} ${userData.unit} left to gain`}
+                </p>
+                {daysToGoal !== null && daysToGoal !== undefined && (
+                  <p className="text-center text-xs text-brand-primary mt-1">
+                    {daysToGoal} day{daysToGoal === 1 ? "" : "s"} left to goal
+                  </p>
                 )}
-              </CardContent>
-            </Card>
-          </motion.div>
-        </motion.div>
+              </div>
+            ) : (
+              
+              <div className="flex flex-col items-center justify-center p-4">
+                <p className="text-muted-foreground">No goal set yet</p>
+                <Button variant="outline" size="sm" className="mt-2" asChild>
+                  <Link to="/goals">
+                    <Trophy className="mr-2 h-4 w-4" />
+                    Set Weight Goal
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      
 
         <motion.div variants={fadeInUp}>
           <Card className="overflow-hidden">

@@ -8,20 +8,12 @@ import { Globe, Scale, Save, AlertCircle, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-// Define list of timezones for the dropdown
-const TIMEZONES = [
-  "UTC",
-  "America/New_York",
-  "America/Chicago",
-  "America/Denver",
-  "America/Los_Angeles",
-  "Europe/London",
-  "Europe/Paris",
-  "Europe/Berlin",
-  "Asia/Tokyo",
-  "Asia/Singapore",
-  "Australia/Sydney",
-  "Pacific/Auckland"
+const UTC_TIMEZONES = [
+  "UTC−12:00", "UTC−11:00", "UTC−10:00", "UTC−09:00", "UTC−08:00",
+  "UTC−07:00", "UTC−06:00", "UTC−05:00", "UTC−04:00", "UTC−03:00",
+  "UTC−02:00", "UTC−01:00", "UTC±00:00", "UTC+01:00", "UTC+02:00",
+  "UTC+03:00", "UTC+04:00", "UTC+05:00", "UTC+06:00", "UTC+07:00",
+  "UTC+08:00", "UTC+09:00", "UTC+10:00", "UTC+11:00", "UTC+12:00"
 ];
 
 interface PreferencesFormProps {
@@ -153,10 +145,8 @@ const PreferencesForm: React.FC<PreferencesFormProps> = ({
                 <SelectValue placeholder="Select timezone" />
               </SelectTrigger>
               <SelectContent>
-                {TIMEZONES.map((tz) => (
-                  <SelectItem key={tz} value={tz}>
-                    {tz.replace("_", " ")}
-                  </SelectItem>
+                {UTC_TIMEZONES.map((tz) => (
+                  <SelectItem key={tz} value={tz}>{tz}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
