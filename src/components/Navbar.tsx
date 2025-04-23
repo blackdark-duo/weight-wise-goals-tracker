@@ -59,16 +59,20 @@ const Navbar = () => {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-ui-border bg-white/80 backdrop-blur-md">
       <div className="container flex h-16 items-center justify-between">
-        {/* Logo */}
         <Link 
           to={session ? "/dashboard" : "/"} 
-          className="flex items-center gap-2 font-bold text-xl md:text-2xl text-black"
+          className="flex items-center gap-2 font-bold text-xl md:text-2xl text-brand-primary"
         >
-          <Scale className="h-6 w-6 text-black" strokeWidth={1.75} />
-          <span className="text-black">WeightWise</span>
+          <img
+            src="/lovable-uploads/fitcozy-logo.png"
+            alt="FitCozy Logo"
+            className="h-8 w-8"
+          />
+          <span className="bg-gradient-to-r from-brand-primary to-purple-600 bg-clip-text text-transparent">
+            FitCozy
+          </span>
         </Link>
 
-        {/* Desktop Navigation for Public Site */}
         {!session && (
           <nav className="hidden md:flex items-center gap-6">
             {navLinks.map((link) => (
@@ -83,7 +87,6 @@ const Navbar = () => {
           </nav>
         )}
         
-        {/* Desktop Account/CTA */}
         <div className="flex items-center gap-4">
           {session ? (
             <HamburgerMenu 
@@ -103,7 +106,6 @@ const Navbar = () => {
                 </Link>
               </div>
 
-              {/* Mobile Menu Button */}
               <button 
                 onClick={toggleMenu}
                 className="md:hidden p-2"
@@ -116,7 +118,6 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile Menu for Public Site */}
       {!session && (
         <div 
           className={cn(
