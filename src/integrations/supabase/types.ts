@@ -53,6 +53,7 @@ export type Database = {
           preferred_unit: string | null
           timezone: string | null
           updated_at: string | null
+          webhook_url: string | null
         }
         Insert: {
           created_at?: string | null
@@ -61,6 +62,7 @@ export type Database = {
           preferred_unit?: string | null
           timezone?: string | null
           updated_at?: string | null
+          webhook_url?: string | null
         }
         Update: {
           created_at?: string | null
@@ -69,6 +71,7 @@ export type Database = {
           preferred_unit?: string | null
           timezone?: string | null
           updated_at?: string | null
+          webhook_url?: string | null
         }
         Relationships: []
       }
