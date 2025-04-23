@@ -1,97 +1,19 @@
+
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { format } from "date-fns";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { 
-  BarChart3, 
-  Calendar, 
-  ChevronRight, 
-  LineChart, 
-  Plus, 
-  Target, 
-  TrendingDown, 
-  TrendingUp,
-  Trophy,
-  FileBarChart,
-  Scale,
-  Home,
-  Target as TargetIcon,
-  BarChart2,
-  UserCircle,
-  Plus as PlusIcon,
-  Settings
-} from "lucide-react";
-import { format, subDays } from "date-fns";
-import { Link, useNavigate } from "react-router-dom";
+import { Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer
-} from 'recharts';
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { HamburgerMenu } from "@/components/ui/hamburger-menu";
 import WeightJourneyInsights from "@/components/WeightJourneyInsights";
 import MobileNavigation from "@/components/MobileNavigation";
 import AIInsights from "@/components/dashboard/AIInsights";
-
-const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { 
-    opacity: 1, 
-    y: 0,
-    transition: {
-      duration: 0.4
-    }
-  }
-};
-
-const staggerContainer = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
-};
-
-const popIn = {
-  hidden: { scale: 0.8, opacity: 0 },
-  visible: { 
-    scale: 1, 
-    opacity: 1,
-    transition: {
-      type: "spring",
-      stiffness: 300,
-      damping: 25
-    }
-  }
-};
-
-type WeightEntry = {
-  id: string;
-  weight: number;
-  unit: string;
-  date: string;
-  time: string;
-  description?: string;
-};
-
-type UserProfile = {
-  id: string;
-  display_name: string;
-  preferred_unit: string;
-  timezone?: string;
-  target_date?: string;
-};
+import WeightEntryForm from "@/components/dashboard/WeightEntryForm";
+import WeightChart from "@/components/dashboard/WeightChart";
+import RecentEntries from "@/components/dashboard/RecentEntries";
+import QuickActions from "@/components/dashboard/QuickActions";
 
 const dashboardNavItems = [
   { title: "Dashboard", href: "/dashboard", icon: Home },
@@ -101,38 +23,11 @@ const dashboardNavItems = [
   { title: "Settings", href: "/settings", icon: Settings },
 ];
 
-const UTC_TIMEZONES = [
-  "UTC−12:00", "UTC−11:00", "UTC−10:00", "UTC−09:00", "UTC−08:00",
-  "UTC−07:00", "UTC−06:00", "UTC−05:00", "UTC−04:00", "UTC−03:00",
-  "UTC−02:00", "UTC−01:00", "UTC±00:00", "UTC+01:00", "UTC+02:00",
-  "UTC+03:00", "UTC+04:00", "UTC+05:00", "UTC+06:00", "UTC+07:00",
-  "UTC+08:00", "UTC+09:00", "UTC+10:00", "UTC+11:00", "UTC+12:00"
-];
-
 const Dashboard = () => {
   const { preferredUnit } = useUserPreferences();
-  
-  const [userData, setUserData] = useState({
-    name: "",
-    initialWeight: 0,
-    currentWeight: 0,
-    goalWeight: 0,
-    progress: 0,
-    unit: preferredUnit
-  });
-  
-  const [newWeight, setNewWeight] = useState("");
-  const [weightUnit, setWeightUnit] = useState(preferredUnit);
-  const [entryDate, setEntryDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [entryTime, setEntryTime] = useState(format(new Date(), "HH:mm"));
-  const [description, setDescription] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
   const [recentEntries, setRecentEntries] = useState<WeightEntry[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState({
     firstWeight: 0,
     lastWeight: 0,
@@ -143,17 +38,11 @@ const Dashboard = () => {
   });
   const [minWeight, setMinWeight] = useState<number | undefined>(undefined);
   const [maxWeight, setMaxWeight] = useState<number | undefined>(undefined);
-  
-  const navigate = useNavigate();
-  const [goalData, setGoalData] = useState<any | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    setWeightUnit(preferredUnit);
-  }, [preferredUnit]);
-
-  useEffect(() => {
-    const fetchUserData = async () => {
+    const fetchData = async () => {
       setIsLoading(true);
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -164,22 +53,7 @@ const Dashboard = () => {
         }
         
         setUserId(user.id);
-        
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .single();
-          
-        if (profileError && profileError.code !== "PGRST116") {
-          console.error("Error fetching profile:", profileError);
-        }
-        
-        if (profileData) {
-          setUserProfile(profileData);
-          setWeightUnit(profileData.preferred_unit || "kg");
-        }
-        
+
         const { data: entries, error: entriesError } = await supabase
           .from("weight_entries")
           .select("*")
@@ -190,31 +64,12 @@ const Dashboard = () => {
           
         if (entriesError) {
           console.error("Error fetching entries:", entriesError);
+          return;
         }
         
-        if (entries && entries.length > 0) {
+        if (entries) {
           setRecentEntries(entries);
           
-          const { data: firstEntry } = await supabase
-            .from("weight_entries")
-            .select("*")
-            .eq("user_id", user.id)
-            .order("date", { ascending: true })
-            .order("time", { ascending: true })
-            .limit(1)
-            .single();
-            
-          const { data: goalData } = await supabase
-            .from("goals")
-            .select("*")
-            .eq("user_id", user.id)
-            .eq("achieved", false)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-            
-          setGoalData(goalData);
-            
           const sevenDaysAgo = new Date();
           sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
           
@@ -254,7 +109,6 @@ const Dashboard = () => {
               const change = lastWeight - firstWeight;
               const percentChange = (change / firstWeight) * 100;
               
-              // Calculate days between first and last entry for accurate weekly average
               const daysDiff = Math.max(1, 
                 (new Date(formattedChartData[formattedChartData.length - 1].fullDate).getTime() - 
                  new Date(formattedChartData[0].fullDate).getTime()) / (1000 * 60 * 60 * 24));
@@ -271,41 +125,6 @@ const Dashboard = () => {
               });
             }
           }
-          
-          let progress = 0;
-          if (goalData && firstEntry) {
-            const initialWeight = firstEntry.weight;
-            const currentWeight = entries[0].weight;
-            const goalWeight = goalData.target_weight;
-            
-            if (initialWeight > goalWeight) {
-              progress = Math.min(1, Math.max(0, 
-                (initialWeight - currentWeight) / (initialWeight - goalWeight)
-              ));
-            } else if (initialWeight < goalWeight) {
-              progress = Math.min(1, Math.max(0, 
-                (currentWeight - initialWeight) / (goalWeight - initialWeight)
-              ));
-            }
-            
-            setUserData({
-              name: profileData?.display_name || user.email?.split("@")[0] || "User",
-              initialWeight: firstEntry.weight,
-              currentWeight: entries[0].weight,
-              goalWeight: goalData.target_weight,
-              progress,
-              unit: entries[0].unit
-            });
-          } else {
-            setUserData({
-              name: profileData?.display_name || user.email?.split("@")[0] || "User",
-              initialWeight: firstEntry ? firstEntry.weight : entries[0].weight,
-              currentWeight: entries[0].weight,
-              goalWeight: 0,
-              progress: 0,
-              unit: entries[0].unit
-            });
-          }
         }
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
@@ -314,99 +133,14 @@ const Dashboard = () => {
       }
     };
     
-    fetchUserData();
+    fetchData();
   }, [navigate]);
 
-  const handleAddWeight = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!newWeight) {
-      toast.error("Please enter a weight value");
-      return;
-    }
-    
-    setIsSubmitting(true);
-    
-    try {
-      const weight = parseFloat(newWeight);
-      
-      if (isNaN(weight) || weight <= 0) {
-        toast.error("Please enter a valid weight value");
-        return;
-      }
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        toast.error("You must be logged in to add weight entries");
-        return;
-      }
-      
-      const { data, error } = await supabase
-        .from("weight_entries")
-        .insert({
-          user_id: user.id,
-          weight,
-          unit: weightUnit,
-          date: entryDate,
-          time: entryTime,
-          description: description.trim() || null
-        })
-        .select()
-        .single();
-        
-      if (error) throw error;
-      
-      setRecentEntries(prev => [data, ...prev].slice(0, 10));
-      
-      setUserData(prev => ({
-        ...prev,
-        currentWeight: weight
-      }));
-      
-      setNewWeight("");
-      setDescription("");
-      
-      toast.success("Weight entry added successfully!");
-      
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-      
-    } catch (err: any) {
-      console.error("Error adding weight entry:", err);
-      toast.error(err.message || "Failed to add weight entry");
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleEntryAdded = () => {
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
   };
-  
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-background border border-border p-2 rounded-md shadow-md">
-          <p className="font-medium">{label}</p>
-          <p className="text-brand-primary">{`${payload[0].value} ${payload[0].payload.unit}`}</p>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const daysToGoal = (() => {
-    let goalTargetDate: string | undefined = undefined;
-    if (userData && userData.goalWeight && userProfile && userProfile.target_date) {
-      goalTargetDate = userProfile.target_date;
-    }
-    
-    if (typeof goalData !== "undefined" && goalData && goalData.target_date) {
-      const today = new Date();
-      const target = new Date(goalData.target_date);
-      const diff = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-      return diff >= 0 ? diff : null;
-    }
-    return null;
-  })();
 
   return (
     <div className="container py-8">
@@ -426,353 +160,31 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div>
-          <Card className="overflow-hidden">
-            <div className="h-1 bg-gradient-to-r from-brand-primary to-purple-500"></div>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Scale className="h-5 w-5 text-brand-primary" />
-                Add Weight Entry
-              </CardTitle>
-              <CardDescription>
-                Record your current weight to track your progress
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleAddWeight} className="space-y-4">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="weight">Weight*</Label>
-                    <div className="flex">
-                      <Input
-                        id="weight"
-                        type="number"
-                        step="any"
-                        min="0"
-                        placeholder="Enter weight"
-                        value={newWeight}
-                        onChange={(e) => setNewWeight(e.target.value)}
-                        required
-                        className="rounded-r-none"
-                      />
-                      <Button
-                        variant="outline"
-                        type="button"
-                        onClick={() => setWeightUnit(weightUnit === "kg" ? "lbs" : "kg")}
-                        className="rounded-l-none border-l-0"
-                      >
-                        {weightUnit}
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="date">Date</Label>
-                    <Input
-                      id="date"
-                      type="date"
-                      value={entryDate}
-                      onChange={(e) => setEntryDate(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="time">Time</Label>
-                    <Input
-                      id="time"
-                      type="time"
-                      value={entryTime}
-                      onChange={(e) => setEntryTime(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="flex items-end">
-                    <div className="w-full">
-                      <Button 
-                        type="submit" 
-                        disabled={isSubmitting}
-                        className="w-full bg-gradient-to-r from-brand-primary to-purple-500 hover:from-brand-primary/90 hover:to-purple-500/90"
-                      >
-                        {isSubmitting ? "Adding..." : "Add Entry"}
-                        <PlusIcon className="ml-2 h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="description">Notes (Diet Related)</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Add any notes about this weight entry..."
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    rows={2}
-                  />
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
+        <WeightEntryForm onEntryAdded={handleEntryAdded} preferredUnit={preferredUnit} />
         
-        <div>
-          <AIInsights userId={userId} />
-        </div>
+        <AIInsights userId={userId} />
 
         {chartData.length > 1 && (
-          <div>
-            <WeightJourneyInsights 
-              stats={stats}
-              unit={chartData[0]?.unit || preferredUnit}
-              dataLength={chartData.length}
-              minWeight={minWeight}
-              maxWeight={maxWeight}
-            />
-          </div>
+          <WeightJourneyInsights 
+            stats={stats}
+            unit={chartData[0]?.unit || preferredUnit}
+            dataLength={chartData.length}
+            minWeight={minWeight}
+            maxWeight={maxWeight}
+          />
         )}
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <div className="md:col-span-2">
-            <Card className="overflow-hidden">
-              <div className="h-1 bg-gradient-to-r from-yellow-400 to-amber-600"></div>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Goal Progress
-                </CardTitle>
-                <Trophy className="h-4 w-4 text-brand-primary" />
-              </CardHeader>
-              <CardContent>
-                {userData.goalWeight ? (
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">{userData.currentWeight} {userData.unit}</span>
-                      <span className="text-sm font-medium">{Math.round(userData.progress * 100)}%</span>
-                      <span className="text-sm">{userData.goalWeight} {userData.unit}</span>
-                    </div>
-                    
-                    <div className="relative h-8 w-full bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-brand-primary to-brand-primary/70"
-                        style={{ width: `${userData.progress * 100}%` }}
-                      />
-                      <div 
-                        className="absolute top-0 h-full"
-                        style={{ 
-                          left: `${userData.progress * 100}%`,
-                          transform: 'translateX(-50%)'
-                        }}
-                      >
-                        <div className="h-8 w-2 bg-white border border-gray-300 rounded-full" />
-                      </div>
-                      {[0.25, 0.5, 0.75].map((milestone) => {
-                        const milestonePosition = `${milestone * 100}%`;
-                        
-                        const milestoneWeight = userData.initialWeight > userData.goalWeight
-                          ? userData.initialWeight - (milestone * (userData.initialWeight - userData.goalWeight))
-                          : userData.initialWeight + (milestone * (userData.goalWeight - userData.initialWeight));
-                          
-                        const isReached = userData.initialWeight > userData.goalWeight
-                          ? userData.currentWeight <= milestoneWeight
-                          : userData.currentWeight >= milestoneWeight;
-                          
-                        return (
-                          <div 
-                            key={milestone}
-                            className="absolute top-0 h-full flex flex-col items-center"
-                            style={{ 
-                              left: milestonePosition,
-                            }}
-                          >
-                            <div 
-                              className={`h-8 w-0.5 ${isReached ? 'bg-white' : 'bg-gray-400'}`}
-                            />
-                            <span className="text-xs mt-1">{milestoneWeight.toFixed(1)}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <p className="text-center text-sm text-muted-foreground mt-2">
-                      {userData.currentWeight > userData.goalWeight
-                        ? `${(userData.currentWeight - userData.goalWeight).toFixed(1)} ${userData.unit} left to lose`
-                        : `${(userData.goalWeight - userData.currentWeight).toFixed(1)} ${userData.unit} left to gain`}
-                    </p>
-                    {daysToGoal !== null && daysToGoal !== undefined && (
-                      <p className="text-center text-xs text-brand-primary mt-1">
-                        {daysToGoal} day{daysToGoal === 1 ? "" : "s"} left to goal
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center p-4">
-                    <p className="text-muted-foreground">No goal set yet</p>
-                    <Button variant="outline" size="sm" className="mt-2" asChild>
-                      <Link to="/goals">
-                        <Trophy className="mr-2 h-4 w-4" />
-                        Set Weight Goal
-                      </Link>
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+          <div className="md:col-span-2 lg:col-span-4">
+            <WeightChart chartData={chartData} />
           </div>
 
           <div className="md:col-span-2 lg:col-span-4">
-            <Card className="overflow-hidden">
-              <div className="h-1 bg-gradient-to-r from-indigo-400 to-purple-600"></div>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Last 7 Days</CardTitle>
-                  <CardDescription>Your recent weight trend</CardDescription>
-                </div>
-                <Button variant="outline" size="sm" asChild>
-                  <Link to="/reports">
-                    <FileBarChart className="mr-2 h-4 w-4" />
-                    View Reports
-                  </Link>
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {chartData.length > 1 ? (
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#9b87f5" stopOpacity={0.8}/>
-                            <stop offset="95%" stopColor="#D6BCFA" stopOpacity={0.2}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                        <XAxis dataKey="date" />
-                        <YAxis 
-                          domain={[
-                            (dataMin: number) => Math.floor(dataMin * 0.99), 
-                            (dataMax: number) => Math.ceil(dataMax * 1.01)
-                          ]} 
-                        />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Area 
-                          type="monotone" 
-                          dataKey="weight" 
-                          stroke="#9b87f5" 
-                          fillOpacity={1}
-                          fill="url(#colorWeight)" 
-                          strokeWidth={2}
-                          activeDot={{ r: 8 }}
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-[300px] text-center">
-                    <LineChart className="h-16 w-16 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium mb-2">Not enough data</h3>
-                    <p className="text-muted-foreground max-w-md">
-                      Add at least two weight entries to see your trend chart.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <RecentEntries entries={recentEntries} />
           </div>
 
           <div className="md:col-span-2 lg:col-span-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Recent Entries</CardTitle>
-                  <CardDescription>Your latest weight measurements</CardDescription>
-                </div>
-                <Button variant="outline" size="sm" asChild>
-                  <Link to="/reports">
-                    <Calendar className="mr-2 h-4 w-4" />
-                    View All
-                  </Link>
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {recentEntries.length > 0 ? (
-                  <div className="space-y-1">
-                    {recentEntries.slice(0, 5).map((entry, i) => (
-                      <div 
-                        key={entry.id}
-                        className="flex items-center justify-between border-b py-3 last:border-0 last:pb-0"
-                      >
-                        <div className="flex items-center">
-                          <div>
-                            <p className="text-sm font-medium">
-                              {format(new Date(entry.date), "MMM dd, yyyy")}
-                              <span className="text-xs text-muted-foreground ml-2">
-                                {entry.time.slice(0, 5)}
-                              </span>
-                            </p>
-                            {entry.description && (
-                              <p className="text-xs text-muted-foreground mt-1 italic">
-                                "{entry.description}"
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center">
-                          <p className="mr-2 text-sm font-semibold">{entry.weight} {entry.unit}</p>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-32 text-center">
-                    <p className="text-muted-foreground">
-                      No weight entries yet. Add your first entry above.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 lg:col-span-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Goals</CardTitle>
-                <CardDescription>Set and track your weight goals</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col">
-                  <p className="text-muted-foreground mb-4">
-                    Set weight goals to stay motivated and track your progress over time.
-                  </p>
-                  <Button asChild>
-                    <Link to="/goals">
-                      <Target className="mr-2 h-4 w-4" />
-                      Manage Goals
-                    </Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Reports</CardTitle>
-                <CardDescription>View detailed weight analytics</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col">
-                  <p className="text-muted-foreground mb-4">
-                    Access comprehensive reports and insights about your weight journey.
-                  </p>
-                  <Button asChild>
-                    <Link to="/reports">
-                      <BarChart3 className="mr-2 h-4 w-4" />
-                      View Reports
-                    </Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <QuickActions />
           </div>
         </div>
       </div>
@@ -782,3 +194,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
