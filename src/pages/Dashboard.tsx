@@ -1,9 +1,9 @@
 
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "lucide-react";
+import { Calendar, Home, Target as TargetIcon, BarChart2, UserCircle, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { HamburgerMenu } from "@/components/ui/hamburger-menu";
@@ -14,6 +14,15 @@ import WeightEntryForm from "@/components/dashboard/WeightEntryForm";
 import WeightChart from "@/components/dashboard/WeightChart";
 import RecentEntries from "@/components/dashboard/RecentEntries";
 import QuickActions from "@/components/dashboard/QuickActions";
+
+interface WeightEntry {
+  id: string;
+  weight: number;
+  unit: string;
+  date: string;
+  time: string;
+  description?: string;
+}
 
 const dashboardNavItems = [
   { title: "Dashboard", href: "/dashboard", icon: Home },
@@ -194,4 +203,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-
