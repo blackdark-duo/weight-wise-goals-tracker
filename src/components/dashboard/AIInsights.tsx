@@ -28,20 +28,21 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
     setError(null);
 
     try {
-      // First, get the webhook URL from the user's profile
+      // First, get user profile data (for display name)
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("webhook_url")
+        .select("display_name, webhook_url")
         .eq("id", userId)
         .single();
 
       if (profileError) {
-        throw new Error("Failed to fetch webhook URL");
+        throw new Error("Failed to fetch user profile");
       }
 
       const webhookUrl = profileData?.webhook_url || 'http://n8n.cozyapp.uno:5678/webhook-test/36e520c4-f7a4-4872-8e21-e469701eb68e';
+      const displayName = profileData?.display_name || 'User';
 
-      // Get last 30 weight entries
+      // Get weight entries (last 30 days)
       const { data: entries, error: entriesError } = await supabase
         .from("weight_entries")
         .select("*")
@@ -53,6 +54,40 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
       if (entriesError) {
         throw new Error("Failed to fetch weight entries");
       }
+      
+      // Get user's latest goal
+      const { data: goals, error: goalsError } = await supabase
+        .from("goals")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(1);
+        
+      if (goalsError) {
+        throw new Error("Failed to fetch goals");
+      }
+
+      // Format data according to the specified structure
+      const formattedData = {
+        display_name: displayName,
+        timestamp: new Date().toISOString(),
+        goal: goals && goals.length > 0 ? {
+          goalWeight: goals[0].target_weight,
+          unit: goals[0].unit,
+          daysToGoal: goals[0].target_date ? 
+            Math.ceil((new Date(goals[0].target_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 30
+        } : {
+          goalWeight: null,
+          unit: entries && entries.length > 0 ? entries[0].unit : 'kg',
+          daysToGoal: 30
+        },
+        entries: {
+          weight: entries ? entries.map(entry => entry.weight).join(',') : '',
+          date: entries ? entries.map(entry => entry.date).join(',') : '',
+          notes: entries ? entries.map(entry => entry.description || '').join(',') : ''
+        },
+        unit: entries && entries.length > 0 ? entries[0].unit : 'kg'
+      };
 
       // Send data to webhook
       const response = await fetch(webhookUrl, {
@@ -60,11 +95,7 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          entries: entries || [],
-          timestamp: new Date().toISOString(),
-          userId: userId,
-        }),
+        body: JSON.stringify(formattedData),
       });
 
       if (!response.ok) {
