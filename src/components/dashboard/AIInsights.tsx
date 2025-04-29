@@ -43,13 +43,17 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
       const displayName = profileData?.display_name || 'User';
 
       // Get weight entries (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
+
       const { data: entries, error: entriesError } = await supabase
         .from("weight_entries")
         .select("*")
         .eq("user_id", userId)
+        .gte("date", thirtyDaysAgoStr)
         .order("date", { ascending: false })
-        .order("time", { ascending: false })
-        .limit(30);
+        .order("time", { ascending: false });
 
       if (entriesError) {
         throw new Error("Failed to fetch weight entries");
@@ -67,19 +71,15 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
         throw new Error("Failed to fetch goals");
       }
 
-      // Format data according to the specified structure
+      // Format data according to the specified structure with comma-separated arrays
       const formattedData = {
         display_name: displayName,
         timestamp: new Date().toISOString(),
-        goal: goals && goals.length > 0 ? {
-          goalWeight: goals[0].target_weight,
-          unit: goals[0].unit,
-          daysToGoal: goals[0].target_date ? 
+        goal: {
+          goalWeight: goals && goals.length > 0 ? goals[0].target_weight : null,
+          unit: goals && goals.length > 0 ? goals[0].unit : (entries && entries.length > 0 ? entries[0].unit : 'kg'),
+          daysToGoal: goals && goals.length > 0 && goals[0].target_date ? 
             Math.ceil((new Date(goals[0].target_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 30
-        } : {
-          goalWeight: null,
-          unit: entries && entries.length > 0 ? entries[0].unit : 'kg',
-          daysToGoal: 30
         },
         entries: {
           weight: entries ? entries.map(entry => entry.weight).join(',') : '',
@@ -129,17 +129,30 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
       .replace(/^# (.*$)/gm, '<h2 class="text-xl font-bold mb-3 text-emerald-700">$1</h2>')
       .replace(/^## (.*$)/gm, '<h3 class="text-lg font-bold mb-2 text-emerald-600">$1</h3>')
       .replace(/^### (.*$)/gm, '<h4 class="text-base font-bold mb-2 text-emerald-500">$1</h4>')
+      .replace(/^([A-Z\s]+)$/gm, '<h2 class="text-xl font-bold mb-3 text-emerald-700">$1</h2>')
       
       // Format bold, italic
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/__(.*?)__/g, '<strong>$1</strong>')
+      .replace(/_(.*?)_/g, '<em>$1</em>')
       
       // Format lists
       .replace(/^\- (.*$)/gm, '<li class="ml-4">• $1</li>')
+      .replace(/^\* (.*$)/gm, '<li class="ml-4">• $1</li>')
       
       // Format paragraphs
       .split('\n\n')
-      .map(para => para.startsWith('<h') || para.startsWith('<li') ? para : `<p class="mb-3">${para}</p>`)
+      .map(para => {
+        if (para.startsWith('<h') || para.startsWith('<li')) {
+          return para;
+        }
+        // Wrap consecutive list items in a ul tag
+        if (para.includes('<li')) {
+          return `<ul class="mb-4">${para}</ul>`;
+        }
+        return `<p class="mb-3">${para}</p>`;
+      })
       .join('\n')
       
       // Highlight important metrics
@@ -148,7 +161,12 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
       
       // Create sections with borders
       .replace(/<h2/g, '<div class="border-t pt-3 mt-3 border-emerald-200 first:border-0 first:mt-0"><h2')
-      .replace(/<\/p>\s*(?=<h2|$)/g, '</p></div>');
+      .replace(/<\/p>\s*(?=<h2|$)/g, '</p></div>')
+      
+      // Normalize excessive newlines
+      .replace(/\n{3,}/g, '\n\n')
+      // Trim leading/trailing whitespace
+      .trim();
     
     return formattedText;
   };
