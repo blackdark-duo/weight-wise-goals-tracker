@@ -15,10 +15,7 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
 
   const fetchInsights = async () => {
     if (!userId) {
-      toast.error("Please sign in to fetch insights", {
-        style: { background: "#FEE2E2", border: "1px solid #FCA5A5", color: "#B91C1C" },
-        icon: "⚠️"
-      });
+      toast.error("Please sign in to fetch insights");
       setError("Authentication required. Please sign in to use AI insights.");
       return;
     }
@@ -34,10 +31,7 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
       }
       
       setInsights(formattedInsights);
-      toast.success("AI insights updated successfully!", {
-        style: { background: "#DCFCE7", border: "1px solid #86EFAC", color: "#166534" },
-        icon: "✅"
-      });
+      toast.success("AI insights updated successfully!");
     } catch (err: any) {
       console.error("Error fetching AI insights:", err);
       
@@ -55,10 +49,7 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
       }
       
       setError(errorMessage);
-      toast.error(errorMessage, {
-        style: { background: "#FEE2E2", border: "1px solid #FCA5A5", color: "#B91C1C" },
-        icon: "⚠️"
-      });
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

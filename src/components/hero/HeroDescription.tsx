@@ -1,18 +1,13 @@
 
 import React from "react";
-import { cn } from "@/lib/utils";
 
 type HeroDescriptionProps = {
   text: string;
-  className?: string;
 };
 
-const HeroDescription = ({ text, className }: HeroDescriptionProps) => {
+const HeroDescription = ({ text }: HeroDescriptionProps) => {
   return (
-    <p className={cn(
-      "text-lg text-muted-foreground md:text-xl leading-relaxed max-w-[650px] animate-fade-in",
-      className
-    )}>
+    <p className="text-lg text-muted-foreground md:text-xl leading-relaxed">
       {text}
     </p>
   );
