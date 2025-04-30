@@ -50,28 +50,61 @@ export type Database = {
           created_at: string | null
           display_name: string | null
           id: string
+          is_admin: boolean | null
+          last_webhook_date: string | null
           preferred_unit: string | null
           timezone: string | null
           updated_at: string | null
+          webhook_count: number | null
+          webhook_limit: number | null
           webhook_url: string | null
         }
         Insert: {
           created_at?: string | null
           display_name?: string | null
           id: string
+          is_admin?: boolean | null
+          last_webhook_date?: string | null
           preferred_unit?: string | null
           timezone?: string | null
           updated_at?: string | null
+          webhook_count?: number | null
+          webhook_limit?: number | null
           webhook_url?: string | null
         }
         Update: {
           created_at?: string | null
           display_name?: string | null
           id?: string
+          is_admin?: boolean | null
+          last_webhook_date?: string | null
           preferred_unit?: string | null
           timezone?: string | null
           updated_at?: string | null
+          webhook_count?: number | null
+          webhook_limit?: number | null
           webhook_url?: string | null
+        }
+        Relationships: []
+      }
+      webhook_config: {
+        Row: {
+          days: number | null
+          fields: Json | null
+          id: number
+          url: string | null
+        }
+        Insert: {
+          days?: number | null
+          fields?: Json | null
+          id?: number
+          url?: string | null
+        }
+        Update: {
+          days?: number | null
+          fields?: Json | null
+          id?: number
+          url?: string | null
         }
         Relationships: []
       }

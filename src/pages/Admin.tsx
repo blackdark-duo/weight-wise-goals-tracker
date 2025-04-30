@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -111,19 +110,28 @@ const Admin = () => {
 
   const fetchWebhookConfig = async () => {
     try {
-      // Use raw SQL query for the webhook_config table until we update the types
-      const { data, error } = await supabase
-        .rpc('get_webhook_config');
-
-      if (error) {
-        throw error;
+      const response = await fetch(
+        'https://mjzzdynuzrpklgexabzs.supabase.co/functions/v1/get_webhook_config',
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error(`Error fetching webhook config: ${response.status}`);
       }
       
-      if (data) {
+      const result = await response.json();
+      
+      if (result.data) {
         setWebhookConfig({
-          url: data.url || "",
-          days: data.days || 30,
-          fields: data.fields || {
+          url: result.data.url || "",
+          days: result.data.days || 30,
+          fields: result.data.fields || {
             user_data: true,
             weight_data: true,
             goal_data: true,
@@ -195,20 +203,31 @@ const Admin = () => {
 
   const saveWebhookConfig = async () => {
     try {
-      // Use raw SQL for updating the webhook_config table
-      const { error } = await supabase
-        .rpc('update_webhook_config', {
-          config_url: webhookConfig.url,
-          config_days: webhookConfig.days,
-          config_fields: webhookConfig.fields
-        });
+      const response = await fetch(
+        'https://mjzzdynuzrpklgexabzs.supabase.co/functions/v1/update_webhook_config',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+          },
+          body: JSON.stringify({
+            url: webhookConfig.url,
+            days: webhookConfig.days,
+            fields: webhookConfig.fields
+          })
+        }
+      );
       
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Error ${response.status}`);
+      }
       
       toast.success("Webhook configuration saved successfully");
     } catch (error) {
       console.error("Error saving webhook config:", error);
-      toast.error("Failed to save webhook configuration");
+      toast.error(`Failed to save webhook configuration: ${(error as Error).message}`);
     }
   };
 

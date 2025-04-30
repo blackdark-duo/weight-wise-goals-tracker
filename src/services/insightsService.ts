@@ -8,6 +8,7 @@ interface UserProfile {
   webhook_limit?: number;
   webhook_count?: number;
   last_webhook_date?: string;
+  is_admin?: boolean;
 }
 
 interface Goal {
@@ -85,22 +86,55 @@ export const fetchInsightsData = async (userId: string) => {
         .eq("id", userId);
     }
 
-    // Get webhook configuration using RPC function
-    const { data: webhookConfigData, error: webhookConfigError } = await supabase
-      .rpc('get_webhook_config');
-    
-    // Fallback webhook config if there's an error
-    const webhookConfig: WebhookConfig = webhookConfigError ? {
-      url: "",
-      days: 30,
-      fields: {
-        user_data: true,
-        weight_data: true,
-        goal_data: true,
-        activity_data: false,
-        detailed_analysis: false
+    // Get webhook configuration using edge function
+    let webhookConfig: WebhookConfig;
+    try {
+      const response = await fetch(
+        'https://mjzzdynuzrpklgexabzs.supabase.co/functions/v1/get_webhook_config',
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error(`Error fetching webhook config: ${response.status}`);
       }
-    } : webhookConfigData;
+      
+      const result = await response.json();
+      
+      if (result.data) {
+        webhookConfig = {
+          url: result.data.url || "",
+          days: result.data.days || 30,
+          fields: result.data.fields || {
+            user_data: true,
+            weight_data: true,
+            goal_data: true,
+            activity_data: false,
+            detailed_analysis: false
+          }
+        };
+      } else {
+        throw new Error("No webhook configuration found");
+      }
+    } catch (error) {
+      console.error("Error fetching webhook config:", error);
+      webhookConfig = {
+        url: profileData?.webhook_url || 'http://n8n.cozyapp.uno:5678/webhook-test/36e520c4-f7a4-4872-8e21-e469701eb68e',
+        days: 30,
+        fields: {
+          user_data: true,
+          weight_data: true,
+          goal_data: true,
+          activity_data: false,
+          detailed_analysis: false
+        }
+      };
+    }
 
     const webhookUrl = webhookConfig.url || profileData?.webhook_url || 'http://n8n.cozyapp.uno:5678/webhook-test/36e520c4-f7a4-4872-8e21-e469701eb68e';
     const displayName = profileData?.display_name || 'User';

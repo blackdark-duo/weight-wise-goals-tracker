@@ -36,8 +36,8 @@ const queryClient = new QueryClient({
 });
 
 // This prevents double rendering in React.StrictMode
-const sessionCache = {
-  session: null as Session | null,
+const sessionCache: { session: Session | null; initialized: boolean } = {
+  session: null,
   initialized: false,
 };
 
