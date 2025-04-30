@@ -32,7 +32,7 @@ export const fetchInsightsData = async (userId: string) => {
     .single();
 
   if (profileError) {
-    throw new Error("Failed to fetch user profile");
+    throw new Error(`Failed to fetch user profile: ${profileError.message}`);
   }
 
   const webhookUrl = profileData?.webhook_url || 'http://n8n.cozyapp.uno:5678/webhook-test/36e520c4-f7a4-4872-8e21-e469701eb68e';
@@ -52,7 +52,7 @@ export const fetchInsightsData = async (userId: string) => {
     .order("time", { ascending: false });
 
   if (entriesError) {
-    throw new Error("Failed to fetch weight entries");
+    throw new Error(`Failed to fetch weight entries: ${entriesError.message}`);
   }
   
   // Get user's latest goal
@@ -64,7 +64,12 @@ export const fetchInsightsData = async (userId: string) => {
     .limit(1);
     
   if (goalsError) {
-    throw new Error("Failed to fetch goals");
+    throw new Error(`Failed to fetch goals: ${goalsError.message}`);
+  }
+
+  // Handle case where no entries exist
+  if (!entries || entries.length === 0) {
+    return "No weight data available for the last 30 days. Please add some weight entries to get insights.";
   }
 
   // Format data according to the specified structure with comma-separated arrays
@@ -85,22 +90,45 @@ export const fetchInsightsData = async (userId: string) => {
     unit: entries && entries.length > 0 ? entries[0].unit : 'kg'
   };
 
-  // Send data to webhook
-  const response = await fetch(webhookUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(formattedData),
-  });
+  try {
+    // Send data to webhook with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(formattedData),
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
 
-  if (!response.ok) {
-    throw new Error(`Webhook returned ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`Webhook returned ${response.status}`);
+    }
+
+    // Get the text response directly without parsing as JSON
+    let responseText;
+    try {
+      responseText = await response.text();
+      
+      // Check if response is actually empty or just whitespace
+      if (!responseText || responseText.trim() === '') {
+        throw new Error("Empty response from AI service");
+      }
+    } catch (error) {
+      throw new Error(`Failed to process AI response: ${(error as Error).message}`);
+    }
+    
+    // Beautify the text response by formatting it as HTML
+    return formatInsightsText(responseText);
+  } catch (error) {
+    if ((error as Error).name === 'AbortError') {
+      throw new Error('AI service request timed out. Please try again later.');
+    }
+    throw error; // Re-throw other errors
   }
-
-  // Get the text response directly without parsing as JSON
-  const responseText = await response.text();
-  
-  // Beautify the text response by formatting it as HTML
-  return formatInsightsText(responseText);
 };
