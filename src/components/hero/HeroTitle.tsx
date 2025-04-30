@@ -9,9 +9,11 @@ type HeroTitleProps = {
 
 const HeroTitle = ({ highlight, beforeText, afterText }: HeroTitleProps) => {
   return (
-    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tighter leading-tight">
+    <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl leading-tight">
       {beforeText}{" "}
-      <span className="text-brand-primary">{highlight}</span>{" "}
+      <span className="bg-gradient-to-r from-brand-primary to-purple-600 bg-clip-text text-transparent font-extrabold">
+        {highlight}
+      </span>{" "}
       {afterText}
     </h1>
   );

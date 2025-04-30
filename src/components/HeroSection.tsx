@@ -1,19 +1,13 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import HeroButtons from "./hero/HeroButtons";
 import HeroRating from "./hero/HeroRating";
 import HeroImage from "./hero/HeroImage";
-import { TextRotate } from "@/components/ui/text-rotate";
+import HeroTitle from "./hero/HeroTitle";
+import HeroDescription from "./hero/HeroDescription";
 import { motion } from "framer-motion";
 
 const HeroSection = () => {
-  const [rotatingTexts] = useState<string[]>([
-    "Fitness Goals",
-    "Health Journey",
-    "Wellness Path",
-    "Active Lifestyle"
-  ]);
-
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-white via-purple-50/30 to-blue-50/30 py-20 md:py-28">
       <div className="absolute top-0 right-0 w-full h-full bg-grid-pattern-light opacity-10 pointer-events-none"></div>
@@ -25,24 +19,14 @@ const HeroSection = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}
           >
-            <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl">
-              Transform Your{" "}
-              <span className="relative inline-block">
-                <TextRotate 
-                  texts={rotatingTexts}
-                  mainClassName="text-brand-primary font-extrabold bg-gradient-to-r from-brand-primary to-purple-600 bg-clip-text text-transparent"
-                  staggerDuration={0.05}
-                  rotationInterval={3000}
-                  initial={{ y: "100%" }}
-                  animate={{ y: 0 }}
-                  exit={{ y: "-100%" }}
-                />
-              </span>
-              {" "}With Weight Wise
-            </h1>
-            <p className="text-muted-foreground md:text-xl max-w-[600px]">
-              Weight Wise is Your Personal Companion for a Healthier, More Vibrant Lifestyle. Track, Achieve, and Celebrate Your Wellness Milestones.
-            </p>
+            <HeroTitle 
+              beforeText="Transform"
+              highlight="Your Health"
+              afterText="Journey With Weight Wise"
+            />
+            <HeroDescription 
+              text="Track your progress, set meaningful goals, and get personalized AI insights to help you achieve your ideal weight and maintain a healthier lifestyle."
+            />
             <HeroButtons />
             <HeroRating />
           </motion.div>

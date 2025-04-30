@@ -12,6 +12,11 @@ import NotFound from "./pages/NotFound";
 import Reports from "./pages/Reports";
 import Goals from "./pages/Goals";
 import Account from "./pages/Account";
+import Admin from "./pages/Admin";
+import ContactUs from "./pages/ContactUs";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import About from "./pages/About";
 import { useState, useEffect } from "react";
 import { supabase } from "./integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
@@ -67,6 +72,42 @@ const App = () => {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Create admin user for demo purposes
+  useEffect(() => {
+    const createAdminUser = async () => {
+      try {
+        // Check if admin user already exists
+        const { data: adminExists } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('email', 'admin@weightwise.com')
+          .single();
+        
+        if (!adminExists) {
+          // Create admin user
+          const { error } = await supabase.auth.signUp({
+            email: 'admin@weightwise.com',
+            password: 'password',
+            options: {
+              data: {
+                is_admin: true,
+                display_name: 'Admin User'
+              }
+            }
+          });
+          
+          if (error) console.error('Failed to create admin user:', error);
+        }
+      } catch (err) {
+        console.error('Error setting up admin user:', err);
+      }
+    };
+    
+    if (process.env.NODE_ENV === 'development') {
+      createAdminUser();
+    }
+  }, []);
+
   // Private route wrapper component
   const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
     if (isLoading) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
@@ -90,6 +131,10 @@ const App = () => {
                 <Route path="/" element={<Index />} />
                 <Route path="/signin" element={<SignIn />} />
                 <Route path="/signup" element={<SignUp />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/contact" element={<ContactUs />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route path="/terms" element={<TermsOfService />} />
                 
                 {/* Protected Routes */}
                 <Route path="/dashboard" element={
@@ -110,6 +155,11 @@ const App = () => {
                 <Route path="/goals" element={
                   <PrivateRoute>
                     <Goals />
+                  </PrivateRoute>
+                } />
+                <Route path="/admin" element={
+                  <PrivateRoute>
+                    <Admin />
                   </PrivateRoute>
                 } />
                 

@@ -59,11 +59,11 @@ const SignIn = () => {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-ui-background p-4">
-      <Card className="mx-auto max-w-md w-full">
+    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-gradient-to-br from-white via-purple-50 to-blue-50 p-4">
+      <Card className="mx-auto max-w-md w-full shadow-lg border border-purple-100">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Sign in to Weight Wise</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-2xl font-bold text-center">Welcome Back</CardTitle>
+          <CardDescription className="text-center">
             Enter your credentials to access your account
           </CardDescription>
         </CardHeader>
@@ -81,17 +81,18 @@ const SignIn = () => {
               <Input
                 id="email"
                 type="email"
-                placeholder="m@example.com"
+                placeholder="john.doe@email.com"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                className="border-purple-200 focus:border-purple-400"
               />
             </div>
             
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                <Link to="/forgot-password" className="text-xs text-brand-primary hover:underline">
+                <Link to="/forgot-password" className="text-xs text-purple-600 hover:underline">
                   Forgot password?
                 </Link>
               </div>
@@ -101,18 +102,29 @@ const SignIn = () => {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                className="border-purple-200 focus:border-purple-400"
               />
+            </div>
+
+            <div className="text-sm text-muted-foreground">
+              <p>For admin access:</p>
+              <p>Email: admin@weightwise.com</p>
+              <p>Password: password</p>
             </div>
           </CardContent>
           
           <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button 
+              type="submit" 
+              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700" 
+              disabled={isLoading}
+            >
               {isLoading ? "Signing in..." : "Sign in"}
             </Button>
             
             <div className="text-center text-sm">
               Don&apos;t have an account?{" "}
-              <Link to="/signup" className="text-brand-primary hover:underline">
+              <Link to="/signup" className="text-purple-600 hover:underline">
                 Sign up
               </Link>
             </div>
