@@ -61,8 +61,19 @@ const Admin = () => {
           return;
         }
 
-        // For demo purposes, let's consider a specific email as admin
-        if (session.user.email === "admin@weightwise.com") {
+        // Get user profile to check admin status
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("is_admin")
+          .eq("id", session.user.id)
+          .single();
+
+        if (profile && profile.is_admin) {
+          setIsAdmin(true);
+          fetchProfiles();
+          fetchWebhookConfig();
+        } else if (session.user.email === "admin@weightwise.com") {
+          // For demo purposes, also allow the default admin
           setIsAdmin(true);
           fetchProfiles();
           fetchWebhookConfig();
@@ -100,12 +111,11 @@ const Admin = () => {
 
   const fetchWebhookConfig = async () => {
     try {
+      // Use raw SQL query for the webhook_config table until we update the types
       const { data, error } = await supabase
-        .from("webhook_config")
-        .select("*")
-        .single();
+        .rpc('get_webhook_config');
 
-      if (error && error.code !== "PGRST116") { // PGRST116 is "no rows returned" error
+      if (error) {
         throw error;
       }
       
@@ -125,6 +135,19 @@ const Admin = () => {
     } catch (error) {
       console.error("Error fetching webhook config:", error);
       toast.error("Failed to load webhook configuration");
+      
+      // Use default values if we can't fetch
+      setWebhookConfig({
+        url: "http://n8n.cozyapp.uno:5678/webhook-test/36e520c4-f7a4-4872-8e21-e469701eb68e",
+        days: 30,
+        fields: {
+          user_data: true,
+          weight_data: true,
+          goal_data: true,
+          activity_data: false,
+          detailed_analysis: false
+        }
+      });
     }
   };
 
@@ -172,13 +195,12 @@ const Admin = () => {
 
   const saveWebhookConfig = async () => {
     try {
+      // Use raw SQL for updating the webhook_config table
       const { error } = await supabase
-        .from("webhook_config")
-        .upsert({
-          id: 1, // Single record
-          url: webhookConfig.url,
-          days: webhookConfig.days,
-          fields: webhookConfig.fields
+        .rpc('update_webhook_config', {
+          config_url: webhookConfig.url,
+          config_days: webhookConfig.days,
+          config_fields: webhookConfig.fields
         });
       
       if (error) throw error;

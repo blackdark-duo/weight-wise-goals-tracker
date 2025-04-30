@@ -43,7 +43,7 @@ export const fetchInsightsData = async (userId: string) => {
     // First, get user profile data
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")
-      .select("display_name, webhook_url, webhook_limit, webhook_count, last_webhook_date")
+      .select("*")
       .eq("id", userId)
       .single();
 
@@ -52,12 +52,15 @@ export const fetchInsightsData = async (userId: string) => {
     }
 
     // Check webhook limit
-    if (profileData.webhook_limit !== undefined && profileData.webhook_count !== undefined) {
+    const webhookLimit = profileData.webhook_limit;
+    const webhookCount = profileData.webhook_count || 0;
+    
+    if (webhookLimit !== undefined && webhookCount !== undefined) {
       // Reset count if it's a new day
       const lastDate = profileData.last_webhook_date ? new Date(profileData.last_webhook_date).toDateString() : null;
       const today = new Date().toDateString();
       
-      let currentCount = profileData.webhook_count;
+      let currentCount = webhookCount;
       
       if (lastDate !== today) {
         // It's a new day, reset the count
@@ -68,8 +71,8 @@ export const fetchInsightsData = async (userId: string) => {
           .eq("id", userId);
       }
       
-      if (currentCount >= profileData.webhook_limit) {
-        throw new Error(`You've reached your daily limit of ${profileData.webhook_limit} AI insights requests. Please try again tomorrow.`);
+      if (webhookLimit > 0 && currentCount >= webhookLimit) {
+        throw new Error(`You've reached your daily limit of ${webhookLimit} AI insights requests. Please try again tomorrow.`);
       }
       
       // Increment the count
@@ -82,12 +85,11 @@ export const fetchInsightsData = async (userId: string) => {
         .eq("id", userId);
     }
 
-    // Get webhook configuration
+    // Get webhook configuration using RPC function
     const { data: webhookConfigData, error: webhookConfigError } = await supabase
-      .from("webhook_config")
-      .select("*")
-      .single();
+      .rpc('get_webhook_config');
     
+    // Fallback webhook config if there's an error
     const webhookConfig: WebhookConfig = webhookConfigError ? {
       url: "",
       days: 30,
