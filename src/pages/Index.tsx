@@ -1,21 +1,53 @@
 
+import { HeroSection } from "@/components/ui/hero-section";
+import { Icons } from "@/components/ui/icons";
 import Navbar from "@/components/Navbar";
-import MobileNavigation from "@/components/MobileNavigation";
-import HeroSection from "@/components/HeroSection";
 import ComparisonTable from "@/components/ComparisonTable";
+import MobileNavigation from "@/components/MobileNavigation";
 import { Toaster } from "@/components/ui/toaster";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-ui-background">
+    <div className="min-h-screen bg-gradient-to-br from-white via-purple-50/30 to-blue-50/30">
       <Navbar />
       <main>
-        <HeroSection />
+        {/* New Hero Section */}
+        <HeroSection
+          badge={{
+            text: "Now with AI-powered insights",
+            action: {
+              text: "Learn how",
+              href: "/features",
+            },
+          }}
+          title="Transform Your Weight Journey"
+          description="WeightWise is your personal companion for a healthier, more vibrant lifestyle. Track your progress, get AI-powered insights, and achieve your wellness goals with precision and motivation."
+          actions={[
+            {
+              text: "Start Your Journey",
+              href: "/signup",
+              variant: "default",
+              icon: <Icons.scale className="h-5 w-5" />,
+            },
+            {
+              text: "Explore Features",
+              href: "/features",
+              variant: "glow",
+              icon: <Icons.chart className="h-5 w-5" />,
+            },
+          ]}
+          image={{
+            src: "/lovable-uploads/weight-wise-hero.png",
+            alt: "WeightWise dashboard showcasing intuitive fitness tracking and wellness insights",
+          }}
+        />
         
         <ComparisonTable />
         
-        {/* CTA Section */}
-        <section className="py-20 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+        {/* Vibrant CTA Section */}
+        <section className="py-20 bg-gradient-to-r from-brand-primary/90 to-purple-600 text-white">
           <div className="container text-center">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-6">
               Ready to Start Your Weight Journey?
@@ -23,21 +55,22 @@ const Index = () => {
             <p className="text-xl mb-12 max-w-2xl mx-auto opacity-90">
               Join thousands of happy customers who have transformed their lives with WeightWise.
             </p>
-            <a 
-              href="/signup" 
-              className="inline-flex h-12 items-center justify-center rounded-md bg-white px-8 text-sm font-medium text-blue-600 shadow-lg transition-all hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring hover:shadow-xl"
+            <Button 
+              size="lg"
+              className="bg-white hover:bg-gray-100 text-brand-primary"
+              asChild
             >
-              Get Started Today
-            </a>
+              <a href="/signup">Get Started Today</a>
+            </Button>
           </div>
         </section>
         
-        {/* Footer */}
+        {/* Footer with enhanced styling */}
         <footer className="border-t border-ui-border py-12 bg-white">
           <div className="container">
             <div className="grid grid-cols-1 gap-8 md:grid-cols-3 lg:grid-cols-4">
               <div>
-                <h3 className="text-xl font-bold text-black">
+                <h3 className="text-xl font-bold bg-gradient-to-r from-brand-primary to-purple-600 bg-clip-text text-transparent">
                   WeightWise
                 </h3>
                 <p className="mt-4 text-sm text-muted-foreground">
@@ -46,15 +79,15 @@ const Index = () => {
               </div>
               
               <div>
-                <h4 className="text-sm font-semibold">Product</h4>
+                <h4 className="text-sm font-semibold text-brand-primary">Product</h4>
                 <ul className="mt-4 space-y-2 text-sm">
                   <li>
-                    <a href="/features" className="text-muted-foreground hover:text-blue-600 transition-colors">
+                    <a href="/features" className="text-muted-foreground hover:text-brand-primary transition-colors">
                       Features
                     </a>
                   </li>
                   <li>
-                    <a href="/pricing" className="text-muted-foreground hover:text-blue-600 transition-colors">
+                    <a href="/pricing" className="text-muted-foreground hover:text-brand-primary transition-colors">
                       Pricing
                     </a>
                   </li>
@@ -62,15 +95,15 @@ const Index = () => {
               </div>
               
               <div>
-                <h4 className="text-sm font-semibold">Resources</h4>
+                <h4 className="text-sm font-semibold text-brand-primary">Resources</h4>
                 <ul className="mt-4 space-y-2 text-sm">
                   <li>
-                    <a href="/blog" className="text-muted-foreground hover:text-blue-600 transition-colors">
+                    <a href="/blog" className="text-muted-foreground hover:text-brand-primary transition-colors">
                       Blog
                     </a>
                   </li>
                   <li>
-                    <a href="/faq" className="text-muted-foreground hover:text-blue-600 transition-colors">
+                    <a href="/faq" className="text-muted-foreground hover:text-brand-primary transition-colors">
                       FAQ
                     </a>
                   </li>
@@ -78,15 +111,15 @@ const Index = () => {
               </div>
               
               <div>
-                <h4 className="text-sm font-semibold">Legal</h4>
+                <h4 className="text-sm font-semibold text-brand-primary">Legal</h4>
                 <ul className="mt-4 space-y-2 text-sm">
                   <li>
-                    <a href="/privacy" className="text-muted-foreground hover:text-blue-600 transition-colors">
+                    <a href="/privacy" className="text-muted-foreground hover:text-brand-primary transition-colors">
                       Privacy
                     </a>
                   </li>
                   <li>
-                    <a href="/terms" className="text-muted-foreground hover:text-blue-600 transition-colors">
+                    <a href="/terms" className="text-muted-foreground hover:text-brand-primary transition-colors">
                       Terms
                     </a>
                   </li>

@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -62,22 +63,23 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-                // Custom theme colors for weight tracking app
+                // Enhanced vibrant theme colors for weight tracking app
                 brand: {
-                    primary: '#8B5CF6', // Purple main color
-                    secondary: '#F97316', // Orange accent
+                    primary: '#8B5CF6', // More vibrant purple main color
+                    secondary: '#F97316', // Vibrant orange accent
+                    tertiary: '#06B6D4', // Bright cyan for highlights
                     light: '#F3F4F6', // Light background
                     dark: '#1F2937', // Dark text
                 },
                 weight: {
-                    gain: '#F97316', // Orange for weight gain
-                    loss: '#10B981', // Green for weight loss
-                    maintain: '#6366F1', // Indigo for maintenance
+                    gain: '#F97316', // Vibrant orange for weight gain
+                    loss: '#10B981', // Vibrant green for weight loss
+                    maintain: '#6366F1', // Vibrant indigo for maintenance
                 },
                 goal: {
-                    progress: '#10B981', // Green for progress
-                    pending: '#F59E0B', // Amber for pending
-                    missed: '#EF4444', // Red for missed goals
+                    progress: '#10B981', // Vibrant green for progress
+                    pending: '#F59E0B', // Vibrant amber for pending
+                    missed: '#EF4444', // Vibrant red for missed goals
                 },
                 ui: {
                     background: '#F8FAFC', // Very light background
@@ -112,7 +114,15 @@ export default {
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out'
-			}
+			},
+            backgroundImage: {
+                'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+                'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
+                'gradient-linear-purple': 'linear-gradient(90deg, hsla(277, 75%, 84%, 1) 0%, hsla(297, 50%, 51%, 1) 100%)',
+                'gradient-linear-orange': 'linear-gradient(90deg, hsla(39, 100%, 77%, 1) 0%, hsla(22, 90%, 57%, 1) 100%)',
+                'gradient-linear-blue': 'linear-gradient(90deg, hsla(221, 45%, 73%, 1) 0%, hsla(220, 78%, 29%, 1) 100%)',
+                'gradient-linear-green': 'linear-gradient(90deg, hsla(146, 45%, 73%, 1) 0%, hsla(145, 78%, 29%, 1) 100%)',
+            }
 		}
 	},
 	plugins: [require("tailwindcss-animate")],

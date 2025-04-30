@@ -114,6 +114,14 @@
   .animate-enter {
     animation: fade-in 0.3s ease-out, scale-in 0.2s ease-out;
   }
+
+  .animate-appear {
+    animation: appear 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .animate-appear-zoom {
+    animation: appear-zoom 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
   
   /* Interactive elements */
   .hover-scale {
@@ -152,6 +160,14 @@
   .bg-gradient-card-teal {
     @apply bg-gradient-to-br from-white to-teal-50;
   }
+
+  .fade-bottom {
+    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1.0) 85%, transparent 100%);
+  }
+
+  .max-w-container {
+    max-width: 1280px;
+  }
 }
 
 @keyframes fade-in {
@@ -174,4 +190,76 @@
     transform: scale(1);
     opacity: 1;
   }
+}
+
+@keyframes appear {
+  0% {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes appear-zoom {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Legacy styles (keep for compatibility) */
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+.bg-grid-pattern-light {
+  background-image: linear-gradient(to right, rgba(139, 92, 246, 0.05) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(139, 92, 246, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
 }
