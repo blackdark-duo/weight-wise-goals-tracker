@@ -2,13 +2,13 @@
 import { createContext } from "react";
 import { Session } from "@supabase/supabase-js";
 
-// Define the shape of our context
+// Define the shape of our context without circular references
 export type AuthContextType = {
   session: Session | null;
   isLoading: boolean;
 };
 
-// Create context with a default undefined value
+// Create context with undefined as default value
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // This prevents double rendering in React.StrictMode
