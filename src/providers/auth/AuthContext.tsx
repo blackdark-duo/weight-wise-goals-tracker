@@ -9,7 +9,10 @@ export type AuthContextType = {
 };
 
 // Create context with undefined as default value
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType>({
+  session: null,
+  isLoading: true,
+});
 
 // This prevents double rendering in React.StrictMode
 export const sessionCache = {
