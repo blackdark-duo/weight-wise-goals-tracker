@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     
     sessionCache.initialized = true;
     
-    // Store just the unsubscribe function
+    // Manually track if we need to unsubscribe
     let unsubscribe: (() => void) | null = null;
     
     // Setup auth state listener first (before checking session)
@@ -45,9 +45,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setIsLoading(false);
     });
 
-    // Extract just the unsubscribe function to avoid complex type issues
-    if (data && typeof data.subscription?.unsubscribe === 'function') {
-      unsubscribe = () => data.subscription.unsubscribe();
+    // Safely extract just the unsubscribe function
+    if (data && data.subscription && typeof data.subscription.unsubscribe === 'function') {
+      unsubscribe = () => {
+        if (data.subscription) data.subscription.unsubscribe();
+      };
     }
 
     // Then check for existing session
