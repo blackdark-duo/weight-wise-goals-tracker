@@ -85,7 +85,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   }, []);
 
-  // Create the context value explicitly typed with AuthContextType
+  // Create the context value without explicit typing that causes circular reference
   const contextValue = {
     session,
     isLoading

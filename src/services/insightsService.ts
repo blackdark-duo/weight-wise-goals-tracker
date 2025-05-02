@@ -56,35 +56,36 @@ export async function fetchInsightsData(userId: string): Promise<string> {
         .select('*')
         .single();
   
-      const webhookConfig: WebhookConfig = webhookConfigData ? {
-        url: (webhookConfigData.url as string) || '',
-        days: (webhookConfigData.days as number) || 30,
-        fields: {
-          user_data: false,
-          weight_data: false,
-          goal_data: false,
-          activity_data: false,
-          detailed_analysis: false,
-          ...(typeof webhookConfigData.fields === 'object' ? 
-            webhookConfigData.fields as WebhookFields : 
-            {
-              user_data: true,
-              weight_data: true,
-              goal_data: true,
-              activity_data: false,
-              detailed_analysis: false
-            })
-        }
-      } : {
-        url: '',
-        days: 30,
-        fields: {
-          user_data: true,
-          weight_data: true,
-          goal_data: true,
-          activity_data: false,
-          detailed_analysis: false
-        }
+      // Define default webhook configuration
+      const defaultWebhookFields: WebhookFields = {
+        user_data: true,
+        weight_data: true,
+        goal_data: true,
+        activity_data: false,
+        detailed_analysis: false
+      };
+      
+      // Safely extract webhook fields from the database response
+      let webhookFields: WebhookFields = defaultWebhookFields;
+      
+      if (webhookConfigData?.fields && typeof webhookConfigData.fields === 'object' && !Array.isArray(webhookConfigData.fields)) {
+        // Cast to unknown first to avoid direct type assertion errors
+        const fieldsObject = webhookConfigData.fields as unknown as Record<string, boolean>;
+        
+        // Safely construct the webhook fields
+        webhookFields = {
+          user_data: fieldsObject.user_data ?? defaultWebhookFields.user_data,
+          weight_data: fieldsObject.weight_data ?? defaultWebhookFields.weight_data,
+          goal_data: fieldsObject.goal_data ?? defaultWebhookFields.goal_data,
+          activity_data: fieldsObject.activity_data ?? defaultWebhookFields.activity_data,
+          detailed_analysis: fieldsObject.detailed_analysis ?? defaultWebhookFields.detailed_analysis
+        };
+      }
+      
+      const webhookConfig: WebhookConfig = {
+        url: (webhookConfigData?.url as string) || '',
+        days: (webhookConfigData?.days as number) || 30,
+        fields: webhookFields
       };
       
       configWebhookUrl = webhookConfig.url;
