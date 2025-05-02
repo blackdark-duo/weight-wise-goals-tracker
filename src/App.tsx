@@ -41,6 +41,11 @@ const sessionCache: { session: Session | null; initialized: boolean } = {
   initialized: false,
 };
 
+// Type guard for session
+function isSession(value: any): value is Session {
+  return value !== null && typeof value === 'object' && 'access_token' in value;
+}
+
 const App = () => {
   const [session, setSession] = useState<Session | null>(sessionCache.session);
   const [isLoading, setIsLoading] = useState(!sessionCache.initialized);
@@ -56,16 +61,23 @@ const App = () => {
     // Setup auth state listener first (before checking session)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_, currentSession) => {
-        setSession(currentSession);
-        sessionCache.session = currentSession;
+        if (isSession(currentSession)) {
+          setSession(currentSession);
+          sessionCache.session = currentSession;
+        } else {
+          setSession(null);
+          sessionCache.session = null;
+        }
         setIsLoading(false);
       }
     );
 
     // Then check for existing session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      sessionCache.session = currentSession;
+      if (isSession(currentSession)) {
+        setSession(currentSession);
+        sessionCache.session = currentSession;
+      }
       setIsLoading(false);
     });
 
