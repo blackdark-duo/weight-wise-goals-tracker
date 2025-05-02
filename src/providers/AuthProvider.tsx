@@ -1,3 +1,4 @@
+
 import { createContext, useState, useEffect, useContext, ReactNode } from "react";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -98,12 +99,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   }, []);
 
-  // Fix: Remove the explicit type annotation that's causing circular reference
-  const contextValue: AuthContextType = {
+  // Remove explicit type annotation to avoid circular reference
+  const contextValue = {
     session,
     isLoading
   };
-
 
   return (
     <AuthContext.Provider value={contextValue}>
