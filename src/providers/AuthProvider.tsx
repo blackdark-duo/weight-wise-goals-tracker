@@ -19,11 +19,6 @@ const sessionCache = {
   initialized: false,
 };
 
-// Type guard for session
-function isSession(value: any): value is Session {
-  return value !== null && typeof value === 'object' && 'access_token' in value;
-}
-
 type AuthProviderProps = {
   children: ReactNode;
 };
@@ -43,26 +38,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     // Setup auth state listener first (before checking session)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_, currentSession) => {
-        if (currentSession === null) {
-          setSession(null);
-          sessionCache.session = null;
-        } else if (isSession(currentSession)) {
-          setSession(currentSession);
-          sessionCache.session = currentSession;
-        }
+        setSession(currentSession);
+        sessionCache.session = currentSession;
         setIsLoading(false);
       }
     );
 
     // Then check for existing session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      if (currentSession === null) {
-        setSession(null);
-        sessionCache.session = null;
-      } else if (isSession(currentSession)) {
-        setSession(currentSession);
-        sessionCache.session = currentSession;
-      }
+      setSession(currentSession);
+      sessionCache.session = currentSession;
       setIsLoading(false);
     });
 
