@@ -99,10 +99,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   // Fix: Remove the explicit type annotation that's causing circular reference
-  const contextValue = {
+  const contextValue: AuthContextType = {
     session,
     isLoading
   };
+
 
   return (
     <AuthContext.Provider value={contextValue}>
