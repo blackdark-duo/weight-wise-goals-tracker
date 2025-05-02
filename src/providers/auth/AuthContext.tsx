@@ -2,13 +2,13 @@
 import { createContext } from "react";
 import { Session } from "@supabase/supabase-js";
 
-// Define the shape of our context without circular references
+// Define the shape of our context
 export type AuthContextType = {
   session: Session | null;
   isLoading: boolean;
 };
 
-// Create context with undefined as default value
+// Create context with default values
 export const AuthContext = createContext<AuthContextType>({
   session: null,
   isLoading: true,

@@ -13,12 +13,12 @@ export const NavLogo = ({ session }: NavLogoProps) => {
       className="flex items-center gap-2 font-bold text-xl md:text-2xl text-[#ff7f50]"
     >
       <img
-        src="/lovable-uploads/66bdf397-4a7e-4a9a-a073-26443337d830.png"
-        alt="WeightTrack Logo"
+        src="/lovable-uploads/6b04f662-fb0c-44df-9e2d-b98a7410f381.png"
+        alt="WeightWise Logo"
         className="h-8 w-8"
       />
       <span className="text-[#ff7f50]">
-        WeightTrack
+        WeightWise
       </span>
     </Link>
   );

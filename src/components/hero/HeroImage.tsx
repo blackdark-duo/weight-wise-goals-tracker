@@ -8,7 +8,7 @@ type HeroImageProps = {
   alt: string;
 };
 
-const HeroImage = ({ src = "/images/weight-tracker-dashboard.png", alt }: HeroImageProps) => {
+const HeroImage = ({ src = "/lovable-uploads/weight-wise-hero.png", alt }: HeroImageProps) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
@@ -45,8 +45,16 @@ const HeroImage = ({ src = "/images/weight-tracker-dashboard.png", alt }: HeroIm
     setImageError(false);
   };
 
+  const renderDashboardImage = () => (
+    <img
+      src="/lovable-uploads/6b04f662-fb0c-44df-9e2d-b98a7410f381.png"
+      alt="WeightWise tracking app logo"
+      className="w-full h-auto max-w-[320px] mx-auto"
+    />
+  );
+
   const renderPlaceholder = () => (
-    <div className="flex h-full w-full flex-col items-center justify-center rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 p-8 text-center">
+    <div className="flex h-full w-full flex-col items-center justify-center rounded-lg bg-gradient-to-br from-[#ff7f50]/10 to-[#ff6347]/10 p-8 text-center">
       <ImageOff className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
       <p className="text-muted-foreground">
         {alt || "WeightWise dashboard illustration"}
@@ -61,14 +69,13 @@ const HeroImage = ({ src = "/images/weight-tracker-dashboard.png", alt }: HeroIm
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: 0.2, duration: 0.5 }}
     >
-      <div className="aspect-[4/3] overflow-hidden rounded-xl bg-gradient-to-br from-brand-primary/20 to-brand-secondary/20 p-4 shadow-xl">
-        {imageError ? (
-          renderPlaceholder()
-        ) : (
+      <div className="aspect-[4/3] overflow-hidden rounded-xl bg-gradient-to-br from-[#ff7f50]/20 to-[#ff6347]/20 p-4 shadow-xl">
+        {imageError ? 
+          renderDashboardImage() :
           <>
             {!imageLoaded && (
               <div className="absolute inset-0 flex items-center justify-center p-4">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-primary/30 border-t-brand-primary"></div>
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#ff7f50]/30 border-t-[#ff7f50]"></div>
               </div>
             )}
             <img
@@ -81,7 +88,7 @@ const HeroImage = ({ src = "/images/weight-tracker-dashboard.png", alt }: HeroIm
               }`}
             />
           </>
-        )}
+        }
       </div>
     </motion.div>
   );

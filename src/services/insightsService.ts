@@ -68,18 +68,25 @@ export async function fetchInsightsData(userId: string): Promise<string> {
       // Safely extract webhook fields from the database response
       let webhookFields: WebhookFields = defaultWebhookFields;
       
-      if (webhookConfigData?.fields && typeof webhookConfigData.fields === 'object' && !Array.isArray(webhookConfigData.fields)) {
-        // Cast to unknown first to avoid direct type assertion errors
-        const fieldsObject = webhookConfigData.fields as unknown as Record<string, boolean>;
-        
-        // Safely construct the webhook fields
-        webhookFields = {
-          user_data: fieldsObject.user_data ?? defaultWebhookFields.user_data,
-          weight_data: fieldsObject.weight_data ?? defaultWebhookFields.weight_data,
-          goal_data: fieldsObject.goal_data ?? defaultWebhookFields.goal_data,
-          activity_data: fieldsObject.activity_data ?? defaultWebhookFields.activity_data,
-          detailed_analysis: fieldsObject.detailed_analysis ?? defaultWebhookFields.detailed_analysis
-        };
+      if (webhookConfigData?.fields) {
+        try {
+          // Properly handle the fields object by first converting to unknown
+          const fieldsData = webhookConfigData.fields as unknown;
+          
+          if (typeof fieldsData === 'object' && fieldsData !== null && !Array.isArray(fieldsData)) {
+            const fieldsObject = fieldsData as Record<string, boolean>;
+            
+            webhookFields = {
+              user_data: fieldsObject.user_data ?? defaultWebhookFields.user_data,
+              weight_data: fieldsObject.weight_data ?? defaultWebhookFields.weight_data,
+              goal_data: fieldsObject.goal_data ?? defaultWebhookFields.goal_data,
+              activity_data: fieldsObject.activity_data ?? defaultWebhookFields.activity_data,
+              detailed_analysis: fieldsObject.detailed_analysis ?? defaultWebhookFields.detailed_analysis
+            };
+          }
+        } catch (e) {
+          console.error('Error parsing webhook fields:', e);
+        }
       }
       
       const webhookConfig: WebhookConfig = {
@@ -138,35 +145,61 @@ export async function fetchInsightsData(userId: string): Promise<string> {
       goals: goalData
     };
     
-    // Send data to webhook
-    const response = await fetch(finalWebhookUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+    console.log("Sending webhook data to:", finalWebhookUrl);
+    console.log("Payload:", JSON.stringify(payload));
     
-    if (!response.ok) {
-      throw new Error(`Webhook returned ${response.status} ${response.statusText}`);
+    // Try the edge function first
+    try {
+      const { data, error } = await supabase.functions.invoke('send_ai_insights', {
+        body: { userId }
+      });
+      
+      if (error) throw error;
+      
+      // Update user's webhook count and last date (edge function also does this, but as a fallback)
+      await supabase
+        .from('profiles')
+        .update({
+          webhook_count: isNewDay ? 1 : profile.webhook_count + 1,
+          last_webhook_date: new Date().toISOString(),
+        })
+        .eq('id', userId);
+      
+      return data?.message || data?.insights || "AI analysis complete. No insights available.";
+    } catch (edgeFunctionError) {
+      console.error("Edge function error, falling back to client-side webhook:", edgeFunctionError);
+      
+      // Fall back to client-side webhook call
+      // Send data to webhook
+      const response = await fetch(finalWebhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Webhook returned ${response.status} ${response.statusText}`);
+      }
+      
+      // Update user's webhook count and last date
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          webhook_count: isNewDay ? 1 : profile.webhook_count + 1,
+          last_webhook_date: new Date().toISOString(),
+        })
+        .eq('id', userId);
+      
+      if (updateError) {
+        console.error("Failed to update webhook count:", updateError);
+      }
+      
+      const result = await response.json();
+      
+      return result.message || "AI analysis complete. No insights available.";
     }
-    
-    // Update user's webhook count and last date
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({
-        webhook_count: isNewDay ? 1 : profile.webhook_count + 1,
-        last_webhook_date: new Date().toISOString(),
-      })
-      .eq('id', userId);
-    
-    if (updateError) {
-      console.error("Failed to update webhook count:", updateError);
-    }
-    
-    const result = await response.json();
-    
-    return result.message || "AI analysis complete. No insights available.";
   } catch (error: any) {
     console.error("Error in fetchInsightsData:", error);
     throw error;

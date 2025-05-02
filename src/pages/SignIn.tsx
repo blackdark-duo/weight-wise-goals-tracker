@@ -59,10 +59,17 @@ const SignIn = () => {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-gradient-to-br from-white via-purple-50 to-blue-50 p-4">
-      <Card className="mx-auto max-w-md w-full shadow-lg border border-purple-100">
+    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-gradient-to-br from-white via-[#ff7f50]/5 to-[#ff6347]/5 p-4">
+      <Card className="mx-auto max-w-md w-full shadow-lg border border-[#ff7f50]/20">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Welcome Back</CardTitle>
+          <div className="flex justify-center mb-4">
+            <img
+              src="/lovable-uploads/6b04f662-fb0c-44df-9e2d-b98a7410f381.png"
+              alt="WeightWise Logo"
+              className="h-12 w-12"
+            />
+          </div>
+          <CardTitle className="text-2xl font-bold text-center text-[#ff7f50]">Welcome to WeightWise</CardTitle>
           <CardDescription className="text-center">
             Enter your credentials to access your account
           </CardDescription>
@@ -85,14 +92,14 @@ const SignIn = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="border-purple-200 focus:border-purple-400"
+                className="border-[#ff7f50]/20 focus:border-[#ff7f50]/40"
               />
             </div>
             
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                <Link to="/forgot-password" className="text-xs text-purple-600 hover:underline">
+                <Link to="/forgot-password" className="text-xs text-[#ff7f50] hover:underline">
                   Forgot password?
                 </Link>
               </div>
@@ -102,7 +109,7 @@ const SignIn = () => {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="border-purple-200 focus:border-purple-400"
+                className="border-[#ff7f50]/20 focus:border-[#ff7f50]/40"
               />
             </div>
 
@@ -116,7 +123,7 @@ const SignIn = () => {
           <CardFooter className="flex flex-col space-y-4">
             <Button 
               type="submit" 
-              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700" 
+              className="w-full bg-gradient-to-r from-[#ff7f50] to-[#ff6347] hover:from-[#ff6347] hover:to-[#ff5733]" 
               disabled={isLoading}
             >
               {isLoading ? "Signing in..." : "Sign in"}
@@ -124,7 +131,7 @@ const SignIn = () => {
             
             <div className="text-center text-sm">
               Don&apos;t have an account?{" "}
-              <Link to="/signup" className="text-purple-600 hover:underline">
+              <Link to="/signup" className="text-[#ff7f50] hover:underline">
                 Sign up
               </Link>
             </div>

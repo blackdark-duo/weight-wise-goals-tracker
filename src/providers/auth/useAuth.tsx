@@ -2,7 +2,6 @@
 import { useContext } from "react";
 import { AuthContext, AuthContextType } from "./AuthContext";
 
-// Updated useAuth hook with proper type checking
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {

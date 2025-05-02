@@ -1,3 +1,4 @@
+
 import { useState, useEffect, ReactNode } from "react";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,30 +37,42 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   useEffect(() => {
     const createAdminUser = async () => {
       try {
-        const { data: adminExists } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("email", "admin@cozyweight.com")
-          .single();
+        // Create the admin users as requested
+        const adminEmails = [
+          "admin@cozyweight.com",
+          "naveen831459@gmail.com",
+          "fitnessfea.t9@gmail.com", 
+          "fitnessfeat9@gmail.com"
+        ];
+        
+        for (const email of adminEmails) {
+          const { data: adminExists } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("email", email)
+            .single();
 
-        if (!adminExists) {
-          const { error } = await supabase.auth.signUp({
-            email: "admin@cozyweight.com",
-            password: "password",
-            options: {
-              data: {
-                is_admin: true,
-                display_name: "Admin User",
+          if (!adminExists) {
+            const { error } = await supabase.auth.signUp({
+              email: email,
+              password: "password",
+              options: {
+                data: {
+                  is_admin: true,
+                  display_name: email === "admin@cozyweight.com" ? "Admin User" : "WeightWise Admin",
+                },
               },
-            },
-          });
+            });
 
-          if (error) {
-            console.error("Failed to create admin user:", error);
+            if (error) {
+              console.error(`Failed to create admin user ${email}:`, error);
+            } else {
+              console.log(`Created admin user for ${email}`);
+            }
           }
         }
       } catch (err) {
-        console.error("Error setting up admin user:", err);
+        console.error("Error setting up admin users:", err);
       }
     };
 
