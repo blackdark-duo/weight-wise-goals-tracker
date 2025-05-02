@@ -1,4 +1,3 @@
-
 import { createContext, useState, useEffect, useContext, ReactNode } from "react";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -55,9 +54,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     // Return unsubscribe function
     return () => {
-      if (authSubscription && typeof authSubscription.unsubscribe === 'function') {
-        authSubscription.unsubscribe();
-      }
+      // Simplify the cleanup to avoid deep type instantiation
+      authSubscription?.unsubscribe?.();
     };
   }, []);
 
