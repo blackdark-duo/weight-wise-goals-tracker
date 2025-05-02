@@ -36,22 +36,22 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     sessionCache.initialized = true;
     
     // Setup auth state listener first (before checking session)
-    const { data } = supabase.auth.onAuthStateChange(
-      (_, currentSession) => {
-        setSession(currentSession);
-        sessionCache.session = currentSession;
-        setIsLoading(false);
-      }
-    );
+    const subscription = supabase.auth.onAuthStateChange((_, currentSession) => {
+      setSession(currentSession);
+      sessionCache.session = currentSession;
+      setIsLoading(false);
+    }).data.subscription;
 
     // Then check for existing session
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      sessionCache.session = data.session;
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      sessionCache.session = currentSession;
       setIsLoading(false);
     });
 
-    return () => data.subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Create admin user for demo purposes
