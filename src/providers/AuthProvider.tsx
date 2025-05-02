@@ -1,4 +1,3 @@
-
 import { createContext, useState, useEffect, useContext, ReactNode } from "react";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +7,7 @@ type AuthContextType = {
   isLoading: boolean;
 };
 
-// Create context with undefined as default value
+// Create context with explicit undefined type and default value
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // This prevents double rendering in React.StrictMode
@@ -98,7 +97,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   }, []);
 
-  // Create a stable context value to prevent unnecessary re-renders
+  // Create a stable context value with explicit type annotation
   const contextValue: AuthContextType = {
     session,
     isLoading
