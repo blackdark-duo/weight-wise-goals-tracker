@@ -36,8 +36,8 @@ const queryClient = new QueryClient({
 });
 
 // This prevents double rendering in React.StrictMode
-const sessionCache: { session: Session | null; initialized: boolean } = {
-  session: null,
+const sessionCache = {
+  session: null as Session | null,
   initialized: false,
 };
 
@@ -74,7 +74,10 @@ const App = () => {
 
     // Then check for existing session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      if (isSession(currentSession)) {
+      if (currentSession === null) {
+        setSession(null);
+        sessionCache.session = null;
+      } else if (isSession(currentSession)) {
         setSession(currentSession);
         sessionCache.session = currentSession;
       }
