@@ -1,3 +1,4 @@
+
 import { createContext, useState, useEffect, useContext, ReactNode } from "react";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -98,7 +99,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   // Create a stable context value to prevent unnecessary re-renders
-  const contextValue = {
+  const contextValue: AuthContextType = {
     session,
     isLoading
   };
