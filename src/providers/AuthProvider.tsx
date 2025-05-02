@@ -8,10 +8,8 @@ type AuthContextType = {
   isLoading: boolean;
 };
 
-const AuthContext = createContext<AuthContextType>({
-  session: null,
-  isLoading: true
-});
+// Create context without default values to avoid type inference issues
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // This prevents double rendering in React.StrictMode
 const sessionCache = {
@@ -45,10 +43,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setIsLoading(false);
     });
 
-    // Safely extract just the unsubscribe function
-    if (data && data.subscription && typeof data.subscription.unsubscribe === 'function') {
+    // Simplified subscription handling to avoid complex types
+    if (data) {
       unsubscribe = () => {
-        if (data.subscription) data.subscription.unsubscribe();
+        if (data.subscription) {
+          data.subscription.unsubscribe();
+        }
       };
     }
 
@@ -104,11 +104,24 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   }, []);
 
+  // Create a stable context value to prevent unnecessary re-renders
+  const contextValue: AuthContextType = {
+    session,
+    isLoading
+  };
+
   return (
-    <AuthContext.Provider value={{ session, isLoading }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+// Updated useAuth hook with proper type checking
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};
