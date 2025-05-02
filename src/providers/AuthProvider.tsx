@@ -36,21 +36,23 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     sessionCache.initialized = true;
     
     // Setup auth state listener first (before checking session)
-    const subscription = supabase.auth.onAuthStateChange((_, currentSession) => {
-      setSession(currentSession);
-      sessionCache.session = currentSession;
-      setIsLoading(false);
-    }).data.subscription;
-
-    // Then check for existing session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+    const authListener = supabase.auth.onAuthStateChange((_, currentSession) => {
       setSession(currentSession);
       sessionCache.session = currentSession;
       setIsLoading(false);
     });
 
+    // Then check for existing session
+    supabase.auth.getSession().then((response) => {
+      const currentSession = response.data.session;
+      setSession(currentSession);
+      sessionCache.session = currentSession;
+      setIsLoading(false);
+    });
+
+    // Return unsubscribe function
     return () => {
-      subscription.unsubscribe();
+      authListener.subscription.unsubscribe();
     };
   }, []);
 
