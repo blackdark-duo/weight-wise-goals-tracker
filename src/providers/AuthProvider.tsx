@@ -8,7 +8,7 @@ type AuthContextType = {
   isLoading: boolean;
 };
 
-// Create context without default values to avoid type inference issues
+// Create context with undefined as default value
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // This prevents double rendering in React.StrictMode
