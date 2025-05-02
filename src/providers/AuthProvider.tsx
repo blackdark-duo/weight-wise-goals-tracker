@@ -1,5 +1,6 @@
+
 import { createContext, useState, useEffect, useContext, ReactNode } from "react";
-import { Session } from "@supabase/supabase-js";
+import { Session, Subscription } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
 type AuthContextType = {
@@ -34,6 +35,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     
     sessionCache.initialized = true;
     
+    // Store subscription reference for cleanup
+    let authSubscription: Subscription | null = null;
+    
     // Setup auth state listener first (before checking session)
     const { data } = supabase.auth.onAuthStateChange((_, currentSession) => {
       setSession(currentSession);
@@ -41,8 +45,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setIsLoading(false);
     });
 
-    // Store the subscription to clean up later
-    const authSubscription = data.subscription;
+    // Save the subscription
+    authSubscription = data.subscription;
 
     // Then check for existing session
     supabase.auth.getSession().then((response) => {
@@ -54,8 +58,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     // Return unsubscribe function
     return () => {
-      // Simplify the cleanup to avoid deep type instantiation
-      authSubscription?.unsubscribe?.();
+      // Use simple nullish check to avoid deep type instantiation
+      if (authSubscription) {
+        authSubscription.unsubscribe();
+      }
     };
   }, []);
 
