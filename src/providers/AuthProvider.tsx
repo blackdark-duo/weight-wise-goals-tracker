@@ -7,7 +7,7 @@ type AuthContextType = {
   isLoading: boolean;
 };
 
-// Create context with explicit undefined type and default value
+// Create a context with undefined as default value
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // This prevents double rendering in React.StrictMode
@@ -97,21 +97,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   }, []);
 
-  // Create a stable context value with explicit type annotation
-  const contextValue: AuthContextType = {
+  // Create a stable context value object
+  const value = {
     session,
     isLoading
   };
 
   return (
-    <AuthContext.Provider value={contextValue}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 };
 
 // Updated useAuth hook with proper type checking
-export const useAuth = (): AuthContextType => {
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");
