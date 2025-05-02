@@ -1,5 +1,5 @@
 
-import { useState, useEffect, createContext, useContext } from "react";
+import React, { useState, useEffect, createContext, useContext } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -19,7 +19,7 @@ const defaultPreferences: UserPreferences = {
 
 const UserPreferencesContext = createContext<UserPreferences>(defaultPreferences);
 
-export const UserPreferencesProvider = ({ children }: { children: React.ReactNode }) => {
+export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [preferences, setPreferences] = useState<Omit<UserPreferences, "updatePreferences">>({
     preferredUnit: "kg",
     timezone: "UTC",

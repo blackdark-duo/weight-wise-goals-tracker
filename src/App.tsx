@@ -24,20 +24,20 @@ const queryClient = new QueryClient({
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <UserPreferencesProvider>
-        <CustomToastProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner position="top-right" expand={false} closeButton richColors />
-            <AuthProvider>
-              <BrowserRouter>
-                <ScrollToTop />
+      <CustomToastProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner position="top-right" expand={false} closeButton richColors />
+          <AuthProvider>
+            <BrowserRouter>
+              <ScrollToTop />
+              <UserPreferencesProvider>
                 <AppRoutes />
-              </BrowserRouter>
-            </AuthProvider>
-          </TooltipProvider>
-        </CustomToastProvider>
-      </UserPreferencesProvider>
+              </UserPreferencesProvider>
+            </BrowserRouter>
+          </AuthProvider>
+        </TooltipProvider>
+      </CustomToastProvider>
     </QueryClientProvider>
   );
 };
