@@ -38,6 +38,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     // Setup auth state listener first (before checking session)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_, currentSession) => {
+        // Use direct assignment without explicit type checking
         setSession(currentSession);
         sessionCache.session = currentSession;
         setIsLoading(false);
@@ -45,9 +46,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     );
 
     // Then check for existing session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      sessionCache.session = currentSession;
+    supabase.auth.getSession().then(({ data }) => {
+      // Simplify session handling to avoid deep type instantiation
+      setSession(data.session);
+      sessionCache.session = data.session;
       setIsLoading(false);
     });
 
