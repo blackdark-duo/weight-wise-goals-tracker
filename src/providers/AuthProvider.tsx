@@ -98,8 +98,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   }, []);
 
-  // Create context value object with explicit type annotation
-  const contextValue: AuthContextType = {
+  // Fix: Remove the explicit type annotation that's causing circular reference
+  const contextValue = {
     session,
     isLoading
   };
