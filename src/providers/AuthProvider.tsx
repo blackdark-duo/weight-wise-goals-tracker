@@ -36,11 +36,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     sessionCache.initialized = true;
     
     // Setup auth state listener first (before checking session)
-    const { subscription } = supabase.auth.onAuthStateChange((_, currentSession) => {
+    const { data } = supabase.auth.onAuthStateChange((_, currentSession) => {
       setSession(currentSession);
       sessionCache.session = currentSession;
       setIsLoading(false);
     });
+
+    // Store the subscription to clean up later
+    const authSubscription = data.subscription;
 
     // Then check for existing session
     supabase.auth.getSession().then((response) => {
@@ -52,7 +55,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     // Return unsubscribe function
     return () => {
-      subscription?.unsubscribe();
+      if (authSubscription && typeof authSubscription.unsubscribe === 'function') {
+        authSubscription.unsubscribe();
+      }
     };
   }, []);
 
