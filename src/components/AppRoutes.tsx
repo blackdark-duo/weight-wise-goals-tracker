@@ -1,6 +1,6 @@
 
 import { Routes, Route, Navigate } from "react-router-dom";
-import { useAuth } from "@/providers/AuthProvider";
+import { useAuth } from "@/providers/auth";
 import Index from "@/pages/Index";
 import SignIn from "@/pages/SignIn";
 import SignUp from "@/pages/SignUp";
@@ -14,7 +14,7 @@ import ContactUs from "@/pages/ContactUs";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsOfService from "@/pages/TermsOfService";
 import About from "@/pages/About";
-import MobileNavigation from "@/components/MobileNavigation";
+import MobileNavigation from "@/components/navigation/MobileNavigation";
 
 // Private route wrapper component
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
