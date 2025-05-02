@@ -33,8 +33,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     
     sessionCache.initialized = true;
     
-    // Manually track if we need to unsubscribe
-    let unsubscribe: (() => void) | null = null;
+    // Store just the unsubscribe function
+    let cleanup: (() => void) | undefined;
     
     // Setup auth state listener first (before checking session)
     const { data } = supabase.auth.onAuthStateChange((_, currentSession) => {
@@ -43,14 +43,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setIsLoading(false);
     });
 
-    // Simplified subscription handling to avoid complex types
-    if (data) {
-      unsubscribe = () => {
-        if (data.subscription) {
-          data.subscription.unsubscribe();
-        }
-      };
-    }
+    // Store the subscription cleanup function directly
+    cleanup = data?.subscription?.unsubscribe;
 
     // Then check for existing session
     supabase.auth.getSession().then((response) => {
@@ -62,8 +56,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     // Return cleanup function
     return () => {
-      if (unsubscribe) {
-        unsubscribe();
+      if (cleanup) {
+        cleanup();
       }
     };
   }, []);
