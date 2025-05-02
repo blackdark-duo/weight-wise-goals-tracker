@@ -1,13 +1,28 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Json } from "@/integrations/supabase/types";
+
+interface WebhookFields {
+  user_data: boolean;
+  weight_data: boolean;
+  goal_data: boolean;
+  activity_data: boolean;
+  detailed_analysis: boolean;
+}
+
+interface WebhookConfig {
+  url: string;
+  days: number;
+  fields: WebhookFields;
+}
 
 export async function fetchInsightsData(userId: string): Promise<string> {
   try {
     // First check if the user is within their rate limit
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('webhook_limit, webhook_count, last_webhook_date')
+      .select('webhook_limit, webhook_count, last_webhook_date, webhook_url')
       .eq('id', userId)
       .single();
       
@@ -30,12 +45,35 @@ export async function fetchInsightsData(userId: string): Promise<string> {
     }
     
     // Get webhook URL from profile
-    const { data: webhookConfig } = await supabase
+    const { data: webhookConfigData } = await supabase
       .from('webhook_config')
       .select('*')
       .single();
+
+    const webhookConfig: WebhookConfig = webhookConfigData ? {
+      url: webhookConfigData.url as string || '',
+      days: webhookConfigData.days as number || 30,
+      fields: {
+        user_data: false,
+        weight_data: false,
+        goal_data: false,
+        activity_data: false,
+        detailed_analysis: false,
+        ...((webhookConfigData.fields as Record<string, boolean>) || {})
+      }
+    } : {
+      url: '',
+      days: 30,
+      fields: {
+        user_data: true,
+        weight_data: true,
+        goal_data: true,
+        activity_data: false,
+        detailed_analysis: false
+      }
+    };
     
-    const webhookUrl = profile.webhook_url || webhookConfig?.url || '';
+    const webhookUrl = profile.webhook_url || webhookConfig.url || '';
     
     if (!webhookUrl) {
       throw new Error("Webhook URL not configured. Please contact an administrator.");
@@ -84,7 +122,7 @@ export async function fetchInsightsData(userId: string): Promise<string> {
       detailed_analysis: false
     };
     
-    const payload: any = {};
+    const payload: Record<string, any> = {};
     
     if (fields.user_data) {
       payload.user = userData;
