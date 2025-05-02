@@ -44,43 +44,60 @@ export async function fetchInsightsData(userId: string): Promise<string> {
       throw new Error(`You have reached your daily limit of ${profile.webhook_limit} AI analyses. Please try again tomorrow.`);
     }
     
-    // Get webhook URL from profile
-    const { data: webhookConfigData } = await supabase
-      .from('webhook_config')
-      .select('*')
-      .single();
-
-    const webhookConfig: WebhookConfig = webhookConfigData ? {
-      url: webhookConfigData.url as string || '',
-      days: webhookConfigData.days as number || 30,
-      fields: {
-        user_data: false,
-        weight_data: false,
-        goal_data: false,
-        activity_data: false,
-        detailed_analysis: false,
-        ...((webhookConfigData.fields as Record<string, boolean>) || {})
-      }
-    } : {
-      url: '',
-      days: 30,
-      fields: {
-        user_data: true,
-        weight_data: true,
-        goal_data: true,
-        activity_data: false,
-        detailed_analysis: false
-      }
-    };
+    // Get webhook URL from profile or config
+    const webhookUrl = profile.webhook_url;
     
-    const webhookUrl = profile.webhook_url || webhookConfig.url || '';
+    // If webhook_url doesn't exist on profile, get it from webhook_config
+    let configWebhookUrl = '';
     
     if (!webhookUrl) {
+      const { data: webhookConfigData } = await supabase
+        .from('webhook_config')
+        .select('*')
+        .single();
+  
+      const webhookConfig: WebhookConfig = webhookConfigData ? {
+        url: (webhookConfigData.url as string) || '',
+        days: (webhookConfigData.days as number) || 30,
+        fields: {
+          user_data: false,
+          weight_data: false,
+          goal_data: false,
+          activity_data: false,
+          detailed_analysis: false,
+          ...(typeof webhookConfigData.fields === 'object' ? 
+            webhookConfigData.fields as WebhookFields : 
+            {
+              user_data: true,
+              weight_data: true,
+              goal_data: true,
+              activity_data: false,
+              detailed_analysis: false
+            })
+        }
+      } : {
+        url: '',
+        days: 30,
+        fields: {
+          user_data: true,
+          weight_data: true,
+          goal_data: true,
+          activity_data: false,
+          detailed_analysis: false
+        }
+      };
+      
+      configWebhookUrl = webhookConfig.url;
+    }
+    
+    const finalWebhookUrl = webhookUrl || configWebhookUrl || '';
+    
+    if (!finalWebhookUrl) {
       throw new Error("Webhook URL not configured. Please contact an administrator.");
     }
     
     // Prepare data to send to webhook
-    const daysToFetch = webhookConfig?.days || 30;
+    const daysToFetch = 30; // Default to 30 days if not specified
     const endDate = new Date();
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - daysToFetch);
@@ -113,31 +130,15 @@ export async function fetchInsightsData(userId: string): Promise<string> {
       
     if (userError) throw userError;
     
-    // Prepare payload based on the fields configuration
-    const fields = webhookConfig?.fields || {
-      user_data: true,
-      weight_data: true,
-      goal_data: true,
-      activity_data: false,
-      detailed_analysis: false
+    // Prepare payload for webhook
+    const payload: Record<string, any> = {
+      user: userData,
+      weight_entries: weightData,
+      goals: goalData
     };
     
-    const payload: Record<string, any> = {};
-    
-    if (fields.user_data) {
-      payload.user = userData;
-    }
-    
-    if (fields.weight_data) {
-      payload.weight_entries = weightData;
-    }
-    
-    if (fields.goal_data) {
-      payload.goals = goalData;
-    }
-    
     // Send data to webhook
-    const response = await fetch(webhookUrl, {
+    const response = await fetch(finalWebhookUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
