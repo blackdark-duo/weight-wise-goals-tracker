@@ -97,8 +97,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   }, []);
 
-  // Create a stable context value object
-  const value = {
+  const value: AuthContextType = {
     session,
     isLoading
   };
