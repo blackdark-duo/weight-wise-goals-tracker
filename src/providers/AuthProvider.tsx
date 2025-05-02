@@ -36,9 +36,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     sessionCache.initialized = true;
     
     // Setup auth state listener first (before checking session)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const { data } = supabase.auth.onAuthStateChange(
       (_, currentSession) => {
-        // Use direct assignment without explicit type checking
         setSession(currentSession);
         sessionCache.session = currentSession;
         setIsLoading(false);
@@ -47,13 +46,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     // Then check for existing session
     supabase.auth.getSession().then(({ data }) => {
-      // Simplify session handling to avoid deep type instantiation
       setSession(data.session);
       sessionCache.session = data.session;
       setIsLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => data.subscription.unsubscribe();
   }, []);
 
   // Create admin user for demo purposes
