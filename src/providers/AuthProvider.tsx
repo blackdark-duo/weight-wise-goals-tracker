@@ -2,12 +2,13 @@ import { createContext, useState, useEffect, useContext, ReactNode } from "react
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
+// Define the shape of our context
 type AuthContextType = {
   session: Session | null;
   isLoading: boolean;
 };
 
-// Create a context with undefined as default value
+// Create context with a default undefined value
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // This prevents double rendering in React.StrictMode
@@ -97,20 +98,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   }, []);
 
-  const value: AuthContextType = {
+  // Create context value object with explicit type annotation
+  const contextValue: AuthContextType = {
     session,
     isLoading
   };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
 };
 
 // Updated useAuth hook with proper type checking
-export const useAuth = () => {
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");
