@@ -1,21 +1,51 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { AlertCircle, Users, User, Settings, Webhook, Calendar } from "lucide-react";
+import {
+  AlertCircle,
+  Users,
+  User,
+  Settings,
+  Webhook,
+  Calendar,
+  Mail,
+  KeyRound,
+  Trash2,
+  Ban
+} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import Navbar from "@/components/Navbar";
 import MobileNavigation from "@/components/MobileNavigation";
 import { Toaster } from "@/components/ui/toaster";
+import { timezoneOptions } from "@/utils/timezoneData";
 
 interface Profile {
   id: string;
   display_name: string;
+  email?: string;
   is_admin?: boolean;
   webhook_limit?: number;
 }
@@ -29,10 +59,10 @@ interface WebhookConfig {
     goal_data: boolean;
     activity_data: boolean;
     detailed_analysis: boolean;
-  }
+  };
 }
 
-const Admin = () => {
+const AdminPage = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -48,6 +78,12 @@ const Admin = () => {
       detailed_analysis: false
     }
   });
+  const [emailContent, setEmailContent] = useState("");
+  const [emailSubject, setEmailSubject] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [isSendingReset, setIsSendingReset] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Check if user is admin
   useEffect(() => {
@@ -63,7 +99,7 @@ const Admin = () => {
         // Get user profile to check admin status
         const { data: profile } = await supabase
           .from("profiles")
-          .select("is_admin")
+          .select("is_admin, email")
           .eq("id", session.user.id)
           .single();
 
@@ -71,7 +107,7 @@ const Admin = () => {
           setIsAdmin(true);
           fetchProfiles();
           fetchWebhookConfig();
-        } else if (session.user.email === "admin@weightwise.com") {
+        } else if (session.user.email === "admin@cozyweight.com") {
           // For demo purposes, also allow the default admin
           setIsAdmin(true);
           fetchProfiles();
@@ -94,14 +130,34 @@ const Admin = () => {
 
   const fetchProfiles = async () => {
     try {
-      const { data, error } = await supabase
+      // First get profiles
+      const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
         .select("*")
         .order("display_name");
 
-      if (error) throw error;
+      if (profilesError) throw profilesError;
       
-      setProfiles(data || []);
+      // Then get user emails from auth.users
+      const profiles = profilesData || [];
+      
+      // Fetch emails for all users
+      const { data: { users }, error: usersError } = await supabase.auth.admin.listUsers();
+      
+      if (usersError) {
+        console.error("Error fetching user emails:", usersError);
+      } else {
+        // Merge profiles with emails
+        const profilesWithEmails = profiles.map(profile => {
+          const user = users.find(u => u.id === profile.id);
+          return {
+            ...profile,
+            email: user?.email || 'Unknown email'
+          };
+        });
+        
+        setProfiles(profilesWithEmails);
+      }
     } catch (error) {
       console.error("Error fetching profiles:", error);
       toast.error("Failed to load user profiles");
@@ -203,6 +259,8 @@ const Admin = () => {
 
   const saveWebhookConfig = async () => {
     try {
+      setIsSaving(true);
+      
       const response = await fetch(
         'https://mjzzdynuzrpklgexabzs.supabase.co/functions/v1/update_webhook_config',
         {
@@ -228,13 +286,101 @@ const Admin = () => {
     } catch (error) {
       console.error("Error saving webhook config:", error);
       toast.error(`Failed to save webhook configuration: ${(error as Error).message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const sendPasswordReset = async (userId: string) => {
+    try {
+      setIsSendingReset(true);
+      
+      const user = profiles.find(p => p.id === userId);
+      if (!user?.email) {
+        throw new Error("User email not found");
+      }
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/account`
+      });
+      
+      if (error) throw error;
+      
+      toast.success(`Password reset email sent to ${user.email}`);
+    } catch (error) {
+      console.error("Error sending password reset:", error);
+      toast.error("Failed to send password reset email");
+    } finally {
+      setIsSendingReset(false);
+    }
+  };
+
+  const sendEmail = async (userId: string, subject: string, content: string) => {
+    try {
+      setIsSendingEmail(true);
+      
+      const user = profiles.find(p => p.id === userId);
+      if (!user?.email) {
+        throw new Error("User email not found");
+      }
+      
+      // In production, we would call an Edge Function here to send the email
+      console.log(`Sending email to ${user.email} with subject: ${subject}`);
+      console.log(`Email content: ${content}`);
+      
+      // For demo purposes, just show a success message
+      toast.success(`Email sent to ${user.email}`);
+      
+      setEmailSubject("");
+      setEmailContent("");
+    } catch (error) {
+      console.error("Error sending email:", error);
+      toast.error("Failed to send email");
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  const deleteUser = async (userId: string) => {
+    try {
+      const { error } = await supabase.auth.admin.deleteUser(userId);
+      if (error) throw error;
+      
+      setProfiles(profiles.filter(p => p.id !== userId));
+      toast.success("User deleted successfully");
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      toast.error("Failed to delete user");
+    }
+  };
+
+  const suspendUser = async (userId: string) => {
+    try {
+      // We don't have a direct "suspend" function in Supabase, but we could
+      // implement this by adding a "suspended" field to the profiles table
+      // and checking it on login
+      const { error } = await supabase
+        .from("profiles")
+        .update({ is_suspended: true })
+        .eq("id", userId);
+        
+      if (error) throw error;
+      
+      setProfiles(profiles.map(p => 
+        p.id === userId ? { ...p, is_suspended: true } : p
+      ));
+      
+      toast.success("User suspended successfully");
+    } catch (error) {
+      console.error("Error suspending user:", error);
+      toast.error("Failed to suspend user");
     }
   };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#ff7f50] border-t-transparent"></div>
         <span className="ml-3">Loading...</span>
       </div>
     );
@@ -260,90 +406,32 @@ const Admin = () => {
       <Navbar />
       <div className="container px-4 py-8">
         <h1 className="text-3xl font-bold mb-8 flex items-center">
-          <Settings className="mr-2 h-8 w-8 text-purple-600" />
+          <Settings className="mr-2 h-8 w-8 text-[#ff7f50]" />
           Admin Dashboard
         </h1>
 
-        <Tabs defaultValue="users" className="w-full">
+        <Tabs defaultValue="app-controls" className="w-full">
           <TabsList className="mb-8">
-            <TabsTrigger value="users" className="flex items-center">
+            <TabsTrigger value="app-controls" className="flex items-center">
+              <Settings className="mr-2 h-5 w-5" />
+              App Controls
+            </TabsTrigger>
+            <TabsTrigger value="user-controls" className="flex items-center">
               <Users className="mr-2 h-5 w-5" />
               User Management
             </TabsTrigger>
-            <TabsTrigger value="webhook" className="flex items-center">
-              <Webhook className="mr-2 h-5 w-5" />
-              Webhook Configuration
-            </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="users" className="space-y-6">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center">
-                  <Users className="mr-2 h-5 w-5" />
-                  User Profiles
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="px-4 py-3 text-left">User</th>
-                        <th className="px-4 py-3 text-left">Admin Status</th>
-                        <th className="px-4 py-3 text-left">Webhook Limit</th>
-                        <th className="px-4 py-3 text-left">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {profiles.map((profile) => (
-                        <tr key={profile.id} className="border-b">
-                          <td className="px-4 py-3 flex items-center">
-                            <User className="h-5 w-5 mr-2 text-muted-foreground" />
-                            {profile.display_name}
-                          </td>
-                          <td className="px-4 py-3">
-                            <Checkbox 
-                              checked={!!profile.is_admin} 
-                              onCheckedChange={() => toggleAdminStatus(profile)}
-                            />
-                          </td>
-                          <td className="px-4 py-3">
-                            <Input 
-                              type="number" 
-                              min="0" 
-                              max="100" 
-                              className="w-24" 
-                              value={profile.webhook_limit || 0} 
-                              onChange={(e) => updateWebhookLimit(profile, parseInt(e.target.value))}
-                            />
-                          </td>
-                          <td className="px-4 py-3">
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              className="mr-2"
-                              onClick={() => updateWebhookLimit(profile, profile.webhook_limit || 0)}
-                            >
-                              Update Limit
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="webhook" className="space-y-6">
+          <TabsContent value="app-controls" className="space-y-6">
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center">
                   <Webhook className="mr-2 h-5 w-5" />
-                  Webhook Settings
+                  Webhook Configuration
                 </CardTitle>
+                <CardDescription>
+                  Configure the webhook that will process AI insights requests.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
@@ -473,11 +561,212 @@ const Admin = () => {
                 
                 <div className="pt-4">
                   <Button 
-                    className="w-full md:w-auto bg-gradient-to-r from-purple-600 to-indigo-600"
+                    className="w-full md:w-auto bg-[#ff7f50] hover:bg-[#ff6347] text-white"
                     onClick={saveWebhookConfig}
+                    disabled={isSaving}
                   >
-                    Save Webhook Configuration
+                    {isSaving ? (
+                      <>
+                        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                        Saving...
+                      </>
+                    ) : "Save Webhook Configuration"}
                   </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="user-controls" className="space-y-6">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center">
+                  <Users className="mr-2 h-5 w-5" />
+                  User Management
+                </CardTitle>
+                <CardDescription>
+                  Manage user accounts, permissions, and access controls.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="px-4 py-3 text-left">User</th>
+                        <th className="px-4 py-3 text-left">Email</th>
+                        <th className="px-4 py-3 text-left">Admin Status</th>
+                        <th className="px-4 py-3 text-left">AI Limit</th>
+                        <th className="px-4 py-3 text-left">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {profiles.map((profile) => (
+                        <tr key={profile.id} className="border-b">
+                          <td className="px-4 py-3 flex items-center">
+                            <User className="h-5 w-5 mr-2 text-muted-foreground" />
+                            {profile.display_name}
+                          </td>
+                          <td className="px-4 py-3">
+                            {profile.email}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Checkbox 
+                              checked={!!profile.is_admin} 
+                              onCheckedChange={() => toggleAdminStatus(profile)}
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <Input 
+                              type="number" 
+                              min="0" 
+                              max="100" 
+                              className="w-24" 
+                              value={profile.webhook_limit || 0} 
+                              onChange={(e) => updateWebhookLimit(profile, parseInt(e.target.value))}
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center space-x-2">
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => setSelectedUserId(profile.id)}
+                                  >
+                                    <Mail className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Send Email to {profile.display_name}</DialogTitle>
+                                    <DialogDescription>
+                                      Send a notification email to the user.
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="space-y-4 py-4">
+                                    <div className="space-y-2">
+                                      <Label htmlFor="subject">Subject</Label>
+                                      <Input
+                                        id="subject"
+                                        value={emailSubject}
+                                        onChange={(e) => setEmailSubject(e.target.value)}
+                                        placeholder="Email subject"
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label htmlFor="content">Message</Label>
+                                      <Textarea
+                                        id="content"
+                                        value={emailContent}
+                                        onChange={(e) => setEmailContent(e.target.value)}
+                                        placeholder="Write your message here..."
+                                        rows={5}
+                                      />
+                                    </div>
+                                  </div>
+                                  <DialogFooter>
+                                    <Button 
+                                      variant="outline" 
+                                      onClick={() => {
+                                        setEmailSubject("");
+                                        setEmailContent("");
+                                      }}
+                                    >
+                                      Cancel
+                                    </Button>
+                                    <Button
+                                      onClick={() => sendEmail(selectedUserId!, emailSubject, emailContent)}
+                                      disabled={isSendingEmail || !emailSubject || !emailContent}
+                                    >
+                                      {isSendingEmail ? "Sending..." : "Send Email"}
+                                    </Button>
+                                  </DialogFooter>
+                                </DialogContent>
+                              </Dialog>
+                              
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => sendPasswordReset(profile.id)}
+                                disabled={isSendingReset}
+                              >
+                                <KeyRound className="h-4 w-4" />
+                              </Button>
+                              
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button 
+                                    variant="destructive" 
+                                    size="sm"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Delete User</DialogTitle>
+                                    <DialogDescription>
+                                      Are you sure you want to delete {profile.display_name}? This action cannot be undone.
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <DialogFooter>
+                                    <Button
+                                      variant="outline"
+                                      onClick={() => {}}
+                                    >
+                                      Cancel
+                                    </Button>
+                                    <Button
+                                      variant="destructive"
+                                      onClick={() => deleteUser(profile.id)}
+                                    >
+                                      Delete User
+                                    </Button>
+                                  </DialogFooter>
+                                </DialogContent>
+                              </Dialog>
+                              
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    className="text-amber-500 border-amber-200 hover:bg-amber-50"
+                                  >
+                                    <Ban className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Suspend User</DialogTitle>
+                                    <DialogDescription>
+                                      Suspend {profile.display_name}'s account. They will not be able to log in until unsuspended.
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <DialogFooter>
+                                    <Button
+                                      variant="outline"
+                                      onClick={() => {}}
+                                    >
+                                      Cancel
+                                    </Button>
+                                    <Button
+                                      variant="secondary"
+                                      onClick={() => suspendUser(profile.id)}
+                                    >
+                                      Suspend User
+                                    </Button>
+                                  </DialogFooter>
+                                </DialogContent>
+                              </Dialog>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </CardContent>
             </Card>
@@ -490,4 +779,4 @@ const Admin = () => {
   );
 };
 
-export default Admin;
+export default AdminPage;

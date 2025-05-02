@@ -1,66 +1,75 @@
 
 import React, { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Database, Download, ArrowDownToLine, DownloadCloud, Trash } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Database, Download, Upload, FileCheck, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
+import { convertToCSV, parseCSV, createCompleteCSV } from "@/utils/csvHelpers";
 
 interface DataManagementSectionProps {
   userId: string | null;
   setIsLoading: (loading: boolean) => void;
 }
 
-const DataManagementSection: React.FC<DataManagementSectionProps> = ({ userId, setIsLoading }) => {
+const DataManagementSection: React.FC<DataManagementSectionProps> = ({ 
+  userId, 
+  setIsLoading 
+}) => {
   const [isExporting, setIsExporting] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleExportData = async () => {
     if (!userId) {
-      toast.error("You must be logged in to export data");
+      toast.error("Please sign in to export your data");
       return;
     }
-
+    
     setIsExporting(true);
     setIsLoading(true);
+    setError(null);
     
     try {
-      // Get weight entries
+      // Fetch weight entries
       const { data: weightEntries, error: weightError } = await supabase
         .from("weight_entries")
         .select("*")
-        .eq("user_id", userId);
+        .eq("user_id", userId)
+        .order("date", { ascending: false });
         
       if (weightError) throw weightError;
       
-      // Get goals
-      const { data: goals, error: goalsError } = await supabase
+      // Fetch goals
+      const { data: goals, error: goalError } = await supabase
         .from("goals")
         .select("*")
-        .eq("user_id", userId);
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
         
-      if (goalsError) throw goalsError;
+      if (goalError) throw goalError;
       
-      // Combine data
-      const exportData = {
-        weightEntries: weightEntries || [],
-        goals: goals || [],
-        exportDate: new Date().toISOString()
-      };
+      // Create a combined CSV file with both data types
+      const csvData = createCompleteCSV(weightEntries || [], goals || []);
       
-      // Create download
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
-      const downloadAnchorNode = document.createElement('a');
-      downloadAnchorNode.setAttribute("href", dataStr);
-      downloadAnchorNode.setAttribute("download", "weight-tracker-data.json");
-      document.body.appendChild(downloadAnchorNode);
-      downloadAnchorNode.click();
-      downloadAnchorNode.remove();
+      // Create a download link
+      const blob = new Blob([csvData], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `cozyweight_export_${new Date().toISOString().split("T")[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
       
-      toast.success("Data exported successfully!");
-    } catch (error: any) {
-      console.error("Error exporting data:", error);
+      toast.success("Data exported successfully");
+    } catch (err: any) {
+      console.error("Error exporting data:", err);
+      setError(err.message || "Failed to export data");
       toast.error("Failed to export data. Please try again.");
     } finally {
       setIsExporting(false);
@@ -68,123 +77,201 @@ const DataManagementSection: React.FC<DataManagementSectionProps> = ({ userId, s
     }
   };
 
-  const handleDeleteAllData = async () => {
-    if (!userId) {
-      toast.error("You must be logged in to delete data");
+  const handleImportClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+      setError("Please upload a CSV file");
+      toast.error("Invalid file format. Please upload a CSV file.");
       return;
     }
+    
+    const reader = new FileReader();
+    reader.onload = handleFileRead;
+    reader.readAsText(file);
+  };
 
-    setIsDeleting(true);
+  const handleFileRead = async (event: ProgressEvent<FileReader>) => {
+    if (!userId) {
+      toast.error("Please sign in to import data");
+      return;
+    }
+    
+    setIsImporting(true);
     setIsLoading(true);
+    setError(null);
+    setProgress(0);
     
     try {
-      // Delete weight entries
-      const { error: weightError } = await supabase
-        .from("weight_entries")
-        .delete()
-        .eq("user_id", userId);
-        
-      if (weightError) throw weightError;
+      const csvData = event.target?.result as string;
+      if (!csvData) {
+        throw new Error("Could not read file contents");
+      }
       
-      // Delete goals
-      const { error: goalsError } = await supabase
-        .from("goals")
-        .delete()
-        .eq("user_id", userId);
-        
-      if (goalsError) throw goalsError;
+      // Parse the CSV data
+      const parsedData = parseCSV(csvData);
       
-      toast.success("All data has been deleted successfully!");
-    } catch (error: any) {
-      console.error("Error deleting data:", error);
-      toast.error("Failed to delete data. Please try again.");
+      if (parsedData.weightEntries.length === 0 && parsedData.goals.length === 0) {
+        throw new Error("No valid data found in the CSV file");
+      }
+      
+      // Import weight entries
+      if (parsedData.weightEntries.length > 0) {
+        setProgress(25);
+        
+        const weightEntriesToInsert = parsedData.weightEntries.map(entry => ({
+          ...entry,
+          user_id: userId,
+        }));
+        
+        const { error: weightError } = await supabase
+          .from("weight_entries")
+          .insert(weightEntriesToInsert);
+          
+        if (weightError) throw weightError;
+      }
+      
+      setProgress(50);
+      
+      // Import goals
+      if (parsedData.goals.length > 0) {
+        const goalsToInsert = parsedData.goals.map(goal => ({
+          ...goal,
+          user_id: userId,
+        }));
+        
+        const { error: goalError } = await supabase
+          .from("goals")
+          .insert(goalsToInsert);
+          
+        if (goalError) throw goalError;
+      }
+      
+      setProgress(100);
+      toast.success("Data imported successfully");
+      
+      // Reset the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      
+    } catch (err: any) {
+      console.error("Error importing data:", err);
+      setError(err.message || "Failed to import data");
+      toast.error("Failed to import data. Please check the format and try again.");
     } finally {
-      setIsDeleting(false);
+      setIsImporting(false);
       setIsLoading(false);
     }
   };
 
   return (
-    <Card className="border border-teal-500/10 bg-gradient-to-r from-white to-teal-50/30 shadow-md">
+    <Card className="overflow-hidden shadow-sm border border-[#ff7f50]/5">
+      <div className="h-1 bg-[#ff7f50]"></div>
       <CardHeader className="pb-4">
-        <div className="flex items-center gap-2">
-          <Database className="h-5 w-5 text-teal-500" />
-          <CardTitle>Data Management</CardTitle>
-        </div>
-        <CardDescription>
-          Export or delete your weight tracking data
-        </CardDescription>
+        <CardTitle className="flex items-center gap-2 text-xl">
+          <Database className="h-5 w-5 text-[#ff7f50]" />
+          Data Management
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="rounded-md border border-teal-200/50 p-4 bg-teal-50/50">
-          <div className="space-y-2">
-            <h3 className="font-medium flex items-center gap-2">
-              <Download className="h-4 w-4 text-teal-500" />
-              Export Your Data
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Download all your weight entries and goals as a JSON file. This file can be used for backup purposes or data analysis.
-            </p>
-          </div>
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
+        <div className="space-y-2">
+          <h3 className="text-lg font-medium">Export Your Data</h3>
+          <p className="text-sm text-muted-foreground">
+            Download all your weight entries and goals as a CSV file for backup or analysis.
+          </p>
           <Button 
-            onClick={handleExportData} 
-            variant="outline" 
-            className="mt-4 border-teal-200 text-teal-700 hover:bg-teal-50 hover:text-teal-800"
-            disabled={isExporting}
+            variant="default" 
+            onClick={handleExportData}
+            disabled={isExporting || !userId}
+            className="mt-2"
           >
             {isExporting ? (
               <>
-                <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
+                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
                 Exporting...
               </>
             ) : (
               <>
-                <ArrowDownToLine className="mr-2 h-4 w-4" />
-                Export Data
+                <Download className="mr-2 h-4 w-4" />
+                Export Data (CSV)
               </>
             )}
           </Button>
         </div>
         
-        <div className="rounded-md border border-destructive/20 p-4 bg-destructive/5">
-          <div className="space-y-2">
-            <h3 className="font-medium flex items-center gap-2 text-destructive">
-              <Trash className="h-4 w-4" />
-              Delete All Data
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Permanently delete all your weight entries and goals. This action cannot be undone.
-            </p>
+        <div className="space-y-2">
+          <h3 className="text-lg font-medium">Import Data</h3>
+          <p className="text-sm text-muted-foreground">
+            Import weight entries and goals from a CSV file. The file should be in the same format as the export file.
+          </p>
+          <input 
+            ref={fileInputRef}
+            type="file" 
+            accept=".csv" 
+            onChange={handleFileChange}
+            className="hidden"
+          />
+          <Button 
+            variant="outline" 
+            onClick={handleImportClick}
+            disabled={isImporting || !userId}
+            className="mt-2"
+          >
+            {isImporting ? (
+              <>
+                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                Importing...
+              </>
+            ) : (
+              <>
+                <Upload className="mr-2 h-4 w-4" />
+                Import Data (CSV)
+              </>
+            )}
+          </Button>
+          
+          {isImporting && (
+            <div className="space-y-2 mt-4">
+              <div className="flex justify-between text-sm">
+                <span>Importing data...</span>
+                <span>{progress}%</span>
+              </div>
+              <Progress value={progress} className="h-2" />
+              <p className="text-xs text-muted-foreground">
+                {progress < 50 ? "Processing weight entries..." : "Processing goals..."}
+              </p>
+            </div>
+          )}
+          
+          <div className="mt-4 rounded-md bg-amber-50 p-4 text-sm border border-amber-200">
+            <div className="flex items-start">
+              <FileCheck className="h-5 w-5 text-amber-600 mr-2 mt-0.5" />
+              <div className="text-amber-800">
+                <p className="font-medium mb-1">Import Format Requirements</p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>The file must be in CSV format</li>
+                  <li>It should have sections marked with # WEIGHT ENTRIES and # GOALS</li>
+                  <li>Each section should have appropriate column headers</li>
+                  <li>Date format should be YYYY-MM-DD</li>
+                </ul>
+              </div>
+            </div>
           </div>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button 
-                variant="outline" 
-                className="mt-4 border-destructive/30 text-destructive hover:bg-destructive/10"
-              >
-                <Trash className="mr-2 h-4 w-4" />
-                Delete All Data
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete all your weight entries and goals from our servers.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDeleteAllData}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  disabled={isDeleting}
-                >
-                  {isDeleting ? "Deleting..." : "Yes, delete all my data"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
         </div>
       </CardContent>
     </Card>

@@ -73,7 +73,7 @@ export default {
         weight: {
           gain: '#FF7F50',
           loss: '#10B981',
-          maintain: '#6366F1',
+          maintain: '#FF7F50',
         },
         goal: {
           progress: '#10B981',
@@ -92,12 +92,12 @@ export default {
             end: '#ff6347',
           },
           blue: {
-            start: '#60A5FA',
-            end: '#3B82F6',
+            start: '#FF7F50',
+            end: '#FF6347',
           },
           green: {
-            start: '#34D399',
-            end: '#10B981',
+            start: '#FF7F50',
+            end: '#FF6347',
           },
         }
       },

@@ -26,8 +26,36 @@ serve(async (req) => {
       throw new Error('Supabase client not initialized');
     }
 
+    // Check if user is authorized (admin)
+    const {
+      data: { user },
+      error: userError,
+    } = await supabaseClient.auth.getUser();
+
+    if (userError || !user) {
+      throw new Error('Unauthorized: Authentication required');
+    }
+
+    // Check if user is an admin
+    const { data: profile, error: profileError } = await supabaseClient
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError) throw profileError;
+
+    if (!profile?.is_admin) {
+      throw new Error('Unauthorized: Admin privileges required');
+    }
+
     // Get the request body
     const { url, days, fields } = await req.json();
+    
+    // Validate the request data
+    if (!url) throw new Error('Webhook URL is required');
+    if (!days || isNaN(days) || days < 1) throw new Error('Days must be a positive number');
+    if (!fields) throw new Error('Fields configuration is required');
     
     // Update the webhook config
     const { data, error } = await supabaseClient
@@ -55,6 +83,7 @@ serve(async (req) => {
       }
     )
   } catch (error) {
+    console.error('Error updating webhook config:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 

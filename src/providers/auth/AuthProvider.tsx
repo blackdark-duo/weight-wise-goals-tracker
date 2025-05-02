@@ -57,13 +57,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         const { data: adminExists } = await supabase
           .from('profiles')
           .select('*')
-          .eq('email', 'admin@weighttrack.com')
+          .eq('email', 'admin@cozyweight.com')
           .single();
         
         if (!adminExists) {
           // Create admin user
           const { error } = await supabase.auth.signUp({
-            email: 'admin@weighttrack.com',
+            email: 'admin@cozyweight.com',
             password: 'password',
             options: {
               data: {
@@ -85,7 +85,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   }, []);
 
-  // Remove explicit type annotation to avoid circular reference
+  // Create the context value without explicit type annotation
   const contextValue = {
     session,
     isLoading
