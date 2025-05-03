@@ -1,6 +1,6 @@
 
 import React from "react";
-import TextRotate from "../ui/text-rotate";
+import { TextRotate } from "../ui/text-rotate";
 
 type HeroTitleProps = {
   highlight: string;
