@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             .from("profiles")
             .select("*")
             .eq("email", email)
-            .single();
+            .maybeSingle();
 
           if (!adminExists) {
             const { error } = await supabase.auth.signUp({
