@@ -45,12 +45,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           "fitnessfeat9@gmail.com"
         ];
         
+        type Profile = {
+          id: string;
+          email: string;
+          // ...other fields as needed
+        };
         for (const email of adminEmails) {
           const { data: adminExists } = await supabase
-            .from("profiles")
+            .from<Profile>("profiles")
             .select("*")
             .eq("email", email)
-            .maybeSingle();
+            .single();
 
           if (!adminExists) {
             const { error } = await supabase.auth.signUp({
