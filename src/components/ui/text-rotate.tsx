@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface TextRotateProps {
   texts: string[];
   rotationInterval?: number;
+  className?: string; // Adding className prop to the interface
   mainClassName?: string;
   staggerDuration?: number;
   staggerFrom?: "first" | "last" | "middle";
@@ -20,6 +21,7 @@ interface TextRotateProps {
 export const TextRotate: React.FC<TextRotateProps> = ({
   texts,
   rotationInterval = 3000,
+  className = '', // Add default empty string value
   mainClassName = '',
   staggerDuration = 0.03,
   staggerFrom = "first",
@@ -84,7 +86,7 @@ export const TextRotate: React.FC<TextRotateProps> = ({
     <AnimatePresence mode="wait">
       <motion.span
         key={currentIndex}
-        className={`inline-flex ${mainClassName}`}
+        className={`inline-flex ${mainClassName} ${className}`}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
