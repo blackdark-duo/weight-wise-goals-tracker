@@ -49,8 +49,10 @@ export type Database = {
         Row: {
           created_at: string | null
           display_name: string | null
+          email: string | null
           id: string
           is_admin: boolean | null
+          is_suspended: boolean | null
           last_webhook_date: string | null
           preferred_unit: string | null
           timezone: string | null
@@ -62,8 +64,10 @@ export type Database = {
         Insert: {
           created_at?: string | null
           display_name?: string | null
+          email?: string | null
           id: string
           is_admin?: boolean | null
+          is_suspended?: boolean | null
           last_webhook_date?: string | null
           preferred_unit?: string | null
           timezone?: string | null
@@ -75,8 +79,10 @@ export type Database = {
         Update: {
           created_at?: string | null
           display_name?: string | null
+          email?: string | null
           id?: string
           is_admin?: boolean | null
+          is_suspended?: boolean | null
           last_webhook_date?: string | null
           preferred_unit?: string | null
           timezone?: string | null

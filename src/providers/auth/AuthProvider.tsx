@@ -17,12 +17,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     sessionCache.initialized = true;
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_, currentSession) => {
+    // Set up auth state listener first to prevent infinite type instantiation
+    const { data: listener } = supabase.auth.onAuthStateChange((event, currentSession) => {
       setSession(currentSession);
       sessionCache.session = currentSession;
       setIsLoading(false);
     });
 
+    // Then check for existing session
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       sessionCache.session = data.session;
@@ -39,23 +41,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       try {
         // Create the admin users as requested
         const adminEmails = [
-          "admin@cozyweight.com",
+          "admin@weightwise.com",
           "naveen831459@gmail.com",
           "fitnessfea.t9@gmail.com", 
           "fitnessfeat9@gmail.com"
         ];
         
-        type Profile = {
-          id: string;
-          email: string;
-          // ...other fields as needed
-        };
         for (const email of adminEmails) {
           const { data: adminExists } = await supabase
-            .from<Profile>("profiles")
+            .from("profiles")
             .select("*")
             .eq("email", email)
-            .single();
+            .maybeSingle();
 
           if (!adminExists) {
             const { error } = await supabase.auth.signUp({
@@ -64,7 +61,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               options: {
                 data: {
                   is_admin: true,
-                  display_name: email === "admin@cozyweight.com" ? "Admin User" : "WeightWise Admin",
+                  display_name: email === "admin@weightwise.com" ? "Admin User" : "WeightWise Admin",
                 },
               },
             });

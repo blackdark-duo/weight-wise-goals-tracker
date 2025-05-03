@@ -39,9 +39,9 @@ serve(async (req) => {
     // Check if user exists and has not exceeded limit
     const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
-      .select('webhook_limit, webhook_count, last_webhook_date, webhook_url')
+      .select('webhook_limit, webhook_count, last_webhook_date, webhook_url, preferred_unit')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
     if (profileError) throw profileError;
     if (!profile) throw new Error('User profile not found');
@@ -101,29 +101,37 @@ serve(async (req) => {
     // Get user profile data
     const { data: userData, error: userDataError } = await supabaseClient
       .from('profiles')
-      .select('display_name, preferred_unit')
+      .select('display_name, preferred_unit, timezone')
       .eq('id', user.id)
       .single();
       
     if (userDataError) throw userDataError;
 
     // Build payload based on field configuration
-    const payload: any = { timestamp: new Date().toISOString() };
+    const payload = { 
+      timestamp: new Date().toISOString(),
+      version: "1.1" // Adding a version to track data format changes
+    };
     
     if (webhookConfig.fields.user_data) {
       payload.user = {
-        ...userData,
         id: user.id,
-        email: user.email
+        email: user.email,
+        display_name: userData.display_name,
+        preferred_unit: userData.preferred_unit || "kg",
+        timezone: userData.timezone || "UTC"
       };
     }
     
     if (webhookConfig.fields.weight_data) {
-      payload.weight_entries = weightData;
+      payload.weight_entries = weightData ? weightData.map(entry => ({
+        ...entry,
+        weight_unit: userData.preferred_unit || "kg"
+      })) : [];
     }
     
     if (webhookConfig.fields.goal_data) {
-      payload.goals = goalData;
+      payload.goals = goalData || [];
     }
     
     // Send data to webhook
@@ -159,7 +167,8 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true,
         message: responseData.message || "AI analysis complete.",
-        insights: responseData.insights || null
+        insights: responseData.insights || null,
+        format_version: "1.1" // Return format version for the client
       }),
       { 
         headers: { 

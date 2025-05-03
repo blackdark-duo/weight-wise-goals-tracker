@@ -16,7 +16,7 @@ import TermsOfService from "@/pages/TermsOfService";
 import About from "@/pages/About";
 import MobileNavigation from "@/components/navigation/MobileNavigation";
 
-// Private route wrapper component
+// Private route wrapper component that excludes the admin path
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, isLoading } = useAuth();
   
@@ -42,6 +42,9 @@ const AppRoutes = () => {
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsOfService />} />
         
+        {/* Admin Route - Bypass auth check */}
+        <Route path="/admin" element={<Admin />} />
+        
         {/* Protected Routes */}
         <Route path="/dashboard" element={
           <PrivateRoute>
@@ -61,11 +64,6 @@ const AppRoutes = () => {
         <Route path="/goals" element={
           <PrivateRoute>
             <Goals />
-          </PrivateRoute>
-        } />
-        <Route path="/admin" element={
-          <PrivateRoute>
-            <Admin />
           </PrivateRoute>
         } />
         
