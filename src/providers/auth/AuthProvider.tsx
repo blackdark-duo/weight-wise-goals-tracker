@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   useEffect(() => {
-    const createAdminUser = async () => {
+    const createAdminUsers = async () => {
       try {
         // Create the admin users as requested
         const adminEmails = [
@@ -77,7 +77,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     };
 
     if (process.env.NODE_ENV === "development") {
-      createAdminUser();
+      createAdminUsers();
     }
   }, []);
 
