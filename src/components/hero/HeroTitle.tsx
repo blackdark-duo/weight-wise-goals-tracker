@@ -17,7 +17,7 @@ const HeroTitle = ({ highlight, beforeText, afterText }: HeroTitleProps) => {
       </span>{" "}
       {afterText} <br />
       <TextRotate 
-        items={["Track", "Analyze", "Improve", "Achieve"]} 
+        texts={["Track", "Analyze", "Improve", "Achieve"]} 
         className="text-[#ff7f50]" 
       />
     </h1>
