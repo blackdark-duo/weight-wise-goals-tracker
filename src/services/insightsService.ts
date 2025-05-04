@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { formatInsightsResponse } from "@/utils/insightsFormatter";
+import { formatInsightsText } from "@/utils/insightsFormatter";
 
 export async function fetchInsightsData(userId: string) {
   try {
@@ -27,7 +27,7 @@ export async function fetchInsightsData(userId: string) {
     }
 
     return {
-      formattedInsights: formatInsightsResponse(responseData.insights),
+      formattedInsights: formatInsightsText(responseData.insights),
       rawResponse: responseData.response || responseData
     };
   } catch (error) {

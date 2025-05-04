@@ -118,14 +118,18 @@ const Pricing = () => {
       
       console.log("Recording pricing click:", sessionData);
 
-      // Store click data in Supabase
-      const { error } = await supabase
-        .from('pricing_clicks')
-        .insert([sessionData])
-        .single();
+      // Store click data in Supabase using a direct RPC call to handle the pricing_clicks table access
+      // This avoids TypeScript errors with the generated types
+      const { error } = await supabase.rpc('record_pricing_click', {
+        p_session_id: sessionData.session_id,
+        p_tier: sessionData.tier,
+        p_timestamp: sessionData.timestamp,
+        p_location: sessionData.location,
+        p_browser: sessionData.browser,
+        p_referrer: sessionData.referrer
+      });
 
       if (error) {
-        // If the table doesn't exist yet, just log and continue
         console.error("Error recording pricing click:", error);
       }
       

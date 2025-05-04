@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, BrainCircuit, AlertTriangle, WifiOff, ArrowDown, ArrowUp, Console } from "lucide-react";
+import { RefreshCw, BrainCircuit, AlertTriangle, WifiOff, ArrowDown, ArrowUp, Code } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -97,7 +97,7 @@ const AIInsightsView: React.FC<AIInsightsViewProps> = ({
                 AI Analysis
               </TabsTrigger>
               <TabsTrigger value="raw" className="flex items-center">
-                <Console className="h-4 w-4 mr-2" /> 
+                <Code className="h-4 w-4 mr-2" /> 
                 Raw Response
               </TabsTrigger>
             </TabsList>
