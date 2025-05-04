@@ -23,7 +23,7 @@ interface RecordPricingClickParams {
 export const recordPricingClick = async (data: PricingClickData) => {
   try {
     // Store click data in Supabase using a direct RPC call
-    const { error } = await supabase.rpc<null, RecordPricingClickParams>('record_pricing_click', {
+    const { error } = await supabase.rpc('record_pricing_click', {
       p_session_id: data.session_id,
       p_tier: data.tier,
       p_timestamp: data.timestamp,

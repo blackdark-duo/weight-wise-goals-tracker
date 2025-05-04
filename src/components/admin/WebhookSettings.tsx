@@ -82,7 +82,7 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
         if (error) throw error;
         
         if (data) {
-          // Ensure fields has the correct shape
+          // Create default fields structure
           const defaultFields: WebhookFields = {
             user_data: true,
             weight_data: true,
@@ -91,18 +91,18 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
             detailed_analysis: true
           };
           
-          // Use type assertion to handle potential unknown field structure
-          const safeFields = data.fields as WebhookFields || defaultFields;
+          // Extract fields from JSON safely
+          const fieldsData = data.fields as Record<string, boolean> || {};
           
           setWebhookConfig({
             url: data.url || DEFAULT_WEBHOOK_URL,
             days: data.days || 30,
             fields: {
-              user_data: safeFields.user_data ?? true,
-              weight_data: safeFields.weight_data ?? true,
-              goal_data: safeFields.goal_data ?? true,
-              activity_data: safeFields.activity_data ?? false,
-              detailed_analysis: safeFields.detailed_analysis ?? false
+              user_data: fieldsData.user_data ?? defaultFields.user_data,
+              weight_data: fieldsData.weight_data ?? defaultFields.weight_data,
+              goal_data: fieldsData.goal_data ?? defaultFields.goal_data,
+              activity_data: fieldsData.activity_data ?? defaultFields.activity_data,
+              detailed_analysis: fieldsData.detailed_analysis ?? defaultFields.detailed_analysis
             },
             include_account_fields: data.include_account_fields ?? true,
             include_user_fields: data.include_user_fields ?? true,
@@ -131,7 +131,13 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
         .update({
           url: webhookConfig.url,
           days: webhookConfig.days,
-          fields: webhookConfig.fields,
+          fields: {
+            user_data: webhookConfig.fields.user_data,
+            weight_data: webhookConfig.fields.weight_data,
+            goal_data: webhookConfig.fields.goal_data,
+            activity_data: webhookConfig.fields.activity_data,
+            detailed_analysis: webhookConfig.fields.detailed_analysis
+          } as unknown as Record<string, boolean>,
           include_account_fields: webhookConfig.include_account_fields,
           include_user_fields: webhookConfig.include_user_fields,
           include_weight_entries: webhookConfig.include_weight_entries,
