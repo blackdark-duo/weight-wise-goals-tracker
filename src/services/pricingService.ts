@@ -18,14 +18,16 @@ interface RecordPricingClickResult {
 export const recordPricingClick = async (data: PricingClickData): Promise<Error | null> => {
   try {
     // Store click data in Supabase using a direct RPC call
-    const { error } = await supabase.rpc('record_pricing_click', {
-      p_session_id: data.session_id,
-      p_tier: data.tier,
-      p_timestamp: data.timestamp,
-      p_location: data.location,
-      p_browser: data.browser,
-      p_referrer: data.referrer
-    } as any); // Use 'any' type to bypass TypeScript's type checking for this specific call
+    const { error } = await supabase.functions.invoke('record_pricing_click', {
+      body: {
+        session_id: data.session_id,
+        tier: data.tier,
+        timestamp: data.timestamp,
+        location: data.location,
+        browser: data.browser,
+        referrer: data.referrer
+      }
+    });
 
     return error;
   } catch (error) {
