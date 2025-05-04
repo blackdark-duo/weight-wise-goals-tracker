@@ -46,6 +46,11 @@ serve(async (req) => {
     if (profileError) throw profileError;
     if (!profile) throw new Error('User profile not found');
 
+    // Check if user is suspended
+    if (profile.is_suspended) {
+      throw new Error('Your account has been suspended. Please contact support.');
+    }
+
     // Check if user has exceeded their webhook limit
     const currentDate = new Date();
     const lastWebhookDate = profile.last_webhook_date ? new Date(profile.last_webhook_date) : null;
@@ -55,7 +60,7 @@ serve(async (req) => {
                     currentDate.getFullYear() !== lastWebhookDate.getFullYear();
     
     if (!isNewDay && (profile.webhook_count >= profile.webhook_limit)) {
-      throw new Error(`You have reached your daily limit of ${profile.webhook_limit} AI analyses. Please try again tomorrow.`);
+      throw new Error(`You have reached your daily limit of ${profile.webhook_limit} AI analyses. Please try again tomorrow or upgrade to a premium plan.`);
     }
 
     // Get webhook configuration
@@ -97,50 +102,73 @@ serve(async (req) => {
       .eq('user_id', user.id);
       
     if (goalError) throw goalError;
-    
-    // Get user profile data with all available fields
-    const { data: userData, error: userDataError } = await supabaseClient
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-      
-    if (userDataError) throw userDataError;
 
     // Build payload including all user fields
-    const payload = { 
+    const payload: Record<string, any> = { 
       timestamp: new Date().toISOString(),
-      version: "1.2", // Updating version to track data format changes
-      account_id: user.id, // Adding account ID
-      user_id: user.id,    // Adding user ID
-      email: user.email,   // Adding email directly
+      version: "1.2", 
+      account_id: user.id,
+      user_id: user.id,
+      email: user.email,
       created_at: profile.created_at,
       last_accessed: new Date().toISOString(),
       webhook_call_count: isNewDay ? 1 : (profile.webhook_count + 1),
       api_limit_status: (profile.webhook_count >= profile.webhook_limit) ? "exceeded" : "within_limit",
-      authentication_status: "verified", // Since they're authenticated
-      preferred_unit: userData.preferred_unit || "kg",
-      timezone: userData.timezone || "UTC"
+      authentication_status: "verified",
+      preferred_unit: profile.preferred_unit || "kg",
+      timezone: profile.timezone || "UTC"
     };
     
-    // Include other data based on field configuration
-    if (webhookConfig.fields.user_data) {
-      payload.user = {
-        ...userData,
-        email: user.email
+    // Include additional account fields if enabled
+    if (webhookConfig.include_account_fields) {
+      payload.account = {
+        id: user.id,
+        created_at: profile.created_at,
+        last_accessed: new Date().toISOString(),
+        api_limit_status: (profile.webhook_count >= profile.webhook_limit) ? "exceeded" : "within_limit",
+        webhook_call_count: isNewDay ? 1 : (profile.webhook_count + 1),
       };
     }
     
-    if (webhookConfig.fields.weight_data) {
+    // Include additional user fields if enabled
+    if (webhookConfig.include_user_fields) {
+      payload.user = {
+        ...profile,
+        email: user.email,
+        auth_id: user.id
+      };
+    }
+    
+    // Include weight entries if enabled
+    if (webhookConfig.include_weight_entries) {
       payload.weight_entries = weightData ? weightData.map(entry => ({
         ...entry,
-        weight_unit: userData.preferred_unit || "kg"
+        weight_unit: profile.preferred_unit || "kg"
       })) : [];
     }
     
-    if (webhookConfig.fields.goal_data) {
+    // Include goals if enabled
+    if (webhookConfig.include_goals) {
       payload.goals = goalData || [];
     }
+    
+    // Create webhook log entry
+    const { data: webhookLog, error: webhookLogError } = await supabaseClient
+      .from('webhook_logs')
+      .insert({
+        user_id: user.id,
+        request_payload: payload,
+        url: webhookUrl,
+        status: 'pending'
+      })
+      .select('id')
+      .single();
+
+    if (webhookLogError) {
+      console.error('Error creating webhook log:', webhookLogError);
+    }
+
+    const logId = webhookLog?.id;
     
     // Send data to webhook
     console.log(`Sending data to webhook: ${webhookUrl}`);
@@ -157,6 +185,17 @@ serve(async (req) => {
     }
     
     const responseData = await webhookResponse.json();
+    
+    // Update webhook log with response
+    if (logId) {
+      await supabaseClient
+        .from('webhook_logs')
+        .update({
+          response_payload: responseData,
+          status: webhookResponse.ok ? 'success' : 'error'
+        })
+        .eq('id', logId);
+    }
     
     // Increment webhook count
     const { error: updateError } = await supabaseClient
@@ -176,8 +215,8 @@ serve(async (req) => {
         success: true,
         message: responseData.message || "AI analysis complete.",
         insights: responseData.insights || null,
-        response: responseData, // Include the complete webhook response
-        format_version: "1.2" // Return updated format version
+        response: responseData,
+        format_version: "1.2"
       }),
       { 
         headers: { 

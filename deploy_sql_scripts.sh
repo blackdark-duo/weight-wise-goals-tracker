@@ -10,4 +10,7 @@ supabase db execute --file supabase/functions/create_pricing_clicks.sql
 # Execute the pricing_clicks function creation script
 supabase db execute --file supabase/functions/record_pricing_click_function.sql
 
+# Execute the webhook_logs table creation script
+supabase db execute --file supabase/functions/create_webhook_logs.sql
+
 echo "SQL scripts executed successfully."

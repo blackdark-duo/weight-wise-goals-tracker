@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Webhook, Calendar, TestTube, ArrowDown, ArrowUp } from "lucide-react";
+import { Webhook, Calendar, TestTube, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -27,16 +27,22 @@ interface WebhookConfigType {
     activity_data: boolean;
     detailed_analysis: boolean;
   };
+  include_account_fields: boolean;
+  include_user_fields: boolean;
+  include_weight_entries: boolean;
+  include_goals: boolean;
+  webhook_version: string;
 }
 
 interface WebhookTestResponse {
   status: string;
   message: string;
   timestamp: string;
+  insights?: string[];
   [key: string]: any;
 }
 
-const DEFAULT_WEBHOOK_URL = "http://n8n.cozyapp.uno:5678/webhook-test/2c26d7e3-525a-4080-9282-21b6af883cf2";
+const DEFAULT_WEBHOOK_URL = "https://api.example.com/webhook";
 
 const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
   const [webhookConfig, setWebhookConfig] = useState<WebhookConfigType>({
@@ -48,47 +54,47 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
       goal_data: true,
       activity_data: true,
       detailed_analysis: true
-    }
+    },
+    include_account_fields: true,
+    include_user_fields: true,
+    include_weight_entries: true,
+    include_goals: true,
+    webhook_version: "1.0"
   });
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isTesting, setIsTesting] = useState(false);
   const [testResponse, setTestResponse] = useState<WebhookTestResponse | null>(null);
-  const [testPayload, setTestPayload] = useState<string>('{"account_id": "12345", "user_id": "67890", "email": "user@example.com"}');
+  const [testPayload, setTestPayload] = useState<string>('{\n  "account_id": "12345",\n  "user_id": "67890",\n  "email": "user@example.com",\n  "unit": "kg",\n  "goal_weight": 75.0,\n  "goal_days": 30,\n  "entries": {\n    "weight": [78.0, 75.6, 77.0],\n    "notes": ["", "Ate dinner out at a buffet", "Ate pizza today"],\n    "dates": ["2025-05-01", "2025-05-02", "2025-05-03"]\n  }\n}');
 
   useEffect(() => {
     const fetchWebhookConfig = async () => {
       try {
         setIsLoading(true);
         
-        const response = await fetch(
-          'https://mjzzdynuzrpklgexabzs.supabase.co/functions/v1/get_webhook_config',
-          {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-            }
-          }
-        );
+        const { data, error } = await supabase
+          .from('webhook_config')
+          .select('*')
+          .single();
         
-        if (!response.ok) {
-          throw new Error(`Error fetching webhook config: ${response.status}`);
-        }
+        if (error) throw error;
         
-        const result = await response.json();
-        
-        if (result.data) {
+        if (data) {
           setWebhookConfig({
-            url: result.data.url || DEFAULT_WEBHOOK_URL,
-            days: result.data.days || 30,
-            fields: result.data.fields || {
+            url: data.url || DEFAULT_WEBHOOK_URL,
+            days: data.days || 30,
+            fields: data.fields || {
               user_data: true,
               weight_data: true,
               goal_data: true,
               activity_data: true,
               detailed_analysis: true
-            }
+            },
+            include_account_fields: data.include_account_fields || true,
+            include_user_fields: data.include_user_fields || true,
+            include_weight_entries: data.include_weight_entries || true,
+            include_goals: data.include_goals || true,
+            webhook_version: data.webhook_version || "1.0"
           });
         }
       } catch (error) {
@@ -106,22 +112,21 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
     try {
       setIsSaving(true);
       
-      const response = await fetch(
-        'https://mjzzdynuzrpklgexabzs.supabase.co/functions/v1/update_webhook_config',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-          },
-          body: JSON.stringify(webhookConfig)
-        }
-      );
+      const { error } = await supabase
+        .from('webhook_config')
+        .update({
+          url: webhookConfig.url,
+          days: webhookConfig.days,
+          fields: webhookConfig.fields,
+          include_account_fields: webhookConfig.include_account_fields,
+          include_user_fields: webhookConfig.include_user_fields,
+          include_weight_entries: webhookConfig.include_weight_entries,
+          include_goals: webhookConfig.include_goals,
+          webhook_version: webhookConfig.webhook_version
+        })
+        .eq('id', 1);
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Error ${response.status}`);
-      }
+      if (error) throw error;
       
       toast.success("Webhook configuration saved successfully");
       if (onUpdate) onUpdate();
@@ -149,6 +154,25 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
         return;
       }
 
+      // Record the webhook test in the database
+      const { data: webhookLogData, error: webhookLogError } = await supabase
+        .from('webhook_logs')
+        .insert({
+          user_id: (await supabase.auth.getUser()).data.user?.id,
+          url: webhookConfig.url,
+          request_payload: payloadObj,
+          status: 'pending'
+        })
+        .select('id')
+        .single();
+
+      if (webhookLogError) {
+        console.error("Error logging webhook test:", webhookLogError);
+      }
+
+      const logId = webhookLogData?.id;
+
+      // Send test request to webhook
       const response = await fetch(webhookConfig.url, {
         method: 'POST',
         headers: {
@@ -159,6 +183,17 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
 
       const responseData = await response.json();
       console.log("Webhook test response:", responseData);
+
+      // Update the webhook log with the response
+      if (logId) {
+        await supabase
+          .from('webhook_logs')
+          .update({
+            response_payload: responseData,
+            status: response.ok ? 'success' : 'error'
+          })
+          .eq('id', logId);
+      }
 
       setTestResponse(responseData);
       toast.success("Webhook test completed successfully");
@@ -188,6 +223,13 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
     );
   }
 
+  const mockResponseExample = `Weight Trend Summary:
+- Your weight has shown a general downward trend over the last 3 days (from 78.0 kg to 77.0 kg), which is a great step toward your goal of 75.0 kg in 30 days.
+- Despite a slight fluctuation on 2025-05-02 (75.6 kg), your consistency is commendable.
+Dietary Insights:
+- On 2025-05-02, dining out at a buffet may have influenced the weight drop; monitor portion sizes in such settings.
+- On 2025-05-03, consuming pizza could impact progress; consider balancing with lighter meals or increased activity.`;
+
   return (
     <Card className="overflow-hidden shadow-sm border border-[#ff7f50]/5">
       <div className="h-1 bg-[#ff7f50]"></div>
@@ -207,7 +249,7 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
             id="webhookUrl" 
             value={webhookConfig.url} 
             onChange={(e) => setWebhookConfig({...webhookConfig, url: e.target.value})}
-            placeholder="https://your-webhook-endpoint.com"
+            placeholder="https://api.example.com/webhook"
           />
           <p className="text-xs text-muted-foreground">
             The webhook URL that will be called when users request AI insights analysis.
@@ -254,6 +296,38 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
                 <Calendar className="h-4 w-4 mr-1" />
                 1y
               </Button>
+            </div>
+          </div>
+        </div>
+        
+        <div className="space-y-2">
+          <Label>Account & User Data</Label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="includeAccountFields" 
+                checked={webhookConfig.include_account_fields}
+                onCheckedChange={(checked) => 
+                  setWebhookConfig({
+                    ...webhookConfig, 
+                    include_account_fields: !!checked
+                  })
+                }
+              />
+              <Label htmlFor="includeAccountFields">Include Account Fields</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="includeUserFields" 
+                checked={webhookConfig.include_user_fields}
+                onCheckedChange={(checked) => 
+                  setWebhookConfig({
+                    ...webhookConfig, 
+                    include_user_fields: !!checked
+                  })
+                }
+              />
+              <Label htmlFor="includeUserFields">Include User Fields</Label>
             </div>
           </div>
         </div>
@@ -362,30 +436,49 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
               <Label htmlFor="testPayload" className="mb-2 block">Test Payload (JSON)</Label>
               <textarea
                 id="testPayload"
-                className="min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground"
+                className="min-h-[180px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground"
                 value={testPayload}
                 onChange={(e) => setTestPayload(e.target.value)}
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                This is an example payload that will be sent to your webhook. Edit as needed.
+              </p>
             </div>
             
-            <Button 
-              onClick={testWebhook}
-              disabled={isTesting}
-              className="bg-[#ff7f50] hover:bg-[#ff6347] text-white"
-              variant="default"
-            >
-              {isTesting ? (
-                <>
-                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
-                  Testing...
-                </>
-              ) : (
-                <>
-                  <TestTube className="h-4 w-4 mr-2" />
-                  Test Webhook
-                </>
-              )}
-            </Button>
+            <div className="flex justify-between">
+              <Button 
+                onClick={testWebhook}
+                disabled={isTesting}
+                className="bg-[#ff7f50] hover:bg-[#ff6347] text-white"
+                variant="default"
+              >
+                {isTesting ? (
+                  <>
+                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                    Testing...
+                  </>
+                ) : (
+                  <>
+                    <TestTube className="h-4 w-4 mr-2" />
+                    Test Webhook
+                  </>
+                )}
+              </Button>
+              
+              <Button
+                onClick={() => setTestResponse({
+                  status: "success",
+                  message: "Webhook test successful",
+                  timestamp: new Date().toISOString(),
+                  insights: mockResponseExample.split('\n')
+                })}
+                variant="outline"
+                disabled={isTesting}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Generate Mock Response
+              </Button>
+            </div>
             
             {testResponse && (
               <Accordion type="single" collapsible className="w-full">
@@ -401,11 +494,23 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
                   <AccordionContent>
                     <Alert className="bg-muted/50">
                       <AlertDescription>
-                        <ScrollArea className="h-[200px]">
-                          <pre className="text-xs overflow-auto p-2">
-                            {JSON.stringify(testResponse, null, 2)}
-                          </pre>
-                        </ScrollArea>
+                        <div className="space-y-4">
+                          {testResponse.insights ? (
+                            <div className="bg-background p-4 rounded-md border text-sm">
+                              {testResponse.insights.map((line, index) => (
+                                <div key={index} className={line.startsWith('-') ? 'pl-4' : 'font-bold mt-2'}>
+                                  {line}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <ScrollArea className="h-[200px]">
+                              <pre className="text-xs overflow-auto p-2">
+                                {JSON.stringify(testResponse, null, 2)}
+                              </pre>
+                            </ScrollArea>
+                          )}
+                        </div>
                       </AlertDescription>
                     </Alert>
                   </AccordionContent>

@@ -98,19 +98,64 @@ export type Database = {
           days: number | null
           fields: Json | null
           id: number
+          include_account_fields: boolean | null
+          include_goals: boolean | null
+          include_user_fields: boolean | null
+          include_weight_entries: boolean | null
           url: string | null
+          webhook_version: string | null
         }
         Insert: {
           days?: number | null
           fields?: Json | null
           id?: number
+          include_account_fields?: boolean | null
+          include_goals?: boolean | null
+          include_user_fields?: boolean | null
+          include_weight_entries?: boolean | null
           url?: string | null
+          webhook_version?: string | null
         }
         Update: {
           days?: number | null
           fields?: Json | null
           id?: number
+          include_account_fields?: boolean | null
+          include_goals?: boolean | null
+          include_user_fields?: boolean | null
+          include_weight_entries?: boolean | null
           url?: string | null
+          webhook_version?: string | null
+        }
+        Relationships: []
+      }
+      webhook_logs: {
+        Row: {
+          created_at: string
+          id: string
+          request_payload: Json
+          response_payload: Json | null
+          status: string | null
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          request_payload: Json
+          response_payload?: Json | null
+          status?: string | null
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          request_payload?: Json
+          response_payload?: Json | null
+          status?: string | null
+          url?: string
+          user_id?: string
         }
         Relationships: []
       }
