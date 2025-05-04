@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Check, X } from "lucide-react";
@@ -98,6 +97,15 @@ const PricingTier: React.FC<PricingTierProps> = ({
   );
 };
 
+interface RecordPricingClickParams {
+  p_session_id: string;
+  p_tier: string;
+  p_timestamp: string;
+  p_location: string;
+  p_browser: string;
+  p_referrer: string;
+}
+
 const Pricing = () => {
   const { session } = useAuth();
   const [loadingTier, setLoadingTier] = useState<string | null>(null);
@@ -119,15 +127,15 @@ const Pricing = () => {
       console.log("Recording pricing click:", sessionData);
 
       // Store click data in Supabase using a direct RPC call to handle the pricing_clicks table access
-      // Fix the TypeScript error by explicitly typing the RPC parameters
-      const { error } = await supabase.rpc('record_pricing_click', {
+      // Fix the TypeScript error by properly typing the RPC parameters
+      const { error } = await supabase.rpc<void>('record_pricing_click', {
         p_session_id: sessionData.session_id,
         p_tier: sessionData.tier,
         p_timestamp: sessionData.timestamp,
         p_location: sessionData.location,
         p_browser: sessionData.browser,
         p_referrer: sessionData.referrer
-      } as any); // Using 'as any' temporarily until we can update the Supabase types
+      } as RecordPricingClickParams);
 
       if (error) {
         console.error("Error recording pricing click:", error);
