@@ -31,7 +31,7 @@ const HeroSection = () => {
           </motion.div>
           
           <HeroImage 
-            src="/lovable-uploads/6b04f662-fb0c-44df-9e2d-b98a7410f381.png"
+            src="/images/hero_image.png"
             alt="WeightWise tracking app" 
           />
         </div>

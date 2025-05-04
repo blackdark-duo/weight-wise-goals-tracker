@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               options: {
                 data: {
                   is_admin: true,
-                  display_name: email === "admin@weightwise.com" ? "Admin User" : "WeightWise Admin",
+                  display_name: email === "admin@weightwise.com" ? "Admin User" : "Weight Wise",
                 },
               },
             });

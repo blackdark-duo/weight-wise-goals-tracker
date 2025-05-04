@@ -259,7 +259,7 @@ Dietary Insights:
           AI Insights Webhook Configuration
         </CardTitle>
         <CardDescription>
-          Configure the webhook that will process AI insights requests and receive data from WeightWise.
+          Configure the webhook that will process AI insights requests and receive data from Weight Wise.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

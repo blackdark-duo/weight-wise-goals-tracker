@@ -64,7 +64,7 @@ const Navbar = () => {
         >
           <img
             src="/lovable-uploads/6b04f662-fb0c-44df-9e2d-b98a7410f381.png"
-            alt="WeightWise Logo"
+            alt="Weight Wise Logo"
             className="h-8 w-8"
           />
           <span className="bg-gradient-to-r from-[#ff7f50] to-[#ff6347] bg-clip-text text-transparent">

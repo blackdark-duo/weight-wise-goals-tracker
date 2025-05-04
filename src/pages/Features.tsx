@@ -105,7 +105,7 @@ const Features = () => {
     },
     {
       title: "Powerful API Integrations",
-      description: "Connect WeightWise with your favorite fitness apps and devices through our webhook integration system. Seamlessly sync your data across your entire health ecosystem.",
+      description: "Connect Weight Wise with your favorite fitness apps and devices through our webhook integration system. Seamlessly sync your data across your entire health ecosystem.",
       icon: <Webhook className="h-12 w-12" />
     },
     {
@@ -127,7 +127,7 @@ const Features = () => {
               <span className="bg-gradient-to-r from-[#ff7f50] to-[#ff6347] bg-clip-text text-transparent"> Weight Journey</span>
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              WeightWise provides all the tools you need to succeed on your weight management journey.
+              Weight Wise provides all the tools you need to succeed on your weight management journey.
             </p>
           </div>
           
@@ -165,7 +165,7 @@ const Features = () => {
               Ready to Transform Your Weight Management?
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
-              Join thousands of satisfied users who have improved their health journey with WeightWise.
+              Join thousands of satisfied users who have improved their health journey with Weight Wise.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" asChild className="bg-gradient-to-r from-[#ff7f50] to-[#ff6347]">

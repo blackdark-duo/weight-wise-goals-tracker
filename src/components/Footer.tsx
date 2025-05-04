@@ -8,7 +8,7 @@ const Footer = () => {
       <div className="container mx-auto max-w-6xl px-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           <div>
-            <h3 className="font-semibold text-lg mb-4">WeightWise</h3>
+            <h3 className="font-semibold text-lg mb-4">Weight Wise</h3>
             <ul className="space-y-2">
               <li><Link to="/" className="text-muted-foreground hover:text-foreground">Home</Link></li>
               <li><Link to="/about" className="text-muted-foreground hover:text-foreground">About</Link></li>
@@ -48,14 +48,14 @@ const Footer = () => {
         <div className="border-t border-border mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
           <div className="flex items-center mb-4 md:mb-0">
             <img 
-              src="/lovable-uploads/6b04f662-fb0c-44df-9e2d-b98a7410f381.png" 
-              alt="WeightWise Logo" 
+              src="/lovable-uploads/app_logo.png" 
+              alt="Weight Wise Logo" 
               className="h-8 w-8 mr-2" 
             />
-            <span className="text-lg font-bold">WeightWise</span>
+            <span className="text-lg font-bold">Weight Wise</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} WeightWise. All rights reserved.
+            &copy; {new Date().getFullYear()} Weight Wise. All rights reserved.
           </p>
         </div>
       </div>

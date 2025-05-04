@@ -20,7 +20,7 @@ const About = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
               >
-                About <span className="bg-gradient-to-r from-[#ff7f50] to-[#ff6347] bg-clip-text text-transparent">WeightWise</span>
+                About <span className="bg-gradient-to-r from-[#ff7f50] to-[#ff6347] bg-clip-text text-transparent">Weight Wise</span>
               </motion.h1>
               <motion.p 
                 className="text-lg text-muted-foreground mb-8"
@@ -45,7 +45,7 @@ const About = () => {
             >
               <h2 className="text-3xl font-bold mb-6 text-[#ff7f50]">Our Mission</h2>
               <p className="text-lg text-muted-foreground mb-6">
-                At WeightWise, we believe that maintaining a healthy weight shouldn't be complicated. Our mission is to provide intuitive tools that make weight tracking simple, meaningful, and motivating.
+                At Weight Wise, we believe that maintaining a healthy weight shouldn't be complicated. Our mission is to provide intuitive tools that make weight tracking simple, meaningful, and motivating.
               </p>
               <p className="text-lg text-muted-foreground">
                 We combine cutting-edge technology with evidence-based health science to deliver personalized insights that help you achieve your goals and maintain a healthier lifestyle for the long term.
@@ -65,7 +65,7 @@ const About = () => {
             >
               <h2 className="text-3xl font-bold mb-4 text-[#ff7f50]">Our Approach</h2>
               <p className="text-lg text-muted-foreground">
-                WeightWise was founded with a simple premise: weight management should be about building healthy, sustainable habits—not quick fixes or extreme measures.
+                Weight Wise was founded with a simple premise: weight management should be about building healthy, sustainable habits—not quick fixes or extreme measures.
               </p>
             </motion.div>
 
@@ -123,7 +123,7 @@ const About = () => {
             >
               <h2 className="text-3xl font-bold mb-6 text-[#ff7f50]">Join Us on This Journey</h2>
               <p className="text-lg text-muted-foreground mb-8">
-                Whether you're looking to lose weight, gain muscle, or simply maintain a healthier lifestyle, WeightWise is here to support you every step of the way.
+                Whether you're looking to lose weight, gain muscle, or simply maintain a healthier lifestyle, Weight Wise is here to support you every step of the way.
               </p>
               <div className="flex flex-col sm:flex-row justify-center gap-4">
                 <Link to="/signup" className="inline-block">

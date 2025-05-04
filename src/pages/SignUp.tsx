@@ -112,7 +112,7 @@ const SignUp = () => {
           throw signInError;
         }
         
-        toast.success("Account created successfully! Welcome to WeightWise.");
+        toast.success("Account created successfully! Welcome to Weight Wise.");
         navigate("/dashboard");
       }
     } catch (err: any) {
@@ -141,13 +141,13 @@ const SignUp = () => {
           <div className="flex justify-center mb-4">
             <img
               src="/lovable-uploads/6b04f662-fb0c-44df-9e2d-b98a7410f381.png"
-              alt="WeightWise Logo"
+              alt="Weight Wise Logo"
               className="h-12 w-12"
             />
           </div>
           <CardTitle className="text-2xl font-bold bg-gradient-to-r from-[#ff7f50] to-[#ff6347] bg-clip-text text-transparent">Create an account</CardTitle>
           <CardDescription>
-            Enter your details to get started with WeightWise
+            Enter your details to get started with Weight Wise
           </CardDescription>
         </CardHeader>
         

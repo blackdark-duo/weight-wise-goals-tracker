@@ -8,7 +8,7 @@ type HeroImageProps = {
   alt: string;
 };
 
-const HeroImage = ({ src = "/lovable-uploads/weight-wise-hero.png", alt }: HeroImageProps) => {
+const HeroImage = ({ src = "/images/hero_image.png", alt }: HeroImageProps) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
@@ -47,8 +47,8 @@ const HeroImage = ({ src = "/lovable-uploads/weight-wise-hero.png", alt }: HeroI
 
   const renderDashboardImage = () => (
     <img
-      src="/lovable-uploads/6b04f662-fb0c-44df-9e2d-b98a7410f381.png"
-      alt="WeightWise tracking app logo"
+      src="/lovable-uploads/app_logo.png"
+      alt="Weight Wise tracking app logo"
       className="w-full h-auto max-w-[320px] mx-auto"
     />
   );
@@ -57,7 +57,7 @@ const HeroImage = ({ src = "/lovable-uploads/weight-wise-hero.png", alt }: HeroI
     <div className="flex h-full w-full flex-col items-center justify-center rounded-lg bg-gradient-to-br from-[#ff7f50]/10 to-[#ff6347]/10 p-8 text-center">
       <ImageOff className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
       <p className="text-muted-foreground">
-        {alt || "WeightWise dashboard illustration"}
+        {alt || "Weight Wise dashboard illustration"}
       </p>
     </div>
   );

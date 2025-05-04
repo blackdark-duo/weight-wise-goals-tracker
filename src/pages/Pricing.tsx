@@ -48,7 +48,7 @@ const Pricing = () => {
         console.log("Sending pro tier interest email to pro@weightwise.site");
         toast.success("Thank you for your interest! We'll contact you about upgrading to Pro tier.");
       } else if (tier === "free") {
-        toast.success("You've selected the Free tier. Continue enjoying WeightWise!");
+        toast.success("You've selected the Free tier. Continue enjoying Weight Wise!");
       } else {
         toast.success("Thank you for your interest in additional credits!");
       }

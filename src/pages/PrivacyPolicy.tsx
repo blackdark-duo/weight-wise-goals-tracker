@@ -89,7 +89,7 @@ const PrivacyPolicy = () => {
             <section>
               <h2 className="text-2xl font-semibold mb-4">Contact Us</h2>
               <p>
-                If you have any questions about this privacy policy, please contact us at <a href="mailto:privacy@weightwise.com" className="text-purple-600 hover:underline">privacy@weightwise.com</a>.
+                If you have any questions about this privacy policy, please contact us at <a href="mailto:privacy@Weight Wise.com" className="text-purple-600 hover:underline">privacy@Weight Wise.com</a>.
               </p>
             </section>
           </div>

@@ -65,11 +65,11 @@ const SignIn = () => {
           <div className="flex justify-center mb-4">
             <img
               src="/lovable-uploads/6b04f662-fb0c-44df-9e2d-b98a7410f381.png"
-              alt="WeightWise Logo"
+              alt="Weight Wise Logo"
               className="h-12 w-12"
             />
           </div>
-          <CardTitle className="text-2xl font-bold text-center text-[#ff7f50]">Welcome to WeightWise</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center text-[#ff7f50]">Welcome to Weight Wise</CardTitle>
           <CardDescription className="text-center">
             Enter your credentials to access your account
           </CardDescription>
