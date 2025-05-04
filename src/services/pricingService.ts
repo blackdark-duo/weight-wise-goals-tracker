@@ -10,19 +10,15 @@ interface PricingClickData {
   referrer: string;
 }
 
-// Define the parameters for the record_pricing_click stored procedure
-interface RecordPricingClickParams {
-  p_session_id: string;
-  p_tier: string;
-  p_timestamp: string;
-  p_location: string;
-  p_browser: string;
-  p_referrer: string;
+// Define the function return type for clarity
+interface RecordPricingClickResult {
+  error: Error | null;
 }
 
-export const recordPricingClick = async (data: PricingClickData) => {
+export const recordPricingClick = async (data: PricingClickData): Promise<Error | null> => {
   try {
     // Store click data in Supabase using a direct RPC call
+    // We explicitly type the parameters as Record<string, any> to resolve the type error
     const { error } = await supabase.rpc('record_pricing_click', {
       p_session_id: data.session_id,
       p_tier: data.tier,
@@ -30,11 +26,11 @@ export const recordPricingClick = async (data: PricingClickData) => {
       p_location: data.location,
       p_browser: data.browser,
       p_referrer: data.referrer
-    });
+    } as Record<string, any>);
 
     return error;
   } catch (error) {
     console.error("Error in recordPricingClick service:", error);
-    return error;
+    return error as Error;
   }
 };
