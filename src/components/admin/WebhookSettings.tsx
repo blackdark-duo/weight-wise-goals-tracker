@@ -17,16 +17,18 @@ interface WebhookSettingsProps {
   onUpdate?: () => void;
 }
 
+interface WebhookFields {
+  user_data: boolean;
+  weight_data: boolean;
+  goal_data: boolean;
+  activity_data: boolean;
+  detailed_analysis: boolean;
+}
+
 interface WebhookConfigType {
   url: string;
   days: number;
-  fields: {
-    user_data: boolean;
-    weight_data: boolean;
-    goal_data: boolean;
-    activity_data: boolean;
-    detailed_analysis: boolean;
-  };
+  fields: WebhookFields;
   include_account_fields: boolean;
   include_user_fields: boolean;
   include_weight_entries: boolean;
@@ -80,20 +82,32 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
         if (error) throw error;
         
         if (data) {
+          // Ensure fields has the correct shape
+          const defaultFields: WebhookFields = {
+            user_data: true,
+            weight_data: true,
+            goal_data: true,
+            activity_data: true,
+            detailed_analysis: true
+          };
+          
+          // Use type assertion to handle potential unknown field structure
+          const safeFields = data.fields as WebhookFields || defaultFields;
+          
           setWebhookConfig({
             url: data.url || DEFAULT_WEBHOOK_URL,
             days: data.days || 30,
-            fields: data.fields || {
-              user_data: true,
-              weight_data: true,
-              goal_data: true,
-              activity_data: true,
-              detailed_analysis: true
+            fields: {
+              user_data: safeFields.user_data ?? true,
+              weight_data: safeFields.weight_data ?? true,
+              goal_data: safeFields.goal_data ?? true,
+              activity_data: safeFields.activity_data ?? false,
+              detailed_analysis: safeFields.detailed_analysis ?? false
             },
-            include_account_fields: data.include_account_fields || true,
-            include_user_fields: data.include_user_fields || true,
-            include_weight_entries: data.include_weight_entries || true,
-            include_goals: data.include_goals || true,
+            include_account_fields: data.include_account_fields ?? true,
+            include_user_fields: data.include_user_fields ?? true,
+            include_weight_entries: data.include_weight_entries ?? true,
+            include_goals: data.include_goals ?? true,
             webhook_version: data.webhook_version || "1.0"
           });
         }
