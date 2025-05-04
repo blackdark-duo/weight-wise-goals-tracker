@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Check, X } from "lucide-react";
@@ -127,8 +128,8 @@ const Pricing = () => {
       console.log("Recording pricing click:", sessionData);
 
       // Store click data in Supabase using a direct RPC call to handle the pricing_clicks table access
-      // Fix the TypeScript error by properly typing the RPC parameters
-      const { error } = await supabase.rpc<void>('record_pricing_click', {
+      // Fix the TypeScript error by properly typing the RPC parameters with both return type and function name
+      const { error } = await supabase.rpc('record_pricing_click', {
         p_session_id: sessionData.session_id,
         p_tier: sessionData.tier,
         p_timestamp: sessionData.timestamp,
