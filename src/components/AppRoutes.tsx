@@ -14,6 +14,9 @@ import ContactUs from "@/pages/ContactUs";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsOfService from "@/pages/TermsOfService";
 import About from "@/pages/About";
+import Features from "@/pages/Features";
+import Pricing from "@/pages/Pricing";
+import ForgotPassword from "@/pages/ForgotPassword";
 import MobileNavigation from "@/components/navigation/MobileNavigation";
 
 // Private route wrapper component that excludes the admin path
@@ -41,8 +44,11 @@ const AppRoutes = () => {
         <Route path="/contact" element={<ContactUs />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/features" element={<Features />} />
+        <Route path="/pricing" element={<Pricing />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         
-        {/* Admin Route - Bypass auth check */}
+        {/* Admin Route - Directly accessible with no auth check */}
         <Route path="/admin" element={<Admin />} />
         
         {/* Protected Routes */}
@@ -66,6 +72,10 @@ const AppRoutes = () => {
             <Goals />
           </PrivateRoute>
         } />
+        
+        {/* Domain/Settings redirect to Account */}
+        <Route path="/settings" element={<Navigate to="/account" replace />} />
+        <Route path="/domain" element={<Navigate to="/account" replace />} />
         
         {/* 404 Route */}
         <Route path="*" element={<NotFound />} />

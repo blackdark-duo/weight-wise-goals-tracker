@@ -39,7 +39,7 @@ serve(async (req) => {
     // Check if user exists and has not exceeded limit
     const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
-      .select('webhook_limit, webhook_count, last_webhook_date, webhook_url, preferred_unit')
+      .select('*, webhook_limit, webhook_count, last_webhook_date, webhook_url, preferred_unit, timezone, is_admin, is_suspended, created_at, updated_at')
       .eq('id', user.id)
       .maybeSingle();
 
@@ -98,28 +98,36 @@ serve(async (req) => {
       
     if (goalError) throw goalError;
     
-    // Get user profile data
+    // Get user profile data with all available fields
     const { data: userData, error: userDataError } = await supabaseClient
       .from('profiles')
-      .select('display_name, preferred_unit, timezone')
+      .select('*')
       .eq('id', user.id)
       .single();
       
     if (userDataError) throw userDataError;
 
-    // Build payload based on field configuration
+    // Build payload including all user fields
     const payload = { 
       timestamp: new Date().toISOString(),
-      version: "1.1" // Adding a version to track data format changes
+      version: "1.2", // Updating version to track data format changes
+      account_id: user.id, // Adding account ID
+      user_id: user.id,    // Adding user ID
+      email: user.email,   // Adding email directly
+      created_at: profile.created_at,
+      last_accessed: new Date().toISOString(),
+      webhook_call_count: isNewDay ? 1 : (profile.webhook_count + 1),
+      api_limit_status: (profile.webhook_count >= profile.webhook_limit) ? "exceeded" : "within_limit",
+      authentication_status: "verified", // Since they're authenticated
+      preferred_unit: userData.preferred_unit || "kg",
+      timezone: userData.timezone || "UTC"
     };
     
+    // Include other data based on field configuration
     if (webhookConfig.fields.user_data) {
       payload.user = {
-        id: user.id,
-        email: user.email,
-        display_name: userData.display_name,
-        preferred_unit: userData.preferred_unit || "kg",
-        timezone: userData.timezone || "UTC"
+        ...userData,
+        email: user.email
       };
     }
     
@@ -168,7 +176,8 @@ serve(async (req) => {
         success: true,
         message: responseData.message || "AI analysis complete.",
         insights: responseData.insights || null,
-        format_version: "1.1" // Return format version for the client
+        response: responseData, // Include the complete webhook response
+        format_version: "1.2" // Return updated format version
       }),
       { 
         headers: { 

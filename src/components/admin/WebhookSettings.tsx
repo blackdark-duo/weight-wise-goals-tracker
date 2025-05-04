@@ -4,10 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Webhook, Calendar } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Webhook, Calendar, TestTube, ArrowDown, ArrowUp } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 
 interface WebhookSettingsProps {
   onUpdate?: () => void;
@@ -25,20 +29,32 @@ interface WebhookConfigType {
   };
 }
 
+interface WebhookTestResponse {
+  status: string;
+  message: string;
+  timestamp: string;
+  [key: string]: any;
+}
+
+const DEFAULT_WEBHOOK_URL = "http://n8n.cozyapp.uno:5678/webhook-test/2c26d7e3-525a-4080-9282-21b6af883cf2";
+
 const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
   const [webhookConfig, setWebhookConfig] = useState<WebhookConfigType>({
-    url: "http://n8n.cozyapp.uno:5678/webhook-test/36e520c4-f7a4-4872-8e21-e469701eb68e",
+    url: DEFAULT_WEBHOOK_URL,
     days: 30,
     fields: {
       user_data: true,
       weight_data: true,
       goal_data: true,
-      activity_data: false,
-      detailed_analysis: false
+      activity_data: true,
+      detailed_analysis: true
     }
   });
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isTesting, setIsTesting] = useState(false);
+  const [testResponse, setTestResponse] = useState<WebhookTestResponse | null>(null);
+  const [testPayload, setTestPayload] = useState<string>('{"account_id": "12345", "user_id": "67890", "email": "user@example.com"}');
 
   useEffect(() => {
     const fetchWebhookConfig = async () => {
@@ -64,14 +80,14 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
         
         if (result.data) {
           setWebhookConfig({
-            url: result.data.url || "",
+            url: result.data.url || DEFAULT_WEBHOOK_URL,
             days: result.data.days || 30,
             fields: result.data.fields || {
               user_data: true,
               weight_data: true,
               goal_data: true,
-              activity_data: false,
-              detailed_analysis: false
+              activity_data: true,
+              detailed_analysis: true
             }
           });
         }
@@ -117,6 +133,43 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
     }
   };
 
+  const testWebhook = async () => {
+    try {
+      setIsTesting(true);
+      setTestResponse(null);
+
+      console.log("Testing webhook with URL:", webhookConfig.url);
+      console.log("Test payload:", testPayload);
+
+      let payloadObj = {};
+      try {
+        payloadObj = JSON.parse(testPayload);
+      } catch (err) {
+        toast.error("Invalid JSON payload");
+        return;
+      }
+
+      const response = await fetch(webhookConfig.url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: testPayload,
+      });
+
+      const responseData = await response.json();
+      console.log("Webhook test response:", responseData);
+
+      setTestResponse(responseData);
+      toast.success("Webhook test completed successfully");
+    } catch (error) {
+      console.error("Error testing webhook:", error);
+      toast.error(`Failed to test webhook: ${(error as Error).message}`);
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <Card className="overflow-hidden shadow-sm border border-[#ff7f50]/5">
@@ -143,6 +196,9 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
           <Webhook className="h-5 w-5 text-[#ff7f50]" />
           AI Insights Webhook Configuration
         </CardTitle>
+        <CardDescription>
+          Configure the webhook that will process AI insights requests and receive data from WeightWise.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
@@ -273,7 +329,7 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
           </div>
         </div>
         
-        <div className="pt-4">
+        <div className="pt-4 flex flex-col md:flex-row gap-3">
           <Button 
             className="w-full md:w-auto bg-[#ff7f50] hover:bg-[#ff6347] text-white"
             onClick={saveWebhookConfig}
@@ -286,6 +342,77 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
               </>
             ) : "Save Webhook Configuration"}
           </Button>
+          <Button 
+            className="w-full md:w-auto"
+            variant="outline"
+            onClick={() => setWebhookConfig({...webhookConfig, url: DEFAULT_WEBHOOK_URL})}
+          >
+            Reset to Default URL
+          </Button>
+        </div>
+        
+        <div className="border-t border-border pt-6 mt-4">
+          <h3 className="text-lg font-medium mb-3 flex items-center">
+            <TestTube className="h-5 w-5 mr-2 text-[#ff7f50]" />
+            Test Webhook
+          </h3>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="testPayload" className="mb-2 block">Test Payload (JSON)</Label>
+              <textarea
+                id="testPayload"
+                className="min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground"
+                value={testPayload}
+                onChange={(e) => setTestPayload(e.target.value)}
+              />
+            </div>
+            
+            <Button 
+              onClick={testWebhook}
+              disabled={isTesting}
+              className="bg-[#ff7f50] hover:bg-[#ff6347] text-white"
+              variant="default"
+            >
+              {isTesting ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                  Testing...
+                </>
+              ) : (
+                <>
+                  <TestTube className="h-4 w-4 mr-2" />
+                  Test Webhook
+                </>
+              )}
+            </Button>
+            
+            {testResponse && (
+              <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="response">
+                  <AccordionTrigger className="text-sm font-medium">
+                    <div className="flex items-center">
+                      <Badge className="mr-2 bg-green-100 text-green-800 hover:bg-green-200">
+                        Response Received
+                      </Badge>
+                      <span>View Response Details</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <Alert className="bg-muted/50">
+                      <AlertDescription>
+                        <ScrollArea className="h-[200px]">
+                          <pre className="text-xs overflow-auto p-2">
+                            {JSON.stringify(testResponse, null, 2)}
+                          </pre>
+                        </ScrollArea>
+                      </AlertDescription>
+                    </Alert>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

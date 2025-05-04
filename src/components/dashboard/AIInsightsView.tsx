@@ -1,14 +1,18 @@
 
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, BrainCircuit, AlertTriangle, WifiOff } from "lucide-react";
+import { RefreshCw, BrainCircuit, AlertTriangle, WifiOff, ArrowDown, ArrowUp, Console } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface AIInsightsViewProps {
   insights: string | null;
+  rawResponse: any | null;
   loading: boolean;
   error: string | null;
   onAnalyzeClick: () => void;
@@ -16,10 +20,12 @@ interface AIInsightsViewProps {
 
 const AIInsightsView: React.FC<AIInsightsViewProps> = ({ 
   insights, 
+  rawResponse, 
   loading, 
   error, 
   onAnalyzeClick 
 }) => {
+  const [activeTab, setActiveTab] = useState("insights");
   // Determine the appropriate icon for error messages
   const ErrorIcon = error?.includes("network") || error?.includes("connect") ? WifiOff : AlertTriangle;
 
@@ -36,6 +42,7 @@ const AIInsightsView: React.FC<AIInsightsViewProps> = ({
           size="sm" 
           onClick={onAnalyzeClick}
           disabled={loading}
+          className="bg-[#ff7f50] text-white hover:bg-[#ff6347] hover:text-white"
         >
           <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           {loading ? "Analyzing..." : "Analyze Data"}
@@ -78,12 +85,56 @@ const AIInsightsView: React.FC<AIInsightsViewProps> = ({
             <p className="text-sm mt-2">We'll analyze your last 30 weight entries</p>
           </div>
         ) : (
-          <div className="prose dark:prose-invert max-w-none">
-            <div className="bg-muted/40 rounded-lg p-4 border border-border">
-              <Badge className="mb-2 bg-emerald-500/20 text-emerald-700 hover:bg-emerald-500/30">AI Generated</Badge>
-              <div dangerouslySetInnerHTML={{ __html: insights }} />
-            </div>
-          </div>
+          <Tabs 
+            defaultValue="insights" 
+            value={activeTab} 
+            onValueChange={setActiveTab}
+            className="w-full"
+          >
+            <TabsList className="mb-4 grid w-full grid-cols-2">
+              <TabsTrigger value="insights" className="flex items-center">
+                <BrainCircuit className="h-4 w-4 mr-2" /> 
+                AI Analysis
+              </TabsTrigger>
+              <TabsTrigger value="raw" className="flex items-center">
+                <Console className="h-4 w-4 mr-2" /> 
+                Raw Response
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="insights" className="space-y-4">
+              <div className="prose dark:prose-invert max-w-none">
+                <div className="bg-muted/40 rounded-lg p-4 border border-border">
+                  <Badge className="mb-2 bg-emerald-500/20 text-emerald-700 hover:bg-emerald-500/30">AI Generated</Badge>
+                  <div dangerouslySetInnerHTML={{ __html: insights }} />
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="raw">
+              <div className="bg-muted/40 rounded-lg p-4 border border-border">
+                <Badge className="mb-2 bg-blue-500/20 text-blue-700 hover:bg-blue-500/30">Webhook Response</Badge>
+                {rawResponse ? (
+                  <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="response">
+                      <AccordionTrigger className="text-sm font-medium">
+                        Response Data
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <ScrollArea className="h-[300px]">
+                          <pre className="text-xs p-4 bg-slate-900 text-slate-50 rounded-md overflow-x-auto">
+                            {JSON.stringify(rawResponse, null, 2)}
+                          </pre>
+                        </ScrollArea>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                ) : (
+                  <p className="text-muted-foreground">No raw response data available.</p>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
         )}
       </CardContent>
     </Card>

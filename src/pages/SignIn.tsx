@@ -112,12 +112,6 @@ const SignIn = () => {
                 className="border-[#ff7f50]/20 focus:border-[#ff7f50]/40"
               />
             </div>
-
-            <div className="text-sm text-muted-foreground">
-              <p>For admin access:</p>
-              <p>Email: admin@weightwise.com</p>
-              <p>Password: password</p>
-            </div>
           </CardContent>
           
           <CardFooter className="flex flex-col space-y-4">
