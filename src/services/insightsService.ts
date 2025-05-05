@@ -98,9 +98,15 @@ export const fetchInsightsData = async (userId: string) => {
     throw new Error(`Webhook returned ${response.status}`);
   }
 
-  // Get the text response directly without parsing as JSON
+  // Get the text response
   const responseText = await response.text();
   
-  // Beautify the text response by formatting it as HTML
-  return formatInsightsText(responseText);
+  // Format the insights text
+  const formattedInsights = formatInsightsText(responseText);
+  
+  // Return both the formatted insights and the raw response
+  return {
+    formattedInsights,
+    rawResponse: responseText
+  };
 };

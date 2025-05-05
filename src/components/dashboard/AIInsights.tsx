@@ -25,14 +25,14 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
     setError(null);
 
     try {
-      const { formattedInsights, rawResponse } = await fetchInsightsData(userId);
+      const result = await fetchInsightsData(userId);
       
-      if (!formattedInsights || formattedInsights.trim() === "") {
+      if (!result.formattedInsights || result.formattedInsights.trim() === "") {
         throw new Error("The AI service returned an empty response. Please try again later.");
       }
       
-      setInsights(formattedInsights);
-      setRawResponse(rawResponse);
+      setInsights(result.formattedInsights);
+      setRawResponse(result.rawResponse);
       toast.success("AI insights updated successfully!");
     } catch (err: any) {
       console.error("Error fetching AI insights:", err);
