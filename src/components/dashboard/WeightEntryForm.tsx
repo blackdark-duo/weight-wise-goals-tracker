@@ -1,85 +1,13 @@
+
 import React, { useState } from 'react';
-import { toast } from "sonner";
-import AIInsightsView from "./AIInsightsView";
-import { fetchInsightsData } from "@/services/insightsService";
-
-interface AIInsightsProps {
-  userId: string | null;
-}
-
-const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
-  const [insights, setInsights] = useState<string | null>(null);
-  // REMOVED: const [rawResponse, setRawResponse] = useState<any | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchInsights = async () => {
-    if (!userId) {
-      toast.error("Please sign in to fetch insights");
-      setError("Authentication required. Please sign in to use AI insights.");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      // CHANGED: fetchInsightsData now returns a string, not an object
-      const formattedInsights = await fetchInsightsData(userId);
-
-      if (!formattedInsights || formattedInsights.trim() === "") {
-        throw new Error("The AI service returned an empty response. Please try again later.");
-      }
-
-      setInsights(formattedInsights);
-      // REMOVED: setRawResponse(rawResponse);
-      toast.success("AI insights updated successfully!");
-    } catch (err: any) {
-      console.error("Error fetching AI insights:", err);
-
-      // Retain advanced error handling from current file
-      let errorMessage = "Failed to fetch AI insights. Please try again later.";
-
-      if (err.message?.includes("fetch")) {
-        errorMessage = "Couldn't connect to the AI service. Please check your network connection and try again.";
-      } else if (err.message?.includes("Webhook returned 5")) {
-        errorMessage = "The AI service is currently unavailable. Our team has been notified.";
-      } else if (err.message?.includes("Webhook returned 4")) {
-        errorMessage = "Unable to process your request. Please try again in a few moments.";
-      } else if (err.message?.includes("Supabase") || err.message?.includes("profiles")) {
-        errorMessage = "There was an issue accessing your profile data. Please try again later.";
-      } else if (err.message?.includes("daily limit")) {
-        errorMessage = err.message;
-      }
-
-      setError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <AIInsightsView
-      insights={insights}
-      // REMOVED: rawResponse={rawResponse}
-      loading={loading}
-      error={error}
-      onAnalyzeClick={fetchInsights}
-    />
-  );
-};
-
-export default AIInsights;
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Scale, Plus } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { toast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Scale, Plus } from 'lucide-react';
 
 interface WeightEntryFormProps {
   onEntryAdded: () => void;
@@ -98,24 +26,40 @@ const WeightEntryForm: React.FC<WeightEntryFormProps> = ({ onEntryAdded, preferr
     e.preventDefault();
     
     if (!newWeight) {
-      toast.error("Please enter a weight value");
+      toast("Please enter a weight value");
       return;
     }
-    
+
+    const weight = parseFloat(newWeight);
+
+    if (isNaN(weight) || weight <= 0) {
+      toast("Please enter a valid weight value");
+      return;
+    }
+    if (weight < 1 || weight > 500) {
+      toast("Weight must be between 1 and 500");
+      return;
+    }
+    // Prevent future date
+    const today = new Date();
+    const selectedDate = new Date(entryDate);
+    if (selectedDate > today) {
+      toast("Date cannot be in the future");
+      return;
+    }
+
     setIsSubmitting(true);
     
     try {
-      const weight = parseFloat(newWeight);
-      
       if (isNaN(weight) || weight <= 0) {
-        toast.error("Please enter a valid weight value");
+        toast("Please enter a valid weight value");
         return;
       }
       
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-        toast.error("You must be logged in to add weight entries");
+        toast("You must be logged in to add weight entries");
         return;
       }
       
@@ -134,13 +78,22 @@ const WeightEntryForm: React.FC<WeightEntryFormProps> = ({ onEntryAdded, preferr
       
       setNewWeight("");
       setDescription("");
-      
-      toast.success("Weight entry added successfully!");
+      setEntryDate(new Date().toISOString().split('T')[0]);
+      setEntryTime(new Date().toLocaleTimeString('en-US', { hour12: false }).slice(0, 5));
+      toast("Weight entry added successfully!");
       onEntryAdded();
       
     } catch (err: any) {
       console.error("Error adding weight entry:", err);
-      toast.error(err.message || "Failed to add weight entry");
+      let message = "Failed to add weight entry";
+      if (err?.message?.includes("network")) {
+        message = "Network error. Please check your connection.";
+      } else if (err?.message?.includes("duplicate")) {
+        message = "Duplicate entry. You have already logged weight for this date/time.";
+      } else if (err?.message) {
+        message = err.message;
+      }
+      toast(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -211,10 +164,14 @@ const WeightEntryForm: React.FC<WeightEntryFormProps> = ({ onEntryAdded, preferr
                 <Button 
                   type="submit" 
                   disabled={isSubmitting}
+                  aria-busy={isSubmitting}
                   className="w-full bg-gradient-to-r from-brand-primary to-purple-500 hover:from-brand-primary/90 hover:to-purple-500/90"
                 >
-                  {isSubmitting ? "Adding..." : "Add Entry"}
-                  <Plus className="ml-2 h-4 w-4" />
+                  {isSubmitting ? (
+                    <><span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent inline-block align-middle"></span>Adding...</>
+                  ) : (
+                    <>Add Entry <Plus className="ml-2 h-4 w-4" /></>
+                  )}
                 </Button>
               </div>
             </div>
