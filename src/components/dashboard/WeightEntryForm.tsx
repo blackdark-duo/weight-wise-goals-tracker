@@ -26,25 +26,41 @@ const WeightEntryForm: React.FC<WeightEntryFormProps> = ({ onEntryAdded, preferr
     e.preventDefault();
     
     if (!newWeight) {
-      toast("Please enter a weight value");
+      toast({
+        title: "Error",
+        description: "Please enter a weight value",
+        variant: "destructive"
+      });
       return;
     }
 
     const weight = parseFloat(newWeight);
 
     if (isNaN(weight) || weight <= 0) {
-      toast("Please enter a valid weight value");
+      toast({
+        title: "Error",
+        description: "Please enter a valid weight value",
+        variant: "destructive"
+      });
       return;
     }
     if (weight < 1 || weight > 500) {
-      toast("Weight must be between 1 and 500");
+      toast({
+        title: "Error",
+        description: "Weight must be between 1 and 500",
+        variant: "destructive"
+      });
       return;
     }
     // Prevent future date
     const today = new Date();
     const selectedDate = new Date(entryDate);
     if (selectedDate > today) {
-      toast("Date cannot be in the future");
+      toast({
+        title: "Error",
+        description: "Date cannot be in the future",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -52,14 +68,22 @@ const WeightEntryForm: React.FC<WeightEntryFormProps> = ({ onEntryAdded, preferr
     
     try {
       if (isNaN(weight) || weight <= 0) {
-        toast("Please enter a valid weight value");
+        toast({
+          title: "Error",
+          description: "Please enter a valid weight value",
+          variant: "destructive"
+        });
         return;
       }
       
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-        toast("You must be logged in to add weight entries");
+        toast({
+          title: "Error",
+          description: "You must be logged in to add weight entries",
+          variant: "destructive"
+        });
         return;
       }
       
@@ -80,7 +104,11 @@ const WeightEntryForm: React.FC<WeightEntryFormProps> = ({ onEntryAdded, preferr
       setDescription("");
       setEntryDate(new Date().toISOString().split('T')[0]);
       setEntryTime(new Date().toLocaleTimeString('en-US', { hour12: false }).slice(0, 5));
-      toast("Weight entry added successfully!");
+      toast({
+        title: "Success",
+        description: "Weight entry added successfully!",
+        variant: "default"
+      });
       onEntryAdded();
       
     } catch (err: any) {
@@ -93,7 +121,11 @@ const WeightEntryForm: React.FC<WeightEntryFormProps> = ({ onEntryAdded, preferr
       } else if (err?.message) {
         message = err.message;
       }
-      toast(message);
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive"
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -194,4 +226,3 @@ const WeightEntryForm: React.FC<WeightEntryFormProps> = ({ onEntryAdded, preferr
 };
 
 export default WeightEntryForm;
-
