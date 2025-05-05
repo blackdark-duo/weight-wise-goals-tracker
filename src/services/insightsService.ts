@@ -1,6 +1,6 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { formatInsightsText } from "@/utils/insightsFormatter";
+import { fetchUserWebhookUrl, DEFAULT_WEBHOOK_URL } from "./webhookService";
 
 interface UserProfile {
   display_name: string;
@@ -20,10 +20,15 @@ interface WeightEntry {
   unit: string;
 }
 
+export interface InsightsResult {
+  formattedInsights: string;
+  rawResponse: any;
+}
+
 /**
  * Fetch user data and send to webhook for AI insights analysis
  */
-export const fetchInsightsData = async (userId: string) => {
+export const fetchInsightsData = async (userId: string): Promise<InsightsResult> => {
   // First, get user profile data (for display name)
   const { data: profileData, error: profileError } = await supabase
     .from("profiles")
@@ -35,7 +40,11 @@ export const fetchInsightsData = async (userId: string) => {
     throw new Error("Failed to fetch user profile");
   }
 
-  const webhookUrl = profileData?.webhook_url || 'http://n8n.cozyapp.uno:5678/webhook-test/2c26d7e3-525a-4080-9282-21b6af883cf2';
+  // Use the user's webhook URL or fall back to the default URL
+  const webhookUrl = await fetchUserWebhookUrl(userId) || 
+                     profileData?.webhook_url || 
+                     DEFAULT_WEBHOOK_URL;
+                     
   const displayName = profileData?.display_name || 'User';
 
   // Get weight entries (last 30 days)
@@ -101,12 +110,20 @@ export const fetchInsightsData = async (userId: string) => {
   // Get the text response
   const responseText = await response.text();
   
+  // Attempt to parse as JSON if possible, otherwise keep as string
+  let rawResponse: any;
+  try {
+    rawResponse = JSON.parse(responseText);
+  } catch (e) {
+    rawResponse = responseText;
+  }
+  
   // Format the insights text
   const formattedInsights = formatInsightsText(responseText);
   
   // Return both the formatted insights and the raw response
   return {
     formattedInsights,
-    rawResponse: responseText
+    rawResponse
   };
 };
