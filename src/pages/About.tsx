@@ -45,7 +45,7 @@ const About = () => {
             >
               <h2 className="text-3xl font-bold mb-6 text-[#ff7f50]">Our Mission</h2>
               <p className="text-lg text-muted-foreground mb-6">
-                At Weight Wise, we believe that maintaining a healthy weight shouldn't be complicated. Our mission is to provide intuitive tools that make weight tracking simple, meaningful, and motivating.
+                At Weight Wise, we believe that maintaining a healthy weight shouldn't be complicated. Our mission is to provide intuitive tools that make Weight Wise simple, meaningful, and motivating.
               </p>
               <p className="text-lg text-muted-foreground">
                 We combine cutting-edge technology with evidence-based health science to deliver personalized insights that help you achieve your goals and maintain a healthier lifestyle for the long term.

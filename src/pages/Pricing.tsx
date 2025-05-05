@@ -75,7 +75,7 @@ const Pricing = () => {
               description="Perfect for getting started on your weight management journey."
               features={[
                 "5 AI insights per month",
-                "Weight tracking",
+                "Weight Wise tracking",
                 "Basic goal setting",
                 "30-day data history",
                 "Email support"
@@ -97,7 +97,7 @@ const Pricing = () => {
               description="Enhanced features for serious weight management."
               features={[
                 "30 AI insights per month",
-                "Unlimited weight tracking",
+                "Unlimited Weight Wise tracking",
                 "Advanced goal setting",
                 "1-year data history",
                 "Priority email support",

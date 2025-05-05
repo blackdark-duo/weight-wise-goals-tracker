@@ -23,7 +23,7 @@ const Index = () => {
               Ready to Start Your Weight Journey?
             </h2>
             <p className="text-xl mb-12 max-w-2xl mx-auto opacity-90">
-              Join thousands of happy customers who have transformed their lives with WeightTrack.
+              Join thousands of happy customers who have transformed their lives with Weight Wise.
             </p>
             <Link to="/signup">
               <Button 
@@ -43,10 +43,10 @@ const Index = () => {
             <div className="grid grid-cols-1 gap-8 md:grid-cols-3 lg:grid-cols-4">
               <div>
                 <h3 className="text-xl font-bold text-black mb-4">
-                  WeightTrack
+                  Weight Wise
                 </h3>
                 <p className="mt-4 text-sm text-muted-foreground">
-                  Your trusted partner for weight tracking and goal setting.
+                  Your trusted partner for weightwiseing and goal setting.
                 </p>
               </div>
               
@@ -99,7 +99,7 @@ const Index = () => {
             </div>
             
             <div className="mt-12 border-t border-ui-border pt-8 text-center text-sm text-muted-foreground">
-              &copy; {new Date().getFullYear()} WeightTrack. All rights reserved.
+              &copy; {new Date().getFullYear()} Weight Wise. All rights reserved.
             </div>
           </div>
         </footer>

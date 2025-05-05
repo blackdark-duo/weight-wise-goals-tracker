@@ -85,7 +85,7 @@ const TermsOfService = () => {
             <section>
               <h2 className="text-2xl font-semibold mb-4">Contact Us</h2>
               <p>
-                If you have any questions about these Terms, please contact us at <a href="mailto:legal@Weight Wise.com" className="text-purple-600 hover:underline">legal@Weight Wise.com</a>.
+                If you have any questions about these Terms, please contact us at <a href="mailto:legal@WeightWise.com" className="text-purple-600 hover:underline">legal@WeightWise.com</a>.
               </p>
             </section>
           </div>

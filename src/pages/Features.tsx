@@ -66,13 +66,13 @@ const DetailFeature = ({ title, description, icon, reversed = false }) => {
 const Features = () => {
   const features = [
     {
-      title: "Weight Tracking",
-      description: "Easy and intuitive weight tracking with visual charts to monitor your progress over time.",
+      title: "Weight Wiseing",
+      description: "Easy and intuitive weight tracking with visual charts to monitor your progress over time with Weight Wise.",
       icon: <BarChart2 className="h-6 w-6" />
     },
     {
       title: "Goal Setting",
-      description: "Set personalized weight goals and track your progress with customizable timelines.",
+      description: "Set personalized weight goals and track your progress with customizable timelines using Weight Wise.",
       icon: <Target className="h-6 w-6" />
     },
     {
