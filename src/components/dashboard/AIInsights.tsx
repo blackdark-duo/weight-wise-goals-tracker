@@ -48,8 +48,6 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
         errorMessage = "Unable to process your request. Please try again in a few moments.";
       } else if (err.message?.includes("Supabase") || err.message?.includes("profiles")) {
         errorMessage = "There was an issue accessing your profile data. Please try again later.";
-      } else if (err.message?.includes("daily limit")) {
-        errorMessage = err.message;
       }
       
       setError(errorMessage);

@@ -1,9 +1,9 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, BrainCircuit, AlertTriangle, WifiOff, ArrowDown, ArrowUp, Code } from "lucide-react";
+import { RefreshCw, BrainCircuit, Code } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -26,8 +26,6 @@ const AIInsightsView: React.FC<AIInsightsViewProps> = ({
   onAnalyzeClick 
 }) => {
   const [activeTab, setActiveTab] = useState("insights");
-  // Determine the appropriate icon for error messages
-  const ErrorIcon = error?.includes("network") || error?.includes("connect") ? WifiOff : AlertTriangle;
 
   return (
     <Card className="overflow-hidden">
@@ -62,7 +60,6 @@ const AIInsightsView: React.FC<AIInsightsViewProps> = ({
           </div>
         ) : error ? (
           <Alert variant="destructive" className="bg-red-50 border-red-200">
-            <ErrorIcon className="h-5 w-5" />
             <AlertTitle className="mb-1 font-medium">Unable to generate insights</AlertTitle>
             <AlertDescription className="text-sm">
               {error}
