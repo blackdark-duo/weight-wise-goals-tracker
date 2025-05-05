@@ -61,19 +61,36 @@ export const fetchWebhookConfig = async (): Promise<WebhookConfig> => {
       detailed_analysis: false
     };
     
-    // Extract fields from JSON safely
-    const fieldsData = data.fields as Record<string, boolean> || {};
+    // Handle the type conversion safely
+    let fieldData;
+    try {
+      // Try to parse or handle the fields as a proper object
+      if (typeof data.fields === 'string') {
+        fieldData = JSON.parse(data.fields);
+      } else if (data.fields && typeof data.fields === 'object') {
+        fieldData = data.fields;
+      } else {
+        fieldData = defaultFields;
+      }
+    } catch (err) {
+      console.error("Error parsing fields data:", err);
+      fieldData = defaultFields;
+    }
     
+    // Ensure all expected properties exist
+    const parsedFields = {
+      user_data: fieldData?.user_data ?? defaultFields.user_data,
+      weight_data: fieldData?.weight_data ?? defaultFields.weight_data,
+      goal_data: fieldData?.goal_data ?? defaultFields.goal_data,
+      activity_data: fieldData?.activity_data ?? defaultFields.activity_data,
+      detailed_analysis: fieldData?.detailed_analysis ?? defaultFields.detailed_analysis
+    };
+    
+    // Return properly typed WebhookConfig
     return {
       url: data.url || DEFAULT_WEBHOOK_URL,
       days: data.days || 30,
-      fields: {
-        user_data: fieldsData.user_data ?? defaultFields.user_data,
-        weight_data: fieldsData.weight_data ?? defaultFields.weight_data,
-        goal_data: fieldsData.goal_data ?? defaultFields.goal_data,
-        activity_data: fieldsData.activity_data ?? defaultFields.activity_data,
-        detailed_analysis: fieldsData.detailed_analysis ?? defaultFields.detailed_analysis
-      },
+      fields: parsedFields,
       include_account_fields: data.include_account_fields ?? true,
       include_user_fields: data.include_user_fields ?? true,
       include_weight_entries: data.include_weight_entries ?? true,
@@ -112,7 +129,26 @@ export const updateWebhookConfig = async (config: WebhookConfig): Promise<Webhoo
       return null;
     }
     
-    return data as WebhookConfig;
+    // Handle the type conversion for the returned data
+    const fieldData = data.fields || DEFAULT_CONFIG.fields;
+    
+    // Return properly typed WebhookConfig
+    return {
+      url: data.url || DEFAULT_WEBHOOK_URL,
+      days: data.days || 30,
+      fields: {
+        user_data: fieldData.user_data ?? DEFAULT_CONFIG.fields.user_data,
+        weight_data: fieldData.weight_data ?? DEFAULT_CONFIG.fields.weight_data,
+        goal_data: fieldData.goal_data ?? DEFAULT_CONFIG.fields.goal_data,
+        activity_data: fieldData.activity_data ?? DEFAULT_CONFIG.fields.activity_data,
+        detailed_analysis: fieldData.detailed_analysis ?? DEFAULT_CONFIG.fields.detailed_analysis
+      },
+      include_account_fields: data.include_account_fields ?? true,
+      include_user_fields: data.include_user_fields ?? true,
+      include_weight_entries: data.include_weight_entries ?? true,
+      include_goals: data.include_goals ?? true,
+      webhook_version: data.webhook_version || "1.0"
+    };
   } catch (err) {
     console.error("Exception updating webhook config:", err);
     return null;
