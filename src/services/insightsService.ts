@@ -35,7 +35,7 @@ export const fetchInsightsData = async (userId: string) => {
     throw new Error("Failed to fetch user profile");
   }
 
-  const webhookUrl = profileData?.webhook_url || 'http://n8n.cozyapp.uno:5678/webhook-test/36e520c4-f7a4-4872-8e21-e469701eb68e';
+  const webhookUrl = profileData?.webhook_url || 'http://n8n.cozyapp.uno:5678/webhook-test/2c26d7e3-525a-4080-9282-21b6af883cf2';
   const displayName = profileData?.display_name || 'User';
 
   // Get weight entries (last 30 days)
