@@ -82,15 +82,18 @@ const Dashboard = () => {
         setUserId(user.id);
 
         // Fetch user preferences for AI insights visibility
-        const { data: profileData } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("show_ai_insights")
           .eq("id", user.id)
           .single();
           
-        if (profileData) {
+        if (!profileError && profileData) {
           // If the field exists, use it, otherwise default to true
           setShowAIInsights(profileData.show_ai_insights !== false);
+        } else {
+          // Default to showing AI insights if there's an error or no data
+          setShowAIInsights(true);
         }
 
         const { data: entries, error: entriesError } = await supabase

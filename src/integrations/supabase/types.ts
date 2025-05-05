@@ -55,6 +55,7 @@ export type Database = {
           is_suspended: boolean | null
           last_webhook_date: string | null
           preferred_unit: string | null
+          show_ai_insights: boolean | null
           timezone: string | null
           updated_at: string | null
           webhook_count: number | null
@@ -70,6 +71,7 @@ export type Database = {
           is_suspended?: boolean | null
           last_webhook_date?: string | null
           preferred_unit?: string | null
+          show_ai_insights?: boolean | null
           timezone?: string | null
           updated_at?: string | null
           webhook_count?: number | null
@@ -85,6 +87,7 @@ export type Database = {
           is_suspended?: boolean | null
           last_webhook_date?: string | null
           preferred_unit?: string | null
+          show_ai_insights?: boolean | null
           timezone?: string | null
           updated_at?: string | null
           webhook_count?: number | null

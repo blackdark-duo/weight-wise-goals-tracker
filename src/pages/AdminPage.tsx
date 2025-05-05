@@ -7,12 +7,12 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { AlertCircle, Settings, Users } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import MobileNavigation from "@/components/MobileNavigation";
+import MobileNavigation from "@/components/navigation/MobileNavigation";
 import { Toaster } from "@/components/ui/toaster";
 import AppControlsTab from "@/components/admin/AppControlsTab";
 import UserManagementTab from "@/components/admin/UserManagementTab";
 import AdminAuthGuard from "@/components/admin/AdminAuthGuard";
-import { useAdminProfiles } from "@/hooks/useAdminProfiles";
+import { useAdminProfiles, Profile } from "@/hooks/useAdminProfiles";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const AdminPage = () => {
@@ -22,7 +22,7 @@ const AdminPage = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  const [profiles, setProfiles] = useState<any[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -91,7 +91,7 @@ const AdminPage = () => {
     }
   };
   
-  const toggleAdminStatus = async (profile: any) => {
+  const toggleAdminStatus = async (profile: Profile) => {
     if (!userId || !isAdmin) return;
     
     try {
@@ -116,7 +116,7 @@ const AdminPage = () => {
     }
   };
   
-  const toggleAIInsightsVisibility = async (profile: any) => {
+  const toggleAIInsightsVisibility = async (profile: Profile) => {
     if (!userId || !isAdmin) return;
     
     try {
@@ -137,7 +137,7 @@ const AdminPage = () => {
     }
   };
   
-  const updateWebhookLimit = async (profile: any, limit: number) => {
+  const updateWebhookLimit = async (profile: Profile, limit: number) => {
     if (!userId || !isAdmin) return;
     
     try {

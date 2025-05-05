@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
@@ -11,12 +10,13 @@ import MobileNavigation from "@/components/MobileNavigation";
 import { Toaster } from "@/components/ui/toaster";
 import AppControlsTab from "@/components/admin/AppControlsTab";
 import UserManagementTab from "@/components/admin/UserManagementTab";
+import { Profile } from "@/hooks/useAdminProfiles";
 
 const AdminPage = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [profiles, setProfiles] = useState<any[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
 
   // Check if user is admin
   useEffect(() => {
@@ -103,6 +103,63 @@ const AdminPage = () => {
     }
   };
 
+  const toggleAdminStatus = async (profile: Profile) => {
+    try {
+      const newStatus = !profile.is_admin;
+      
+      const { error } = await supabase
+        .from("profiles")
+        .update({ is_admin: newStatus })
+        .eq("id", profile.id);
+      
+      if (error) throw error;
+      
+      await fetchProfiles();
+      
+      toast.success(`${profile.display_name} is now ${newStatus ? "an admin" : "a regular user"}`);
+    } catch (error) {
+      console.error("Error updating admin status:", error);
+      toast.error("Failed to update user privileges");
+    }
+  };
+
+  const updateWebhookLimit = async (profile: Profile, limit: number) => {
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ webhook_limit: limit })
+        .eq("id", profile.id);
+      
+      if (error) throw error;
+      
+      await fetchProfiles();
+      
+      toast.success(`Updated webhook limit for ${profile.display_name}`);
+    } catch (error) {
+      console.error("Error updating webhook limit:", error);
+      toast.error("Failed to update webhook limit");
+    }
+  };
+
+  const toggleAIInsightsVisibility = async (profile: Profile) => {
+    try {
+      const currentValue = profile.show_ai_insights !== false;
+      
+      const { error } = await supabase
+        .from("profiles")
+        .update({ show_ai_insights: !currentValue })
+        .eq("id", profile.id);
+        
+      if (error) throw error;
+      
+      await fetchProfiles();
+      toast.success(`AI Insights ${!currentValue ? "enabled" : "disabled"} for ${profile.display_name}`);
+    } catch (error) {
+      console.error("Error toggling AI insights visibility:", error);
+      toast.error("Failed to update AI insights visibility");
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -150,7 +207,15 @@ const AdminPage = () => {
           </TabsContent>
           
           <TabsContent value="user-controls">
-            <UserManagementTab profiles={profiles} fetchProfiles={fetchProfiles} />
+            <Card>
+              <UserManagementTab 
+                profiles={profiles} 
+                fetchProfiles={fetchProfiles}
+                toggleAdminStatus={toggleAdminStatus}
+                updateWebhookLimit={updateWebhookLimit}
+                toggleAIInsightsVisibility={toggleAIInsightsVisibility}
+              />
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

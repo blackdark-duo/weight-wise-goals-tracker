@@ -17,6 +17,7 @@ export interface Profile {
   webhook_count?: number;
   webhook_url?: string;
   last_webhook_date?: string;
+  show_ai_insights?: boolean;
 }
 
 export const useAdminProfiles = () => {
