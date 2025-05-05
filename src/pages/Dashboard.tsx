@@ -14,6 +14,8 @@ import WeightEntryForm from "@/components/dashboard/WeightEntryForm";
 import WeightChart from "@/components/dashboard/WeightChart";
 import RecentEntries from "@/components/dashboard/RecentEntries";
 import QuickActions from "@/components/dashboard/QuickActions";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 
 interface WeightEntry {
   id: string;
@@ -48,7 +50,23 @@ const Dashboard = () => {
   const [minWeight, setMinWeight] = useState<number | undefined>(undefined);
   const [maxWeight, setMaxWeight] = useState<number | undefined>(undefined);
   const [userId, setUserId] = useState<string | null>(null);
+  const [dietNote, setDietNote] = useState("");
+  const [showAIInsights, setShowAIInsights] = useState(true);
   const navigate = useNavigate();
+  
+  const MAX_DIET_NOTE_LENGTH = 1000;
+  
+  // Check if user is logged in
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate("/signin");
+      }
+    };
+    
+    checkAuth();
+  }, [navigate]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -62,6 +80,18 @@ const Dashboard = () => {
         }
         
         setUserId(user.id);
+
+        // Fetch user preferences for AI insights visibility
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("show_ai_insights")
+          .eq("id", user.id)
+          .single();
+          
+        if (profileData) {
+          // If the field exists, use it, otherwise default to true
+          setShowAIInsights(profileData.show_ai_insights !== false);
+        }
 
         const { data: entries, error: entriesError } = await supabase
           .from("weight_entries")
@@ -150,6 +180,36 @@ const Dashboard = () => {
       window.location.reload();
     }, 1000);
   };
+  
+  const saveDietNote = async () => {
+    if (!userId || !dietNote.trim()) return;
+    
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const currentTime = new Date().toISOString().split('T')[1].substring(0, 8);
+      
+      const { error } = await supabase
+        .from("weight_entries")
+        .insert({
+          user_id: userId,
+          date: today,
+          time: currentTime,
+          weight: 0, // Using 0 as a flag for diet-only entries
+          unit: preferredUnit,
+          description: dietNote.trim()
+        });
+        
+      if (error) {
+        console.error("Error saving diet note:", error);
+        return;
+      }
+      
+      setDietNote("");
+      handleEntryAdded();
+    } catch (err) {
+      console.error("Error saving diet note:", err);
+    }
+  };
 
   return (
     <div className="container py-8">
@@ -171,7 +231,17 @@ const Dashboard = () => {
 
         <WeightEntryForm onEntryAdded={handleEntryAdded} preferredUnit={preferredUnit} />
         
-        <AIInsights userId={userId} />
+        {showAIInsights && (
+          <div className="relative">
+            <div className="flex items-center gap-2 mb-2">
+              <h2 className="text-lg font-semibold">AI Insights</h2>
+              <Badge variant="outline" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-300">
+                Coming Soon
+              </Badge>
+            </div>
+            <AIInsights userId={userId} />
+          </div>
+        )}
 
         {chartData.length > 1 && (
           <WeightJourneyInsights 
@@ -190,6 +260,33 @@ const Dashboard = () => {
 
           <div className="md:col-span-2 lg:col-span-4">
             <RecentEntries entries={recentEntries} />
+          </div>
+          
+          <div className="md:col-span-2 lg:col-span-4">
+            <div className="bg-white p-4 rounded-lg shadow-sm border">
+              <h3 className="text-lg font-medium mb-2">Notes (Diet Related)</h3>
+              <div className="space-y-2">
+                <Textarea 
+                  placeholder="Record your diet notes here..."
+                  className="min-h-[100px] resize-none"
+                  value={dietNote}
+                  onChange={(e) => setDietNote(e.target.value.slice(0, MAX_DIET_NOTE_LENGTH))}
+                  maxLength={MAX_DIET_NOTE_LENGTH}
+                />
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    {dietNote.length}/{MAX_DIET_NOTE_LENGTH} characters
+                  </span>
+                  <Button 
+                    onClick={saveDietNote} 
+                    disabled={!dietNote.trim() || dietNote.length > MAX_DIET_NOTE_LENGTH}
+                    size="sm"
+                  >
+                    Save Note
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="md:col-span-2 lg:col-span-4">

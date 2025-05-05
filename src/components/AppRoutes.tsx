@@ -45,11 +45,14 @@ const AppRoutes = () => {
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/features" element={<Features />} />
-        <Route path="/pricing" element={<Pricing />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         
-        {/* Admin Route - Directly accessible with no auth check */}
-        <Route path="/admin" element={<Admin />} />
+        {/* Admin Route - Protected but with its own access control */}
+        <Route path="/admin" element={
+          <PrivateRoute>
+            <Admin />
+          </PrivateRoute>
+        } />
         
         {/* Protected Routes */}
         <Route path="/dashboard" element={
@@ -76,6 +79,8 @@ const AppRoutes = () => {
         {/* Domain/Settings redirect to Account */}
         <Route path="/settings" element={<Navigate to="/account" replace />} />
         <Route path="/domain" element={<Navigate to="/account" replace />} />
+        
+        {/* Pricing page removed as requested */}
         
         {/* 404 Route */}
         <Route path="*" element={<NotFound />} />

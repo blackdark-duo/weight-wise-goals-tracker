@@ -3,6 +3,7 @@ import React from "react";
 import { User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import UserActions from "./UserActions";
 import { Profile } from "@/hooks/useAdminProfiles";
 
@@ -11,6 +12,7 @@ interface UserTableProps {
   fetchProfiles: () => Promise<void>;
   toggleAdminStatus: (profile: Profile) => Promise<void>;
   updateWebhookLimit: (profile: Profile, limit: number) => Promise<void>;
+  toggleAIInsightsVisibility: (profile: Profile) => Promise<void>;
   onSendEmail: (userId: string) => void;
   onSendPasswordReset: (userId: string) => void;
 }
@@ -20,6 +22,7 @@ const UserTable: React.FC<UserTableProps> = ({
   fetchProfiles,
   toggleAdminStatus,
   updateWebhookLimit,
+  toggleAIInsightsVisibility,
   onSendEmail,
   onSendPasswordReset,
 }) => {
@@ -32,6 +35,7 @@ const UserTable: React.FC<UserTableProps> = ({
             <th className="px-4 py-3 text-left">Email</th>
             <th className="px-4 py-3 text-left">Admin</th>
             <th className="px-4 py-3 text-left">AI Limit</th>
+            <th className="px-4 py-3 text-left">Show AI</th>
             <th className="px-4 py-3 text-left">Last Request</th>
             <th className="px-4 py-3 text-left">API Status</th>
             <th className="px-4 py-3 text-left">Actions</th>
@@ -66,6 +70,12 @@ const UserTable: React.FC<UserTableProps> = ({
                   className="w-24" 
                   value={profile.webhook_limit || 0} 
                   onChange={(e) => updateWebhookLimit(profile, parseInt(e.target.value))}
+                />
+              </td>
+              <td className="px-4 py-3">
+                <Switch
+                  checked={profile.show_ai_insights !== false}
+                  onCheckedChange={() => toggleAIInsightsVisibility(profile)}
                 />
               </td>
               <td className="px-4 py-3 text-sm">

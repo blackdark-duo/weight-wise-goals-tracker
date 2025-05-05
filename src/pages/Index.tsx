@@ -15,7 +15,6 @@ const Index = () => {
       <main>
         <HeroSection />
         <FeaturesSection />
-        <TestimonialsSection />
         
         {/* CTA Section */}
         <section className="py-20 bg-[#ff7f50] text-white">
