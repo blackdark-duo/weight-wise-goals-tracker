@@ -52,24 +52,28 @@ export const useAdminProfiles = () => {
 
       // Combine auth and profile data
       const combinedProfiles = authUsers.users.map(authUser => {
+        // Find matching profile or create an empty object with default values
         const profile = profileData?.find(p => p.id === authUser.id) || {};
         
-        return {
+        // Create a properly typed profile with all fields, using optional chaining to safely access properties
+        const typedProfile: Profile = {
           id: authUser.id,
           email: authUser.email,
           created_at: authUser.created_at,
-          display_name: profile.display_name,
-          preferred_unit: profile.preferred_unit,
-          timezone: profile.timezone,
-          updated_at: profile.updated_at,
-          webhook_limit: profile.webhook_limit,
-          webhook_count: profile.webhook_count,
-          last_webhook_date: profile.last_webhook_date,
-          webhook_url: profile.webhook_url,
-          is_admin: profile.is_admin,
-          is_suspended: profile.is_suspended,
-          show_ai_insights: profile.show_ai_insights
+          display_name: profile.display_name as string | undefined,
+          preferred_unit: profile.preferred_unit as string | undefined,
+          timezone: profile.timezone as string | undefined,
+          updated_at: profile.updated_at as string | undefined,
+          webhook_limit: profile.webhook_limit as number | undefined,
+          webhook_count: profile.webhook_count as number | undefined,
+          last_webhook_date: profile.last_webhook_date as string | undefined,
+          webhook_url: profile.webhook_url as string | undefined,
+          is_admin: profile.is_admin as boolean | undefined,
+          is_suspended: profile.is_suspended as boolean | undefined,
+          show_ai_insights: profile.show_ai_insights as boolean | undefined
         };
+        
+        return typedProfile;
       });
       
       setProfiles(combinedProfiles);
