@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,8 +8,17 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Scale, Plus } from 'lucide-react';
 
+interface WeightEntry {
+  id: string;
+  weight: number;
+  unit: string;
+  date: string;
+  time: string;
+  description?: string;
+}
+
 interface WeightEntryFormProps {
-  onEntryAdded: () => void;
+  onEntryAdded: (entry: WeightEntry) => void;
   preferredUnit: string;
 }
 
@@ -87,16 +95,20 @@ const WeightEntryForm: React.FC<WeightEntryFormProps> = ({ onEntryAdded, preferr
         return;
       }
       
-      const { error } = await supabase
+      const entryData = {
+        user_id: user.id,
+        weight,
+        unit: weightUnit,
+        date: entryDate,
+        time: entryTime,
+        description: description.trim() || null
+      };
+      
+      const { data, error } = await supabase
         .from("weight_entries")
-        .insert({
-          user_id: user.id,
-          weight,
-          unit: weightUnit,
-          date: entryDate,
-          time: entryTime,
-          description: description.trim() || null
-        });
+        .insert(entryData)
+        .select()
+        .single();
         
       if (error) throw error;
       
@@ -109,7 +121,11 @@ const WeightEntryForm: React.FC<WeightEntryFormProps> = ({ onEntryAdded, preferr
         description: "Weight entry added successfully!",
         variant: "default"
       });
-      onEntryAdded();
+      
+      // Pass the new entry back to the parent component
+      if (data) {
+        onEntryAdded(data as WeightEntry);
+      }
       
     } catch (err: any) {
       console.error("Error adding weight entry:", err);

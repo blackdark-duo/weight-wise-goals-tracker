@@ -65,120 +65,150 @@ const Dashboard = () => {
     checkAuth();
   }, [navigate]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) {
-          navigate("/signin");
-          return;
-        }
-        
-        setUserId(user.id);
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        navigate("/signin");
+        return;
+      }
+      
+      setUserId(user.id);
 
-        // Fetch user preferences for AI insights visibility
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("show_ai_insights")
-          .eq("id", user.id)
-          .single();
-          
-        if (!profileError && profileData) {
-          // If the field exists, use it, otherwise default to true
-          setShowAIInsights(profileData.show_ai_insights !== false);
-        } else {
-          // Default to showing AI insights if there's an error or no data
-          setShowAIInsights(true);
-        }
+      // Fetch user preferences for AI insights visibility
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("show_ai_insights")
+        .eq("id", user.id)
+        .single();
+        
+      if (!profileError && profileData) {
+        // Make explicit the default behavior
+        setShowAIInsights(profileData?.show_ai_insights ?? true);
+      } else {
+        // Default to showing AI insights if there's an error or no data
+        setShowAIInsights(true);
+      }
 
-        const { data: entries, error: entriesError } = await supabase
+      const { data: entries, error: entriesError } = await supabase
+        .from("weight_entries")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("date", { ascending: false })
+        .order("time", { ascending: false })
+        .limit(10);
+        
+      if (entriesError) {
+        console.error("Error fetching entries:", entriesError);
+        return;
+      }
+      
+      if (entries) {
+        setRecentEntries(entries);
+        
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        
+        const { data: chartEntries } = await supabase
           .from("weight_entries")
           .select("*")
           .eq("user_id", user.id)
-          .order("date", { ascending: false })
-          .order("time", { ascending: false })
-          .limit(10);
+          .gte("date", format(sevenDaysAgo, "yyyy-MM-dd"))
+          .order("date", { ascending: true });
           
-        if (entriesError) {
-          console.error("Error fetching entries:", entriesError);
-          return;
-        }
-        
-        if (entries) {
-          setRecentEntries(entries);
-          
-          const sevenDaysAgo = new Date();
-          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-          
-          const { data: chartEntries } = await supabase
-            .from("weight_entries")
-            .select("*")
-            .eq("user_id", user.id)
-            .gte("date", format(sevenDaysAgo, "yyyy-MM-dd"))
-            .order("date", { ascending: true });
-            
-          if (chartEntries && chartEntries.length > 0) {
-            const groupedByDate = chartEntries.reduce((acc, entry) => {
-              if (!acc[entry.date]) {
-                acc[entry.date] = entry;
-              }
-              return acc;
-            }, {} as Record<string, WeightEntry>);
-            
-            const formattedChartData = Object.values(groupedByDate).map(entry => ({
-              date: format(new Date(entry.date), "MMM dd"),
-              weight: entry.weight,
-              unit: entry.unit,
-              fullDate: entry.date
-            }));
-            
-            setChartData(formattedChartData);
-            
-            // Calculate min and max weights
-            const weights = formattedChartData.map(entry => entry.weight);
-            setMinWeight(Math.min(...weights));
-            setMaxWeight(Math.max(...weights));
-            
-            // Calculate statistics for insights
-            if (formattedChartData.length >= 2) {
-              const firstWeight = formattedChartData[0].weight;
-              const lastWeight = formattedChartData[formattedChartData.length - 1].weight;
-              const change = lastWeight - firstWeight;
-              const percentChange = (change / firstWeight) * 100;
-              
-              const daysDiff = Math.max(1, 
-                (new Date(formattedChartData[formattedChartData.length - 1].fullDate).getTime() - 
-                 new Date(formattedChartData[0].fullDate).getTime()) / (1000 * 60 * 60 * 24));
-                 
-              const avgWeeklyChange = (change / daysDiff) * 7;
-              
-              setStats({
-                firstWeight,
-                lastWeight,
-                change,
-                percentChange,
-                avgWeeklyChange,
-                isIncreasing: change > 0
-              });
+        if (chartEntries && chartEntries.length > 0) {
+          const groupedByDate = chartEntries.reduce((acc, entry) => {
+            if (!acc[entry.date]) {
+              acc[entry.date] = entry;
             }
-          }
+            return acc;
+          }, {} as Record<string, WeightEntry>);
+          
+          const formattedChartData = Object.values(groupedByDate).map(entry => ({
+            date: format(new Date(entry.date), "MMM dd"),
+            weight: entry.weight,
+            unit: entry.unit,
+            fullDate: entry.date
+          }));
+          
+          setChartData(formattedChartData);
+          
+          // Calculate min and max weights
+          updateMinMaxWeights(formattedChartData);
+          
+          // Calculate statistics for insights
+          updateStats(formattedChartData);
         }
-      } catch (err) {
-        console.error("Error fetching dashboard data:", err);
-      } finally {
-        setIsLoading(false);
       }
-    };
-    
+    } catch (err) {
+      console.error("Error fetching dashboard data:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Extract functions to update stats and min/max weights for reusability
+  const updateMinMaxWeights = (chartData: any[]) => {
+    if (chartData.length > 0) {
+      const weights = chartData.map(entry => entry.weight);
+      setMinWeight(Math.min(...weights));
+      setMaxWeight(Math.max(...weights));
+    }
+  };
+  
+  const updateStats = (chartData: any[]) => {
+    if (chartData.length >= 2) {
+      const firstWeight = chartData[0].weight;
+      const lastWeight = chartData[chartData.length - 1].weight;
+      const change = lastWeight - firstWeight;
+      const percentChange = (change / firstWeight) * 100;
+      
+      const daysDiff = Math.max(1, 
+        (new Date(chartData[chartData.length - 1].fullDate).getTime() - 
+         new Date(chartData[0].fullDate).getTime()) / (1000 * 60 * 60 * 24));
+         
+      const avgWeeklyChange = (change / daysDiff) * 7;
+      
+      setStats({
+        firstWeight,
+        lastWeight,
+        change,
+        percentChange,
+        avgWeeklyChange,
+        isIncreasing: change > 0
+      });
+    }
+  };
+  
+  // Initial fetch on component mount
+  useEffect(() => {
     fetchData();
   }, [navigate]);
 
-  const handleEntryAdded = () => {
-    setTimeout(() => {
-      window.location.reload();
-    }, 1000);
+  // Handle new weight entry without page reload
+  const handleEntryAdded = async (newEntry: WeightEntry) => {
+    // Add the new entry to the recent entries at the top
+    setRecentEntries(prevEntries => [newEntry, ...prevEntries.slice(0, 9)]);
+    
+    // Format the new entry for chart data
+    const formattedNewEntry = {
+      date: format(new Date(newEntry.date), "MMM dd"),
+      weight: newEntry.weight,
+      unit: newEntry.unit,
+      fullDate: newEntry.date
+    };
+    
+    // Update chart data
+    const updatedChartData = [...chartData, formattedNewEntry]
+      .sort((a, b) => new Date(a.fullDate).getTime() - new Date(b.fullDate).getTime());
+    
+    setChartData(updatedChartData);
+    
+    // Update min/max weights and stats
+    updateMinMaxWeights(updatedChartData);
+    updateStats(updatedChartData);
   };
 
   return (

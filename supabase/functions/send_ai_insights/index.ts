@@ -22,21 +22,19 @@ serve(async (req) => {
     // Check if user has exceeded their webhook limit
     const { isNewDay } = checkWebhookLimit(profile);
 
-    // Get webhook URL from profile or config
+    // Get webhook URL from webhook_config (admin config)
     const { data: webhookConfig } = await supabaseClient
       .from('webhook_config')
       .select('*')
       .single();
     
-    if (!webhookConfig) {
-      throw new Error('Webhook configuration not found');
+    if (!webhookConfig || !webhookConfig.url) {
+      throw new Error('Default webhook URL not configured by admin');
     }
 
-    const webhookUrl = profile.webhook_url || webhookConfig.url;
-    if (!webhookUrl) {
-      throw new Error('No webhook URL configured');
-    }
-
+    // Always use the admin-configured URL for consistency and security
+    const webhookUrl = webhookConfig.url;
+    
     // Get data for the user
     const daysToFetch = webhookConfig.days || 30;
     const { weightData, goalData } = await fetchUserData(supabaseClient, user.id, daysToFetch);

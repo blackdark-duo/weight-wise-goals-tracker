@@ -60,18 +60,19 @@ export const useAdminProfiles = () => {
           id: authUser.id,
           email: authUser.email,
           created_at: authUser.created_at,
-          // Use type assertions to explicitly cast the properties to the correct types
-          display_name: (profile as any).display_name as string | undefined,
-          preferred_unit: (profile as any).preferred_unit as string | undefined,
-          timezone: (profile as any).timezone as string | undefined,
-          updated_at: (profile as any).updated_at as string | undefined,
-          webhook_limit: (profile as any).webhook_limit as number | undefined,
-          webhook_count: (profile as any).webhook_count as number | undefined,
-          last_webhook_date: (profile as any).last_webhook_date as string | undefined,
-          webhook_url: (profile as any).webhook_url as string | undefined,
-          is_admin: (profile as any).is_admin as boolean | undefined,
-          is_suspended: (profile as any).is_suspended as boolean | undefined,
-          show_ai_insights: (profile as any).show_ai_insights as boolean | undefined
+          
+          // Type assertions to avoid property access issues on empty profiles
+          display_name: profile.hasOwnProperty('display_name') ? (profile as any).display_name : undefined,
+          preferred_unit: profile.hasOwnProperty('preferred_unit') ? (profile as any).preferred_unit : undefined,
+          timezone: profile.hasOwnProperty('timezone') ? (profile as any).timezone : undefined,
+          updated_at: profile.hasOwnProperty('updated_at') ? (profile as any).updated_at : undefined,
+          webhook_limit: profile.hasOwnProperty('webhook_limit') ? (profile as any).webhook_limit : undefined,
+          webhook_count: profile.hasOwnProperty('webhook_count') ? (profile as any).webhook_count : undefined,
+          last_webhook_date: profile.hasOwnProperty('last_webhook_date') ? (profile as any).last_webhook_date : undefined,
+          webhook_url: profile.hasOwnProperty('webhook_url') ? (profile as any).webhook_url : undefined,
+          is_admin: profile.hasOwnProperty('is_admin') ? (profile as any).is_admin : undefined,
+          is_suspended: profile.hasOwnProperty('is_suspended') ? (profile as any).is_suspended : undefined,
+          show_ai_insights: profile.hasOwnProperty('show_ai_insights') ? (profile as any).show_ai_insights : undefined
         };
         
         return typedProfile;
