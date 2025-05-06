@@ -72,8 +72,3 @@ export const formatInsightsText = (text: string): string => {
             <pre class="mt-2 p-2 bg-gray-50 rounded text-sm overflow-auto">${text}</pre>`;
   }
 };
-
-// Export a function to format the insights response
-export const formatInsightsResponse = (text: string): string => {
-  return formatInsightsText(text);
-};

@@ -10,7 +10,6 @@ interface AIInsightsProps {
 
 const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
   const [insights, setInsights] = useState<string | null>(null);
-  const [rawResponse, setRawResponse] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,14 +24,13 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
     setError(null);
 
     try {
-      const result = await fetchInsightsData(userId);
+      const formattedInsights = await fetchInsightsData(userId);
       
-      if (!result.formattedInsights || result.formattedInsights.trim() === "") {
+      if (!formattedInsights || formattedInsights.trim() === "") {
         throw new Error("The AI service returned an empty response. Please try again later.");
       }
       
-      setInsights(result.formattedInsights);
-      setRawResponse(result.rawResponse);
+      setInsights(formattedInsights);
       toast.success("AI insights updated successfully!");
     } catch (err: any) {
       console.error("Error fetching AI insights:", err);
@@ -60,7 +58,6 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
   return (
     <AIInsightsView
       insights={insights}
-      rawResponse={rawResponse}
       loading={loading}
       error={error}
       onAnalyzeClick={fetchInsights}

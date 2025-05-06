@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -6,10 +5,12 @@ import {
   Menu, 
   X, 
   LogOut,
+  Scale,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { HamburgerMenu } from "./ui/hamburger-menu";
 import { Home, Target, BarChart2, UserCircle } from "lucide-react";
 
@@ -60,15 +61,15 @@ const Navbar = () => {
       <div className="container flex h-16 items-center justify-between">
         <Link 
           to={session ? "/dashboard" : "/"} 
-          className="flex items-center gap-2 font-bold text-xl md:text-2xl text-[#ff7f50]"
+          className="flex items-center gap-2 font-bold text-xl md:text-2xl text-brand-primary"
         >
           <img
-            src="/lovable-uploads/6b04f662-fb0c-44df-9e2d-b98a7410f381.png"
-            alt="Weight Wise Logo"
+            src="/lovable-uploads/fitcozy-logo.png"
+            alt="FitCozy Logo"
             className="h-8 w-8"
           />
-          <span className="bg-gradient-to-r from-[#ff7f50] to-[#ff6347] bg-clip-text text-transparent">
-            WeightWise
+          <span className="bg-gradient-to-r from-brand-primary to-purple-600 bg-clip-text text-transparent">
+            FitCozy
           </span>
         </Link>
 
@@ -78,7 +79,7 @@ const Navbar = () => {
               <Link 
                 key={link.title}
                 to={link.href}
-                className="text-sm font-medium transition-colors hover:text-[#ff7f50]"
+                className="text-sm font-medium transition-colors hover:text-brand-primary"
               >
                 {link.title}
               </Link>
@@ -98,10 +99,10 @@ const Navbar = () => {
             <>
               <div className="hidden md:flex items-center gap-4">
                 <Link to="/signin">
-                  <Button variant="ghost" className="hover:text-[#ff7f50]">Sign In</Button>
+                  <Button variant="ghost">Sign In</Button>
                 </Link>
                 <Link to="/signup">
-                  <Button className="bg-[#ff7f50] hover:bg-[#ff6347]">Get Started</Button>
+                  <Button>Get Started</Button>
                 </Link>
               </div>
 
@@ -130,7 +131,7 @@ const Navbar = () => {
                 <Link 
                   key={link.title}
                   to={link.href}
-                  className="text-lg font-medium transition-colors hover:text-[#ff7f50]"
+                  className="text-lg font-medium transition-colors hover:text-brand-primary"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   {link.title}
@@ -143,7 +144,7 @@ const Navbar = () => {
                 <Button className="w-full" variant="outline">Sign In</Button>
               </Link>
               <Link to="/signup" onClick={() => setIsMenuOpen(false)}>
-                <Button className="w-full bg-[#ff7f50] hover:bg-[#ff6347]">Get Started</Button>
+                <Button className="w-full">Get Started</Button>
               </Link>
             </div>
           </div>

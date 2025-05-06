@@ -1,18 +1,23 @@
 
-import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter } from "react-router-dom";
-import { AuthProvider } from "./providers/auth";
-import AppRoutes from "./components/AppRoutes";
-import ScrollToTop from "./components/ScrollToTop";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import Index from "./pages/Index";
+import SignIn from "./pages/SignIn";
+import SignUp from "./pages/SignUp";
+import Dashboard from "./pages/Dashboard";
+import NotFound from "./pages/NotFound";
+import Reports from "./pages/Reports";
+import Goals from "./pages/Goals";
+import Account from "./pages/Account";
+import { useState, useEffect } from "react";
+import { supabase } from "./integrations/supabase/client";
+import { Session } from "@supabase/supabase-js";
+import MobileNavigation from "./components/MobileNavigation";
 import { CustomToastProvider } from "./components/ui/custom-toast";
 import { UserPreferencesProvider } from "./hooks/use-user-preferences";
-
-// Set application name
-const APP_NAME = "WeightWise";
 
 // Create a client with stale time to prevent unnecessary refetches
 const queryClient = new QueryClient({
@@ -25,30 +30,110 @@ const queryClient = new QueryClient({
   },
 });
 
+// This prevents double rendering in React.StrictMode
+const sessionCache = {
+  session: null as Session | null,
+  initialized: false,
+};
+
 const App = () => {
-  // Set document title
+  const [session, setSession] = useState<Session | null>(sessionCache.session);
+  const [isLoading, setIsLoading] = useState(!sessionCache.initialized);
+  
   useEffect(() => {
-    document.title = APP_NAME;
+    // Only run this once to prevent double initialization
+    if (sessionCache.initialized) {
+      return;
+    }
+    
+    sessionCache.initialized = true;
+    
+    // Setup auth state listener first (before checking session)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_, session) => {
+        setSession(session);
+        sessionCache.session = session;
+        setIsLoading(false);
+      }
+    );
+
+    // Then check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      sessionCache.session = session;
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  // Private route wrapper component
+  const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
+    if (isLoading) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return session ? <>{children}</> : <Navigate to="/signin" replace />;
+  };
+
+  // Determine if we should show mobile navigation (only for authenticated routes)
+  const showMobileNav = session && !isLoading;
 
   return (
     <QueryClientProvider client={queryClient}>
-      <CustomToastProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner position="top-right" expand={false} closeButton richColors />
-          <AuthProvider>
+      <UserPreferencesProvider>
+        <CustomToastProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner position="top-right" expand={false} closeButton richColors />
             <BrowserRouter>
               <ScrollToTop />
-              <UserPreferencesProvider>
-                <AppRoutes />
-              </UserPreferencesProvider>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<Index />} />
+                <Route path="/signin" element={<SignIn />} />
+                <Route path="/signup" element={<SignUp />} />
+                
+                {/* Protected Routes */}
+                <Route path="/dashboard" element={
+                  <PrivateRoute>
+                    <Dashboard />
+                  </PrivateRoute>
+                } />
+                <Route path="/account" element={
+                  <PrivateRoute>
+                    <Account />
+                  </PrivateRoute>
+                } />
+                <Route path="/reports" element={
+                  <PrivateRoute>
+                    <Reports />
+                  </PrivateRoute>
+                } />
+                <Route path="/goals" element={
+                  <PrivateRoute>
+                    <Goals />
+                  </PrivateRoute>
+                } />
+                
+                {/* 404 Route */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              {showMobileNav && <MobileNavigation />}
             </BrowserRouter>
-          </AuthProvider>
-        </TooltipProvider>
-      </CustomToastProvider>
+          </TooltipProvider>
+        </CustomToastProvider>
+      </UserPreferencesProvider>
     </QueryClientProvider>
   );
+};
+
+// Component to force scroll to top on route change
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+  
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  
+  return null;
 };
 
 export default App;

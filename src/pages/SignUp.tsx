@@ -5,10 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, Loader2, CheckCircle, ArrowRight } from "lucide-react";
+import { AlertCircle, Loader2, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 const SignUp = () => {
   const [email, setEmail] = useState("");
@@ -26,18 +25,9 @@ const SignUp = () => {
   // Check for existing session on component mount
   useEffect(() => {
     const checkSession = async () => {
-      try {
-        const { data, error } = await supabase.auth.getSession();
-        if (error) {
-          console.error("Session check error:", error);
-          return;
-        }
-        
-        if (data.session) {
-          navigate("/dashboard");
-        }
-      } catch (err) {
-        console.error("Error checking session:", err);
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        navigate("/dashboard");
       }
     };
     
@@ -92,34 +82,6 @@ const SignUp = () => {
     setError("");
 
     try {
-      // Server-side validation via Supabase
-      // Check if email already exists
-      const { data: existingUser, error: checkError } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('email', email)
-        .maybeSingle();
-      
-      if (existingUser) {
-        setError("This email is already registered. Try signing in instead.");
-        setIsLoading(false);
-        return;
-      }
-      
-      // Additional server-side validation
-      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-      if (!emailRegex.test(email)) {
-        setError("Invalid email format. Please provide a valid email address.");
-        setIsLoading(false);
-        return;
-      }
-      
-      if (password.length < 6) {
-        setError("Password must be at least 6 characters long.");
-        setIsLoading(false);
-        return;
-      }
-
       // Sign up with Supabase auth
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -128,7 +90,6 @@ const SignUp = () => {
           data: {
             name: displayName
           },
-          // Skip email verification
           emailRedirectTo: window.location.origin + "/dashboard"
         }
       });
@@ -138,6 +99,9 @@ const SignUp = () => {
       }
 
       if (data.user) {
+        // Create a demo session for testing
+        localStorage.setItem("demo-auth-session", "true");
+        
         // Automatically sign in the user after registration
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
@@ -148,7 +112,7 @@ const SignUp = () => {
           throw signInError;
         }
         
-        toast.success("Account created successfully! Welcome to Weight Wise.");
+        toast.success("Account created successfully! Welcome to WeightWise.");
         navigate("/dashboard");
       }
     } catch (err: any) {
@@ -169,23 +133,69 @@ const SignUp = () => {
       setIsLoading(false);
     }
   };
+
+  // Helper function to create the admin account
+  const createAdminAccount = async () => {
+    setIsLoading(true);
+    setError("");
+    
+    try {
+      // Try to create the admin account
+      const { data, error } = await supabase.auth.signUp({
+        email: "admin@admin.com",
+        password: "admin",
+        options: {
+          data: {
+            name: "Admin"
+          }
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      // Automatically sign in as admin
+      await supabase.auth.signInWithPassword({
+        email: "admin@admin.com",
+        password: "admin"
+      });
+
+      toast.success("Admin account created and signed in!");
+      navigate("/dashboard");
+    } catch (err: any) {
+      let errorMessage = err.message || "Failed to create admin account.";
+      
+      if (errorMessage.includes("already registered")) {
+        // If admin already exists, just sign in
+        try {
+          await supabase.auth.signInWithPassword({
+            email: "admin@admin.com",
+            password: "admin"
+          });
+          
+          toast.success("Signed in as admin!");
+          navigate("/dashboard");
+          return;
+        } catch (signInErr) {
+          errorMessage = "Admin account exists but could not sign in.";
+        }
+      }
+      
+      setError(errorMessage);
+      console.error("Admin account error:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   return (
     <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-gradient-to-br from-white via-purple-50/30 to-blue-50/30 p-4">
       <Card className="mx-auto max-w-md w-full border-brand-primary/10 shadow-xl bg-white/80 backdrop-blur-sm">
         <CardHeader className="space-y-1">
-          <div className="flex justify-center mb-4">
-            <img
-              src="/lovable-uploads/6b04f662-fb0c-44df-9e2d-b98a7410f381.png"
-              alt="Weight Wise Logo"
-              className="h-12 w-12"
-            />
-          </div>
-          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-[#ff7f50] to-[#ff6347] bg-clip-text text-transparent">
-            Create an account
-          </CardTitle>
+          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-brand-primary to-blue-600 bg-clip-text text-transparent">Create an account</CardTitle>
           <CardDescription>
-            Enter your details to get started with Weight Wise
+            Enter your details to get started with WeightWise
           </CardDescription>
         </CardHeader>
         
@@ -219,7 +229,7 @@ const SignUp = () => {
               <Input
                 id="email"
                 type="email"
-                placeholder="john.doe@gmail.com"
+                placeholder="m@example.com"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -244,7 +254,7 @@ const SignUp = () => {
                 <p className="text-xs text-destructive mt-1">{formErrors.password}</p>
               ) : (
                 <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                  <CheckCircle className="h-3 w-3 text-green-500" />
+                  <CheckCircle className="h-3 w-3 text-weight-loss" />
                   Password must be at least 6 characters long
                 </p>
               )}
@@ -254,25 +264,39 @@ const SignUp = () => {
           <CardFooter className="flex flex-col space-y-4">
             <Button 
               type="submit" 
-              className="w-full bg-gradient-to-r from-[#ff7f50] to-[#ff6347] hover:from-[#ff6347] hover:to-[#ff5733]"
+              className="w-full bg-gradient-to-r from-brand-primary to-blue-600 hover:from-brand-primary/90 hover:to-blue-700"
               disabled={isLoading}
             >
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
+                  Creating account...
                 </>
               ) : (
+                "Create account"
+              )}
+            </Button>
+            
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="w-full border-brand-primary/20 text-brand-primary hover:bg-brand-primary/5"
+              onClick={createAdminAccount}
+              disabled={isLoading}
+            >
+              {isLoading ? (
                 <>
-                  Sign Up
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating admin...
                 </>
+              ) : (
+                "Create Admin Account"
               )}
             </Button>
             
             <div className="text-center text-sm">
               Already have an account?{" "}
-              <Link to="/signin" className="text-[#ff7f50] hover:underline font-medium">
+              <Link to="/signin" className="text-brand-primary hover:underline font-medium">
                 Sign in
               </Link>
             </div>

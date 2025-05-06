@@ -48,7 +48,7 @@ const DashboardHeader = ({ title }: DashboardHeaderProps) => {
       <div className="container flex h-16 items-center justify-between px-4 md:px-6">
         <div className="flex items-center gap-2">
           <Link to="/dashboard" className="flex items-center gap-2">
-            <span className="font-bold text-xl">Weight Wise</span>
+            <span className="font-bold text-xl">WeightWise</span>
           </Link>
           <span className="hidden md:inline-block text-muted-foreground">|</span>
           <h1 className="text-lg font-medium hidden md:block">{title}</h1>
@@ -64,7 +64,7 @@ const DashboardHeader = ({ title }: DashboardHeaderProps) => {
           </SheetTrigger>
           <SheetContent side="right" className="p-0">
             <SheetHeader className="border-b p-4">
-              <SheetTitle>Weight Wise</SheetTitle>
+              <SheetTitle>WeightWise</SheetTitle>
             </SheetHeader>
             <nav className="flex flex-col gap-2 p-4">
               <Link

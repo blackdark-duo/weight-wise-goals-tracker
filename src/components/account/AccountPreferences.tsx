@@ -42,12 +42,12 @@ const AccountPreferences: React.FC<AccountPreferencesProps> = ({ userId, preferr
   useEffect(() => {
     try {
       const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      setSelectedTimezone(browserTimezone || "UTC");
       
       const fetchUserPreferences = async () => {
         if (!userId) return;
         
         try {
-          setIsLoading(true);
           const { data, error } = await supabase
             .from("profiles")
             .select("preferred_unit, timezone")
@@ -59,14 +59,9 @@ const AccountPreferences: React.FC<AccountPreferencesProps> = ({ userId, preferr
           if (data) {
             setSelectedUnit(data.preferred_unit || preferredUnit || 'kg');
             setSelectedTimezone(data.timezone || browserTimezone || "UTC");
-          } else {
-            setSelectedTimezone(browserTimezone || "UTC");
           }
         } catch (error) {
           console.error("Error fetching preferences:", error);
-          setSelectedTimezone(browserTimezone || "UTC");
-        } finally {
-          setIsLoading(false);
         }
       };
       
@@ -75,12 +70,11 @@ const AccountPreferences: React.FC<AccountPreferencesProps> = ({ userId, preferr
       console.error("Error initializing timezone:", error);
       setSelectedTimezone("UTC"); // Fallback to UTC
     }
-  }, [userId, preferredUnit, setIsLoading]);
+  }, [userId, preferredUnit]);
 
   // Track changes
   useEffect(() => {
-    const storedUnit = localStorage.getItem("preferredUnit") || preferredUnit;
-    if (storedUnit !== selectedUnit) {
+    if (preferredUnit !== selectedUnit) {
       setHasChanges(true);
     } else {
       setHasChanges(false);
@@ -97,7 +91,7 @@ const AccountPreferences: React.FC<AccountPreferencesProps> = ({ userId, preferr
     setIsLoading(true);
     
     try {
-      // Update profile in Supabase using our preferences hook
+      // Update profile in Supabase
       await updatePreferences({
         preferredUnit: selectedUnit,
         timezone: selectedTimezone
@@ -122,7 +116,7 @@ const AccountPreferences: React.FC<AccountPreferencesProps> = ({ userId, preferr
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-2 text-xl">
           <SettingsIcon className="h-5 w-5 text-blue-500" />
-          WeightWise Preferences
+          Application Preferences
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">

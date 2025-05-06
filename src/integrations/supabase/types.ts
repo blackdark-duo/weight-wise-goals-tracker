@@ -49,116 +49,29 @@ export type Database = {
         Row: {
           created_at: string | null
           display_name: string | null
-          email: string | null
           id: string
-          is_admin: boolean | null
-          is_suspended: boolean | null
-          last_webhook_date: string | null
           preferred_unit: string | null
-          show_ai_insights: boolean | null
           timezone: string | null
           updated_at: string | null
-          webhook_count: number | null
-          webhook_limit: number | null
           webhook_url: string | null
         }
         Insert: {
           created_at?: string | null
           display_name?: string | null
-          email?: string | null
           id: string
-          is_admin?: boolean | null
-          is_suspended?: boolean | null
-          last_webhook_date?: string | null
           preferred_unit?: string | null
-          show_ai_insights?: boolean | null
           timezone?: string | null
           updated_at?: string | null
-          webhook_count?: number | null
-          webhook_limit?: number | null
           webhook_url?: string | null
         }
         Update: {
           created_at?: string | null
           display_name?: string | null
-          email?: string | null
           id?: string
-          is_admin?: boolean | null
-          is_suspended?: boolean | null
-          last_webhook_date?: string | null
           preferred_unit?: string | null
-          show_ai_insights?: boolean | null
           timezone?: string | null
           updated_at?: string | null
-          webhook_count?: number | null
-          webhook_limit?: number | null
           webhook_url?: string | null
-        }
-        Relationships: []
-      }
-      webhook_config: {
-        Row: {
-          days: number | null
-          fields: Json | null
-          id: number
-          include_account_fields: boolean | null
-          include_goals: boolean | null
-          include_user_fields: boolean | null
-          include_weight_entries: boolean | null
-          url: string | null
-          webhook_version: string | null
-        }
-        Insert: {
-          days?: number | null
-          fields?: Json | null
-          id?: number
-          include_account_fields?: boolean | null
-          include_goals?: boolean | null
-          include_user_fields?: boolean | null
-          include_weight_entries?: boolean | null
-          url?: string | null
-          webhook_version?: string | null
-        }
-        Update: {
-          days?: number | null
-          fields?: Json | null
-          id?: number
-          include_account_fields?: boolean | null
-          include_goals?: boolean | null
-          include_user_fields?: boolean | null
-          include_weight_entries?: boolean | null
-          url?: string | null
-          webhook_version?: string | null
-        }
-        Relationships: []
-      }
-      webhook_logs: {
-        Row: {
-          created_at: string
-          id: string
-          request_payload: Json
-          response_payload: Json | null
-          status: string | null
-          url: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          request_payload: Json
-          response_payload?: Json | null
-          status?: string | null
-          url: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          request_payload?: Json
-          response_payload?: Json | null
-          status?: string | null
-          url?: string
-          user_id?: string
         }
         Relationships: []
       }

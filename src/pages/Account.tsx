@@ -6,11 +6,12 @@ import MobileNavigation from "@/components/MobileNavigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Shield, User, Settings, Database } from "lucide-react";
+import { Shield, User, Settings, Database, Webhook } from "lucide-react";
 import ProfileSection from "@/components/account/ProfileSection";
 import PreferencesSection from "@/components/account/PreferencesSection";
 import DataManagementSection from "@/components/account/DataManagementSection";
 import DangerZoneSection from "@/components/account/DangerZoneSection";
+import WebhookSettings from "@/components/account/WebhookSettings";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
 
@@ -23,14 +24,12 @@ const Account = () => {
     email: string | null;
     preferredUnit: string;
     timezone: string;
-    isAdmin: boolean;
   }>({
     userId: null,
     userName: null,
     email: null,
     preferredUnit: 'kg',
-    timezone: 'UTC',
-    isAdmin: false
+    timezone: 'UTC'
   });
   const navigate = useNavigate();
 
@@ -60,7 +59,7 @@ const Account = () => {
         // Fetch profile data from profiles table
         const { data, error: profileError } = await supabase
           .from("profiles")
-          .select("display_name, preferred_unit, timezone, is_admin")
+          .select("display_name, preferred_unit, timezone")
           .eq("id", user.id)
           .maybeSingle();
           
@@ -74,8 +73,7 @@ const Account = () => {
             ...prev,
             userName: data.display_name || null,
             preferredUnit: data.preferred_unit || 'kg',
-            timezone: data.timezone || 'UTC',
-            isAdmin: !!data.is_admin
+            timezone: data.timezone || 'UTC'
           }));
         }
       } catch (error: any) {
@@ -95,19 +93,19 @@ const Account = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-orange-50/30 to-amber-50/30">
+    <div className="min-h-screen bg-gradient-to-br from-white via-purple-50/30 to-blue-50/30">
       <Navbar />
       <div className="container max-w-4xl pt-6 pb-24">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold flex items-center gap-2 bg-gradient-to-r from-[#ff7f50] to-[#ff6347] bg-clip-text text-transparent">
+          <h1 className="text-2xl font-bold flex items-center gap-2 bg-gradient-to-r from-brand-primary to-blue-600 bg-clip-text text-transparent">
             Account Settings
             {isLoading && (
-              <Loader2 className="ml-2 h-4 w-4 animate-spin text-[#ff7f50]" />
+              <Loader2 className="ml-2 h-4 w-4 animate-spin text-brand-primary" />
             )}
           </h1>
           
           {profile.userName && (
-            <div className="text-muted-foreground bg-white/70 px-3 py-1 rounded-full shadow-sm border border-[#ff7f50]/10">
+            <div className="text-muted-foreground bg-white/70 px-3 py-1 rounded-full shadow-sm border border-brand-primary/10">
               Welcome, {profile.userName}
             </div>
           )}
@@ -122,16 +120,20 @@ const Account = () => {
         
         {!isLoading && !error && (
           <Tabs defaultValue="profile" className="space-y-6">
-            <TabsList className="grid grid-cols-4 md:w-auto w-full bg-white/80 border border-[#ff7f50]/10 p-1">
-              <TabsTrigger value="profile" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#ff7f50]/10 data-[state=active]:to-[#ff7f50]/5">
+            <TabsList className="grid grid-cols-5 md:w-auto w-full bg-white/80 border border-brand-primary/10 p-1">
+              <TabsTrigger value="profile" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-brand-primary/10 data-[state=active]:to-brand-primary/5">
                 <User className="h-4 w-4 mr-2" strokeWidth={1.75} />
                 <span className="hidden sm:inline">Profile</span>
               </TabsTrigger>
-              <TabsTrigger value="preferences" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#ff7f50]/10 data-[state=active]:to-[#ff7f50]/5">
+              <TabsTrigger value="preferences" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500/10 data-[state=active]:to-blue-500/5">
                 <Settings className="h-4 w-4 mr-2" strokeWidth={1.75} />
                 <span className="hidden sm:inline">Preferences</span>
               </TabsTrigger>
-              <TabsTrigger value="data" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#ff7f50]/10 data-[state=active]:to-[#ff7f50]/5">
+              <TabsTrigger value="webhook" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500/10 data-[state=active]:to-emerald-500/5">
+                <Webhook className="h-4 w-4 mr-2" strokeWidth={1.75} />
+                <span className="hidden sm:inline">Webhook</span>
+              </TabsTrigger>
+              <TabsTrigger value="data" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500/10 data-[state=active]:to-teal-500/5">
                 <Database className="h-4 w-4 mr-2" strokeWidth={1.75} />
                 <span className="hidden sm:inline">Data</span>
               </TabsTrigger>
@@ -159,6 +161,10 @@ const Account = () => {
                 setIsLoading={setIsLoading}
                 updateProfile={updateProfile}
               />
+            </TabsContent>
+            
+            <TabsContent value="webhook" className="space-y-4 focus-visible:outline-none focus-visible:ring-0">
+              <WebhookSettings userId={profile.userId} />
             </TabsContent>
             
             <TabsContent value="data" className="space-y-4 focus-visible:outline-none focus-visible:ring-0">

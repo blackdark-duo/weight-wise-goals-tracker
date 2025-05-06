@@ -51,14 +51,6 @@ const DangerZoneSection: React.FC<DangerZoneSectionProps> = ({ userId, setIsLoad
         
       if (goalsError) throw goalsError;
       
-      // Delete webhook logs
-      const { error: webhookLogsError } = await supabase
-        .from("webhook_logs")
-        .delete()
-        .eq("user_id", userId);
-        
-      if (webhookLogsError) throw webhookLogsError;
-      
       // Delete profile
       const { error: profileError } = await supabase
         .from("profiles")
@@ -67,15 +59,7 @@ const DangerZoneSection: React.FC<DangerZoneSectionProps> = ({ userId, setIsLoad
         
       if (profileError) throw profileError;
       
-      // Finally delete the user's auth account
-      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
-      
-      if (authError) {
-        console.error("Error deleting auth user (might require admin rights):", authError);
-        // Continue anyway since we've deleted all the user data
-      }
-      
-      // Sign out
+      // Finally, sign out
       await supabase.auth.signOut();
       
       toast.success("Your account has been deleted successfully");

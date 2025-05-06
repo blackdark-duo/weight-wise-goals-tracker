@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -64,20 +63,20 @@ export default {
           ring: 'hsl(var(--sidebar-ring))'
         },
         brand: {
-          primary: '#ff7f50',
-          secondary: '#ff6347',
-          tertiary: '#ff8c66',
+          primary: '#9b87f5',
+          secondary: '#7E69AB',
+          tertiary: '#06B6D4',
           light: '#F3F4F6',
           dark: '#1F2937',
         },
         weight: {
-          gain: '#FF7F50',
+          gain: '#F59E0B',
           loss: '#10B981',
-          maintain: '#FF7F50',
+          maintain: '#6366F1',
         },
         goal: {
           progress: '#10B981',
-          pending: '#FF7F50',
+          pending: '#F59E0B',
           missed: '#EF4444',
         },
         ui: {
@@ -87,17 +86,21 @@ export default {
           hover: '#F1F5F9',
         },
         gradient: {
-          orange: {
-            start: '#ff7f50',
-            end: '#ff6347',
+          purple: {
+            start: '#C084FC',
+            end: '#8B5CF6',
           },
           blue: {
-            start: '#FF7F50',
-            end: '#FF6347',
+            start: '#60A5FA',
+            end: '#3B82F6',
           },
           green: {
-            start: '#FF7F50',
-            end: '#FF6347',
+            start: '#34D399',
+            end: '#10B981',
+          },
+          orange: {
+            start: '#FDBA74',
+            end: '#F97316',
           },
         }
       },
@@ -129,7 +132,10 @@ export default {
         'accordion-up': 'accordion-up 0.2s ease-out'
       },
       backgroundImage: {
-        'gradient-linear-orange': 'linear-gradient(90deg, #ff7f50 0%, #ff6347 100%)',
+        'gradient-linear-purple': 'linear-gradient(90deg, hsla(277, 75%, 84%, 1) 0%, hsla(297, 50%, 51%, 1) 100%)',
+        'gradient-linear-orange': 'linear-gradient(90deg, hsla(39, 100%, 77%, 1) 0%, hsla(22, 90%, 57%, 1) 100%)',
+        'gradient-linear-blue': 'linear-gradient(90deg, hsla(221, 45%, 73%, 1) 0%, hsla(220, 78%, 29%, 1) 100%)',
+        'gradient-linear-green': 'linear-gradient(90deg, hsla(146, 45%, 73%, 1) 0%, hsla(145, 78%, 29%, 1) 100%)',
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
       }
     }

@@ -16,12 +16,12 @@ export const convertToCSV = (data: any[], fields: string[], type: string) => {
     }).join(',');
   });
   
-  return `# ${type.toUpperCase()}\n${header}\n${rows.join('\n')}`;
+  return [header, ...rows].join('\n');
 };
 
 // Function to parse CSV data
 export const parseCSV = (csv: string) => {
-  const result: { weightEntries: any[], goals: any[] } = {
+  const result: { weightEntries: any[], goals: any[], weightEntriesColumns?: string[], goalsColumns?: string[] } = {
     weightEntries: [],
     goals: []
   };
@@ -37,7 +37,7 @@ export const parseCSV = (csv: string) => {
     
     // Check for section headers
     if (line.startsWith('#')) {
-      if (line.includes('WEIGHT')) {
+      if (line.includes('WEIGHT ENTRIES')) {
         currentSection = 'weightEntries';
         continue;
       } else if (line.includes('GOALS')) {
@@ -49,22 +49,20 @@ export const parseCSV = (csv: string) => {
       }
     }
     
+    // Process data lines
     if (currentSection) {
-      const values = line.split(',');
-      
-      // Check if it's a header row or data row
-      if ((currentSection === 'weightEntries' && result.weightEntries.length === 0) ||
-          (currentSection === 'goals' && result.goals.length === 0)) {
-        // It's a header row, store it for reference
-        result[`${currentSection}Columns`] = values;
+      // First line after section header is the column names
+      if (result[currentSection].length === 0) {
+        // Store column names
+        result[`${currentSection}Columns`] = line.split(',');
       } else {
-        // It's a data row
-        const dataObject = {};
-        if (result[`${currentSection}Columns`]) {
+        // Parse data row
+        const values = line.split(',');
+        
+        if (values.length > 1) { // Make sure it's a valid data row
+          const dataObject = {};
           result[`${currentSection}Columns`].forEach((column, index) => {
-            if (index < values.length) {
-              dataObject[column] = values[index];
-            }
+            dataObject[column] = values[index] || '';
           });
           result[currentSection].push(dataObject);
         }
@@ -73,18 +71,4 @@ export const parseCSV = (csv: string) => {
   }
   
   return result;
-};
-
-// Create a complete CSV with both weight entries and goals
-export const createCompleteCSV = (weightEntries: any[], goals: any[]) => {
-  // Define fields for each section
-  const weightFields = ['id', 'user_id', 'date', 'time', 'weight', 'unit', 'description', 'created_at'];
-  const goalFields = ['id', 'user_id', 'start_weight', 'target_weight', 'target_date', 'unit', 'achieved', 'created_at', 'updated_at'];
-  
-  // Create CSV for each section
-  const weightCSV = convertToCSV(weightEntries, weightFields, 'WEIGHT ENTRIES');
-  const goalsCSV = convertToCSV(goals, goalFields, 'GOALS');
-  
-  // Combine both sections
-  return `${weightCSV}\n\n${goalsCSV}`;
 };
