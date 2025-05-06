@@ -1,6 +1,6 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { formatInsightsText } from "@/utils/insightsFormatter";
+import { fetchUserWebhookUrl, DEFAULT_WEBHOOK_URL } from "./webhookService";
 
 interface UserProfile {
   display_name: string;
@@ -20,10 +20,15 @@ interface WeightEntry {
   unit: string;
 }
 
+export interface InsightsResult {
+  formattedInsights: string;
+  rawResponse: any;
+}
+
 /**
  * Fetch user data and send to webhook for AI insights analysis
  */
-export const fetchInsightsData = async (userId: string) => {
+export const fetchInsightsData = async (userId: string): Promise<InsightsResult> => {
   // First, get user profile data (for display name)
   const { data: profileData, error: profileError } = await supabase
     .from("profiles")
@@ -32,10 +37,14 @@ export const fetchInsightsData = async (userId: string) => {
     .single();
 
   if (profileError) {
-    throw new Error(`Failed to fetch user profile: ${profileError.message}`);
+    throw new Error("Failed to fetch user profile");
   }
 
-  const webhookUrl = profileData?.webhook_url || 'http://n8n.cozyapp.uno:5678/webhook-test/36e520c4-f7a4-4872-8e21-e469701eb68e';
+  // Use the user's webhook URL or fall back to the default URL
+  const webhookUrl = await fetchUserWebhookUrl(userId) || 
+                     profileData?.webhook_url || 
+                     DEFAULT_WEBHOOK_URL;
+                     
   const displayName = profileData?.display_name || 'User';
 
   // Get weight entries (last 30 days)
@@ -52,7 +61,7 @@ export const fetchInsightsData = async (userId: string) => {
     .order("time", { ascending: false });
 
   if (entriesError) {
-    throw new Error(`Failed to fetch weight entries: ${entriesError.message}`);
+    throw new Error("Failed to fetch weight entries");
   }
   
   // Get user's latest goal
@@ -64,12 +73,7 @@ export const fetchInsightsData = async (userId: string) => {
     .limit(1);
     
   if (goalsError) {
-    throw new Error(`Failed to fetch goals: ${goalsError.message}`);
-  }
-
-  // Handle case where no entries exist
-  if (!entries || entries.length === 0) {
-    return "No weight data available for the last 30 days. Please add some weight entries to get insights.";
+    throw new Error("Failed to fetch goals");
   }
 
   // Format data according to the specified structure with comma-separated arrays
@@ -90,45 +94,36 @@ export const fetchInsightsData = async (userId: string) => {
     unit: entries && entries.length > 0 ? entries[0].unit : 'kg'
   };
 
-  try {
-    // Send data to webhook with timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-    
-    const response = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(formattedData),
-      signal: controller.signal
-    });
-    
-    clearTimeout(timeoutId);
+  // Send data to webhook
+  const response = await fetch(webhookUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(formattedData),
+  });
 
-    if (!response.ok) {
-      throw new Error(`Webhook returned ${response.status}`);
-    }
-
-    // Get the text response directly without parsing as JSON
-    let responseText;
-    try {
-      responseText = await response.text();
-      
-      // Check if response is actually empty or just whitespace
-      if (!responseText || responseText.trim() === '') {
-        throw new Error("Empty response from AI service");
-      }
-    } catch (error) {
-      throw new Error(`Failed to process AI response: ${(error as Error).message}`);
-    }
-    
-    // Beautify the text response by formatting it as HTML
-    return formatInsightsText(responseText);
-  } catch (error) {
-    if ((error as Error).name === 'AbortError') {
-      throw new Error('AI service request timed out. Please try again later.');
-    }
-    throw error; // Re-throw other errors
+  if (!response.ok) {
+    throw new Error(`Webhook returned ${response.status}`);
   }
+
+  // Get the text response
+  const responseText = await response.text();
+  
+  // Attempt to parse as JSON if possible, otherwise keep as string
+  let rawResponse: any;
+  try {
+    rawResponse = JSON.parse(responseText);
+  } catch (e) {
+    rawResponse = responseText;
+  }
+  
+  // Format the insights text
+  const formattedInsights = formatInsightsText(responseText);
+  
+  // Return both the formatted insights and the raw response
+  return {
+    formattedInsights,
+    rawResponse
+  };
 };

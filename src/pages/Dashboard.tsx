@@ -14,6 +14,8 @@ import WeightEntryForm from "@/components/dashboard/WeightEntryForm";
 import WeightChart from "@/components/dashboard/WeightChart";
 import RecentEntries from "@/components/dashboard/RecentEntries";
 import QuickActions from "@/components/dashboard/QuickActions";
+import { Badge } from "@/components/ui/badge";
+import NotesInput from "@/components/notes/NotesInput";
 
 interface WeightEntry {
   id: string;
@@ -48,7 +50,20 @@ const Dashboard = () => {
   const [minWeight, setMinWeight] = useState<number | undefined>(undefined);
   const [maxWeight, setMaxWeight] = useState<number | undefined>(undefined);
   const [userId, setUserId] = useState<string | null>(null);
+  const [showAIInsights, setShowAIInsights] = useState(true);
   const navigate = useNavigate();
+  
+  // Check if user is logged in
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate("/signin");
+      }
+    };
+    
+    checkAuth();
+  }, [navigate]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -62,6 +77,21 @@ const Dashboard = () => {
         }
         
         setUserId(user.id);
+
+        // Fetch user preferences for AI insights visibility
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("show_ai_insights")
+          .eq("id", user.id)
+          .single();
+          
+        if (!profileError && profileData) {
+          // If the field exists, use it, otherwise default to true
+          setShowAIInsights(profileData.show_ai_insights !== false);
+        } else {
+          // Default to showing AI insights if there's an error or no data
+          setShowAIInsights(true);
+        }
 
         const { data: entries, error: entriesError } = await supabase
           .from("weight_entries")
@@ -171,7 +201,17 @@ const Dashboard = () => {
 
         <WeightEntryForm onEntryAdded={handleEntryAdded} preferredUnit={preferredUnit} />
         
-        <AIInsights userId={userId} />
+        {showAIInsights && (
+          <div className="relative">
+            <div className="flex items-center gap-2 mb-2">
+              <h2 className="text-lg font-semibold">AI Insights</h2>
+              <Badge variant="outline" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-300">
+                Coming Soon
+              </Badge>
+            </div>
+            <AIInsights userId={userId} />
+          </div>
+        )}
 
         {chartData.length > 1 && (
           <WeightJourneyInsights 
@@ -190,6 +230,12 @@ const Dashboard = () => {
 
           <div className="md:col-span-2 lg:col-span-4">
             <RecentEntries entries={recentEntries} />
+          </div>
+          
+          <div className="md:col-span-2 lg:col-span-4">
+            <div className="bg-white p-4 rounded-lg shadow-sm border">
+              <NotesInput userId={userId || undefined} maxLength={1000} />
+            </div>
           </div>
 
           <div className="md:col-span-2 lg:col-span-4">

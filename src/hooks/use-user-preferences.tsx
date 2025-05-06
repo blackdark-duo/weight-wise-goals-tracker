@@ -1,5 +1,5 @@
 
-import { useState, useEffect, createContext, useContext } from "react";
+import React, { useState, useEffect, createContext, useContext } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -19,7 +19,7 @@ const defaultPreferences: UserPreferences = {
 
 const UserPreferencesContext = createContext<UserPreferences>(defaultPreferences);
 
-export const UserPreferencesProvider = ({ children }: { children: React.ReactNode }) => {
+export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [preferences, setPreferences] = useState<Omit<UserPreferences, "updatePreferences">>({
     preferredUnit: "kg",
     timezone: "UTC",
@@ -28,11 +28,13 @@ export const UserPreferencesProvider = ({ children }: { children: React.ReactNod
   
   // Load preferences from DB on mount
   useEffect(() => {
+    let mounted = true;
+    
     const loadPreferences = async () => {
       try {
         // First get from localStorage for immediate response
         const storedUnit = localStorage.getItem("preferredUnit");
-        if (storedUnit) {
+        if (storedUnit && mounted) {
           setPreferences(prev => ({
             ...prev,
             preferredUnit: storedUnit
@@ -42,31 +44,35 @@ export const UserPreferencesProvider = ({ children }: { children: React.ReactNod
         // Then get from DB for accurate data
         const { data: { user } } = await supabase.auth.getUser();
         
-        if (user) {
+        if (user && mounted) {
           const { data, error } = await supabase
             .from("profiles")
             .select("preferred_unit, timezone")
             .eq("id", user.id)
             .maybeSingle();
             
-          if (data && !error) {
-            setPreferences({
+          if (data && !error && mounted) {
+            const updatedPreferences = {
               preferredUnit: data.preferred_unit || "kg",
               timezone: data.timezone || "UTC",
               isLoading: false
-            });
+            };
+            
+            setPreferences(updatedPreferences);
             
             // Update localStorage with the correct DB value
-            localStorage.setItem("preferredUnit", data.preferred_unit || "kg");
-          } else {
+            localStorage.setItem("preferredUnit", updatedPreferences.preferredUnit);
+          } else if (mounted) {
             setPreferences(prev => ({ ...prev, isLoading: false }));
           }
-        } else {
+        } else if (mounted) {
           setPreferences(prev => ({ ...prev, isLoading: false }));
         }
       } catch (error) {
         console.error("Error loading preferences:", error);
-        setPreferences(prev => ({ ...prev, isLoading: false }));
+        if (mounted) {
+          setPreferences(prev => ({ ...prev, isLoading: false }));
+        }
       }
     };
     
@@ -75,9 +81,9 @@ export const UserPreferencesProvider = ({ children }: { children: React.ReactNod
     
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && mounted) {
         loadPreferences();
-      } else if (event === 'SIGNED_OUT') {
+      } else if (event === 'SIGNED_OUT' && mounted) {
         setPreferences({
           preferredUnit: "kg",
           timezone: "UTC",
@@ -88,7 +94,7 @@ export const UserPreferencesProvider = ({ children }: { children: React.ReactNod
     
     // Listen for localStorage changes
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "preferredUnit" && e.newValue) {
+      if (e.key === "preferredUnit" && e.newValue && mounted) {
         setPreferences(prev => ({
           ...prev,
           preferredUnit: e.newValue as string
@@ -99,6 +105,7 @@ export const UserPreferencesProvider = ({ children }: { children: React.ReactNod
     window.addEventListener("storage", handleStorageChange);
     
     return () => {
+      mounted = false;
       subscription.unsubscribe();
       window.removeEventListener("storage", handleStorageChange);
     };
@@ -113,12 +120,22 @@ export const UserPreferencesProvider = ({ children }: { children: React.ReactNod
         throw new Error("User not authenticated");
       }
       
+      // Make sure we're updating the correct columns in the database
+      const updateData: Record<string, any> = {
+        updated_at: new Date().toISOString()
+      };
+      
+      if (prefs.preferredUnit !== undefined) {
+        updateData.preferred_unit = prefs.preferredUnit;
+      }
+      
+      if (prefs.timezone !== undefined) {
+        updateData.timezone = prefs.timezone;
+      }
+      
       const { error } = await supabase
         .from("profiles")
-        .update({
-          ...prefs,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq("id", user.id);
         
       if (error) throw error;

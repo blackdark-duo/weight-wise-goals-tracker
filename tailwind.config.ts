@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -64,8 +65,9 @@ export default {
 				},
                 // Custom theme colors for weight tracking app
                 brand: {
-                    primary: '#8B5CF6', // Purple main color
-                    secondary: '#F97316', // Orange accent
+                    primary: '#9b87f5', // Purple main color
+                    secondary: '#7E69AB', // Secondary purple
+                    tertiary: '#06B6D4', // Accent blue
                     light: '#F3F4F6', // Light background
                     dark: '#1F2937', // Dark text
                 },
@@ -84,6 +86,20 @@ export default {
                     card: '#FFFFFF',
                     border: '#E2E8F0',
                     hover: '#F1F5F9',
+                },
+                gradient: {
+                    purple: {
+                        start: '#9b87f5',
+                        end: '#7E69AB',
+                    },
+                    blue: {
+                        start: '#60A5FA',
+                        end: '#3B82F6',
+                    },
+                    green: {
+                        start: '#34D399',
+                        end: '#10B981',
+                    },
                 }
 			},
 			borderRadius: {
@@ -107,12 +123,49 @@ export default {
 					to: {
 						height: '0'
 					}
-				}
+				},
+                'fade-in': {
+                    '0%': {
+                        opacity: '0',
+                        transform: 'translateY(10px)'
+                    },
+                    '100%': {
+                        opacity: '1',
+                        transform: 'translateY(0)'
+                    }
+                },
+                'appear': {
+                    '0%': {
+                        opacity: '0',
+                        transform: 'translateY(20px)'
+                    },
+                    '100%': {
+                        opacity: '1',
+                        transform: 'translateY(0)'
+                    }
+                },
+                'appear-zoom': {
+                    '0%': {
+                        opacity: '0',
+                        transform: 'scale(0.95)'
+                    },
+                    '100%': {
+                        opacity: '1',
+                        transform: 'scale(1)'
+                    }
+                }
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
-			}
+				'accordion-up': 'accordion-up 0.2s ease-out',
+                'fade-in': 'fade-in 0.5s ease-out forwards',
+                'appear': 'appear 0.7s ease-out forwards',
+                'appear-zoom': 'appear-zoom 0.7s ease-out forwards'
+			},
+            backgroundImage: {
+                'gradient-linear-purple': 'linear-gradient(90deg, #9b87f5 0%, #7E69AB 100%)',
+                'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+            }
 		}
 	},
 	plugins: [require("tailwindcss-animate")],

@@ -1,13 +1,13 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Scale, Plus } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { toast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Scale, Plus } from 'lucide-react';
 
 interface WeightEntryFormProps {
   onEntryAdded: () => void;
@@ -26,24 +26,64 @@ const WeightEntryForm: React.FC<WeightEntryFormProps> = ({ onEntryAdded, preferr
     e.preventDefault();
     
     if (!newWeight) {
-      toast.error("Please enter a weight value");
+      toast({
+        title: "Error",
+        description: "Please enter a weight value",
+        variant: "destructive"
+      });
       return;
     }
-    
+
+    const weight = parseFloat(newWeight);
+
+    if (isNaN(weight) || weight <= 0) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid weight value",
+        variant: "destructive"
+      });
+      return;
+    }
+    if (weight < 1 || weight > 500) {
+      toast({
+        title: "Error",
+        description: "Weight must be between 1 and 500",
+        variant: "destructive"
+      });
+      return;
+    }
+    // Prevent future date
+    const today = new Date();
+    const selectedDate = new Date(entryDate);
+    if (selectedDate > today) {
+      toast({
+        title: "Error",
+        description: "Date cannot be in the future",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     
     try {
-      const weight = parseFloat(newWeight);
-      
       if (isNaN(weight) || weight <= 0) {
-        toast.error("Please enter a valid weight value");
+        toast({
+          title: "Error",
+          description: "Please enter a valid weight value",
+          variant: "destructive"
+        });
         return;
       }
       
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-        toast.error("You must be logged in to add weight entries");
+        toast({
+          title: "Error",
+          description: "You must be logged in to add weight entries",
+          variant: "destructive"
+        });
         return;
       }
       
@@ -62,13 +102,30 @@ const WeightEntryForm: React.FC<WeightEntryFormProps> = ({ onEntryAdded, preferr
       
       setNewWeight("");
       setDescription("");
-      
-      toast.success("Weight entry added successfully!");
+      setEntryDate(new Date().toISOString().split('T')[0]);
+      setEntryTime(new Date().toLocaleTimeString('en-US', { hour12: false }).slice(0, 5));
+      toast({
+        title: "Success",
+        description: "Weight entry added successfully!",
+        variant: "default"
+      });
       onEntryAdded();
       
     } catch (err: any) {
       console.error("Error adding weight entry:", err);
-      toast.error(err.message || "Failed to add weight entry");
+      let message = "Failed to add weight entry";
+      if (err?.message?.includes("network")) {
+        message = "Network error. Please check your connection.";
+      } else if (err?.message?.includes("duplicate")) {
+        message = "Duplicate entry. You have already logged weight for this date/time.";
+      } else if (err?.message) {
+        message = err.message;
+      }
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive"
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -139,10 +196,14 @@ const WeightEntryForm: React.FC<WeightEntryFormProps> = ({ onEntryAdded, preferr
                 <Button 
                   type="submit" 
                   disabled={isSubmitting}
+                  aria-busy={isSubmitting}
                   className="w-full bg-gradient-to-r from-brand-primary to-purple-500 hover:from-brand-primary/90 hover:to-purple-500/90"
                 >
-                  {isSubmitting ? "Adding..." : "Add Entry"}
-                  <Plus className="ml-2 h-4 w-4" />
+                  {isSubmitting ? (
+                    <><span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent inline-block align-middle"></span>Adding...</>
+                  ) : (
+                    <>Add Entry <Plus className="ml-2 h-4 w-4" /></>
+                  )}
                 </Button>
               </div>
             </div>
@@ -165,4 +226,3 @@ const WeightEntryForm: React.FC<WeightEntryFormProps> = ({ onEntryAdded, preferr
 };
 
 export default WeightEntryForm;
-
