@@ -39,7 +39,7 @@ serve(async (req) => {
     // Check if user exists and has not exceeded limit
     const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
-      .select('*, webhook_limit, webhook_count, last_webhook_date, webhook_url, preferred_unit, timezone, is_admin, is_suspended, created_at, updated_at')
+      .select('*, webhook_limit, webhook_count, last_webhook_date, webhook_url, preferred_unit, timezone, is_admin, is_suspended, created_at, updated_at, email')
       .eq('id', user.id)
       .maybeSingle();
 
@@ -63,7 +63,7 @@ serve(async (req) => {
       throw new Error(`You have reached your daily limit of ${profile.webhook_limit} AI analyses. Please try again tomorrow or upgrade to a premium plan.`);
     }
 
-    // Get webhook configuration
+    // Get webhook URL from profile or config
     const { data: webhookConfig } = await supabaseClient
       .from('webhook_config')
       .select('*')
@@ -99,58 +99,27 @@ serve(async (req) => {
     const { data: goalData, error: goalError } = await supabaseClient
       .from('goals')
       .select('*')
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1);
       
     if (goalError) throw goalError;
 
-    // Build payload including all user fields
-    const payload: Record<string, any> = { 
-      timestamp: new Date().toISOString(),
-      version: "1.2", 
+    // Build standardized payload structure
+    const payload = {
       account_id: user.id,
       user_id: user.id,
-      email: user.email,
-      created_at: profile.created_at,
-      last_accessed: new Date().toISOString(),
-      webhook_call_count: isNewDay ? 1 : (profile.webhook_count + 1),
-      api_limit_status: (profile.webhook_count >= profile.webhook_limit) ? "exceeded" : "within_limit",
-      authentication_status: "verified",
-      preferred_unit: profile.preferred_unit || "kg",
-      timezone: profile.timezone || "UTC"
+      email: profile.email || user.email,
+      unit: profile.preferred_unit || "kg",
+      goal_weight: goalData && goalData.length > 0 ? goalData[0].target_weight : null,
+      goal_days: goalData && goalData.length > 0 && goalData[0].target_date ? 
+        Math.ceil((new Date(goalData[0].target_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 30,
+      entries: {
+        weight: weightData ? weightData.map(entry => entry.weight) : [],
+        notes: weightData ? weightData.map(entry => entry.description || "") : [],
+        dates: weightData ? weightData.map(entry => entry.date) : []
+      }
     };
-    
-    // Include additional account fields if enabled
-    if (webhookConfig.include_account_fields) {
-      payload.account = {
-        id: user.id,
-        created_at: profile.created_at,
-        last_accessed: new Date().toISOString(),
-        api_limit_status: (profile.webhook_count >= profile.webhook_limit) ? "exceeded" : "within_limit",
-        webhook_call_count: isNewDay ? 1 : (profile.webhook_count + 1),
-      };
-    }
-    
-    // Include additional user fields if enabled
-    if (webhookConfig.include_user_fields) {
-      payload.user = {
-        ...profile,
-        email: user.email,
-        auth_id: user.id
-      };
-    }
-    
-    // Include weight entries if enabled
-    if (webhookConfig.include_weight_entries) {
-      payload.weight_entries = weightData ? weightData.map(entry => ({
-        ...entry,
-        weight_unit: profile.preferred_unit || "kg"
-      })) : [];
-    }
-    
-    // Include goals if enabled
-    if (webhookConfig.include_goals) {
-      payload.goals = goalData || [];
-    }
     
     // Create webhook log entry
     const { data: webhookLog, error: webhookLogError } = await supabaseClient
@@ -184,14 +153,15 @@ serve(async (req) => {
       throw new Error(`Webhook returned ${webhookResponse.status} ${webhookResponse.statusText}`);
     }
     
-    const responseData = await webhookResponse.json();
+    // Get plain text response
+    const responseText = await webhookResponse.text();
     
     // Update webhook log with response
     if (logId) {
       await supabaseClient
         .from('webhook_logs')
         .update({
-          response_payload: responseData,
+          response_payload: responseText,
           status: webhookResponse.ok ? 'success' : 'error'
         })
         .eq('id', logId);
@@ -213,10 +183,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: responseData.message || "AI analysis complete.",
-        insights: responseData.insights || null,
-        response: responseData,
-        format_version: "1.2"
+        message: responseText.substring(0, 1000) // Limit to 1000 characters
       }),
       { 
         headers: { 

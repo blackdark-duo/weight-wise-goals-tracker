@@ -32,7 +32,7 @@ export const fetchInsightsData = async (userId: string): Promise<InsightsResult>
   // First, get user profile data (for display name)
   const { data: profileData, error: profileError } = await supabase
     .from("profiles")
-    .select("display_name, webhook_url")
+    .select("display_name, webhook_url, email, preferred_unit")
     .eq("id", userId)
     .single();
 
@@ -46,6 +46,8 @@ export const fetchInsightsData = async (userId: string): Promise<InsightsResult>
                      DEFAULT_WEBHOOK_URL;
                      
   const displayName = profileData?.display_name || 'User';
+  const email = profileData?.email || '';
+  const preferredUnit = profileData?.preferred_unit || 'kg';
 
   // Get weight entries (last 30 days)
   const thirtyDaysAgo = new Date();
@@ -57,7 +59,7 @@ export const fetchInsightsData = async (userId: string): Promise<InsightsResult>
     .select("*")
     .eq("user_id", userId)
     .gte("date", thirtyDaysAgoStr)
-    .order("date", { ascending: false })
+    .order("date", { ascending: true })
     .order("time", { ascending: false });
 
   if (entriesError) {
@@ -76,54 +78,57 @@ export const fetchInsightsData = async (userId: string): Promise<InsightsResult>
     throw new Error("Failed to fetch goals");
   }
 
-  // Format data according to the specified structure with comma-separated arrays
+  // Format data according to the specified JSON structure
   const formattedData = {
-    display_name: displayName,
-    timestamp: new Date().toISOString(),
-    goal: {
-      goalWeight: goals && goals.length > 0 ? goals[0].target_weight : null,
-      unit: goals && goals.length > 0 ? goals[0].unit : (entries && entries.length > 0 ? entries[0].unit : 'kg'),
-      daysToGoal: goals && goals.length > 0 && goals[0].target_date ? 
-        Math.ceil((new Date(goals[0].target_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 30
-    },
+    account_id: userId,
+    user_id: userId,
+    email: email,
+    unit: preferredUnit,
+    goal_weight: goals && goals.length > 0 ? goals[0].target_weight : null,
+    goal_days: goals && goals.length > 0 && goals[0].target_date ? 
+      Math.ceil((new Date(goals[0].target_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 30,
     entries: {
-      weight: entries ? entries.map(entry => entry.weight).join(',') : '',
-      date: entries ? entries.map(entry => entry.date).join(',') : '',
-      notes: entries ? entries.map(entry => entry.description || '').join(',') : ''
-    },
-    unit: entries && entries.length > 0 ? entries[0].unit : 'kg'
+      weight: entries ? entries.map(entry => entry.weight) : [],
+      notes: entries ? entries.map(entry => entry.description || '') : [],
+      dates: entries ? entries.map(entry => entry.date) : []
+    }
   };
 
-  // Send data to webhook
-  const response = await fetch(webhookUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(formattedData),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Webhook returned ${response.status}`);
-  }
-
-  // Get the text response
-  const responseText = await response.text();
-  
-  // Attempt to parse as JSON if possible, otherwise keep as string
-  let rawResponse: any;
   try {
-    rawResponse = JSON.parse(responseText);
-  } catch (e) {
-    rawResponse = responseText;
+    // Send data to webhook
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(formattedData),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Webhook returned ${response.status}`);
+    }
+
+    // Get the text response
+    const responseText = await response.text();
+    
+    // Attempt to parse as JSON if possible, otherwise keep as string
+    let rawResponse: any;
+    try {
+      rawResponse = JSON.parse(responseText);
+    } catch (e) {
+      rawResponse = responseText;
+    }
+    
+    // Format the insights text
+    const formattedInsights = formatInsightsText(responseText);
+    
+    // Return both the formatted insights and the raw response
+    return {
+      formattedInsights,
+      rawResponse
+    };
+  } catch (error) {
+    console.error("Error calling webhook:", error);
+    throw error;
   }
-  
-  // Format the insights text
-  const formattedInsights = formatInsightsText(responseText);
-  
-  // Return both the formatted insights and the raw response
-  return {
-    formattedInsights,
-    rawResponse
-  };
 };

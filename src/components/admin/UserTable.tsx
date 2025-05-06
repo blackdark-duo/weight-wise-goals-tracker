@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import UserActions from "./UserActions";
 import { Profile } from "@/hooks/useAdminProfiles";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface UserTableProps {
   profiles: Profile[];
@@ -28,23 +29,23 @@ const UserTable: React.FC<UserTableProps> = ({
 }) => {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full border-collapse">
-        <thead>
-          <tr className="border-b">
-            <th className="px-4 py-3 text-left">User</th>
-            <th className="px-4 py-3 text-left">Email</th>
-            <th className="px-4 py-3 text-left">Admin</th>
-            <th className="px-4 py-3 text-left">AI Limit</th>
-            <th className="px-4 py-3 text-left">Show AI</th>
-            <th className="px-4 py-3 text-left">Last Request</th>
-            <th className="px-4 py-3 text-left">Status</th>
-            <th className="px-4 py-3 text-left">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>User</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Admin</TableHead>
+            <TableHead>AI Limit</TableHead>
+            <TableHead>Show AI</TableHead>
+            <TableHead>Last Request</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {profiles.map((profile) => (
-            <tr key={profile.id} className="border-b">
-              <td className="px-4 py-3 flex items-center">
+            <TableRow key={profile.id}>
+              <TableCell className="flex items-center">
                 <User className="h-5 w-5 mr-2 text-muted-foreground" />
                 {profile.display_name || "No Name"}
                 {profile.created_at && (
@@ -52,17 +53,17 @@ const UserTable: React.FC<UserTableProps> = ({
                     {new Date(profile.created_at).toLocaleDateString()}
                   </span>
                 )}
-              </td>
-              <td className="px-4 py-3">
+              </TableCell>
+              <TableCell>
                 {profile.email || "No Email"}
-              </td>
-              <td className="px-4 py-3">
+              </TableCell>
+              <TableCell>
                 <Checkbox 
                   checked={!!profile.is_admin} 
                   onCheckedChange={() => toggleAdminStatus(profile)}
                 />
-              </td>
-              <td className="px-4 py-3">
+              </TableCell>
+              <TableCell>
                 <Input 
                   type="number" 
                   min="0" 
@@ -71,20 +72,20 @@ const UserTable: React.FC<UserTableProps> = ({
                   value={profile.webhook_limit || 0} 
                   onChange={(e) => updateWebhookLimit(profile, parseInt(e.target.value))}
                 />
-              </td>
-              <td className="px-4 py-3">
+              </TableCell>
+              <TableCell>
                 <Switch
                   checked={profile.show_ai_insights !== false}
                   onCheckedChange={() => toggleAIInsightsVisibility(profile)}
                 />
-              </td>
-              <td className="px-4 py-3 text-sm">
+              </TableCell>
+              <TableCell className="text-sm">
                 {profile.last_webhook_date ? 
                   new Date(profile.last_webhook_date).toLocaleString() : 
                   "Never"
                 }
-              </td>
-              <td className="px-4 py-3">
+              </TableCell>
+              <TableCell>
                 <div className="text-sm">
                   {profile.webhook_count && profile.webhook_limit ? (
                     profile.webhook_count >= profile.webhook_limit ? (
@@ -96,19 +97,19 @@ const UserTable: React.FC<UserTableProps> = ({
                     <span className="text-yellow-500">not_used</span>
                   )}
                 </div>
-              </td>
-              <td className="px-4 py-3">
+              </TableCell>
+              <TableCell>
                 <UserActions 
                   profile={profile}
                   onSendEmail={() => onSendEmail(profile.id)}
                   onSendPasswordReset={() => onSendPasswordReset(profile.id)}
                   fetchProfiles={fetchProfiles}
                 />
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 };

@@ -9,15 +9,15 @@ export interface Profile {
   email?: string;
   is_admin?: boolean;
   created_at?: string;
-  updated_at?: string; // Added this property
+  updated_at?: string;
   webhook_limit?: number;
   webhook_count?: number;
   last_webhook_date?: string;
   webhook_url?: string;
   show_ai_insights?: boolean;
-  preferred_unit?: string; // Added this property
-  timezone?: string; // Added this property
-  is_suspended?: boolean; // Added this property
+  preferred_unit?: string;
+  timezone?: string;
+  is_suspended?: boolean;
 }
 
 export const useAdminProfiles = () => {
