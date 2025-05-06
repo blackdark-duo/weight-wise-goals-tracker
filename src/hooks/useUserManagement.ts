@@ -5,6 +5,12 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { Profile } from "./useAdminProfiles";
 
+// Since we're importing the Profile interface from useAdminProfiles.ts,
+// we don't need to redefine it here. The TypeScript error is happening
+// because the Profile interface imported from useAdminProfiles lacks
+// some properties that are being used in this file.
+// The proper solution is to update the Profile interface in useAdminProfiles.ts
+
 export const useUserManagement = (profiles: Profile[], fetchProfiles: () => Promise<void>) => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [emailSubject, setEmailSubject] = useState("");
