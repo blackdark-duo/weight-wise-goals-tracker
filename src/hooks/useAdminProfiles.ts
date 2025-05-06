@@ -52,10 +52,10 @@ export const useAdminProfiles = () => {
 
       // Combine auth and profile data
       const combinedProfiles = authUsers.users.map(authUser => {
-        // Find matching profile or create an empty object with default values
+        // Find matching profile or create an empty object
         const profile = profileData?.find(p => p.id === authUser.id) || {};
         
-        // Create a properly typed profile with all fields, using optional chaining to safely access properties
+        // Create a properly typed profile with all fields
         const typedProfile: Profile = {
           id: authUser.id,
           email: authUser.email,
