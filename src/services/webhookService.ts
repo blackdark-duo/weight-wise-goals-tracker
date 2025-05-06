@@ -3,6 +3,21 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const DEFAULT_WEBHOOK_URL = 'http://n8n.cozyapp.uno:5678/webhook-test/36e520c4-f7a4-4872-8e21-e469701eb68e';
 
+export interface WebhookConfig {
+  id?: number;
+  url: string;
+  days: number;
+  include_account_fields: boolean;
+  include_user_fields: boolean;
+  fields: {
+    user_data: boolean;
+    weight_data: boolean;
+    goal_data: boolean;
+    activity_data: boolean;
+    detailed_analysis: boolean;
+  };
+}
+
 /**
  * Fetch the webhook URL for a user from their profile
  */
@@ -103,4 +118,85 @@ export const generateDefaultTestPayload = (overrides = {}): any => {
     },
     ...overrides
   };
+};
+
+/**
+ * Fetch the global webhook configuration
+ */
+export const fetchWebhookConfig = async (): Promise<WebhookConfig> => {
+  try {
+    const { data: config, error } = await supabase
+      .functions.invoke('get_webhook_config', {
+        method: 'GET',
+      });
+
+    if (error) {
+      console.error("Error fetching webhook config:", error);
+      throw new Error("Failed to fetch webhook configuration");
+    }
+
+    if (!config || !config.data) {
+      // Return default config if none exists
+      return {
+        url: DEFAULT_WEBHOOK_URL,
+        days: 30,
+        include_account_fields: true,
+        include_user_fields: true,
+        fields: {
+          user_data: true,
+          weight_data: true,
+          goal_data: true,
+          activity_data: false,
+          detailed_analysis: false
+        }
+      };
+    }
+
+    return config.data;
+  } catch (error) {
+    console.error("Error in fetchWebhookConfig:", error);
+    // Return default config in case of error
+    return {
+      url: DEFAULT_WEBHOOK_URL,
+      days: 30,
+      include_account_fields: true,
+      include_user_fields: true,
+      fields: {
+        user_data: true,
+        weight_data: true,
+        goal_data: true,
+        activity_data: false,
+        detailed_analysis: false
+      }
+    };
+  }
+};
+
+/**
+ * Update the global webhook configuration
+ */
+export const updateWebhookConfig = async (config: WebhookConfig): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase
+      .functions.invoke('update_webhook_config', {
+        method: 'POST',
+        body: { 
+          url: config.url,
+          days: config.days,
+          fields: config.fields,
+          include_account_fields: config.include_account_fields,
+          include_user_fields: config.include_user_fields
+        }
+      });
+
+    if (error) {
+      console.error("Error updating webhook config:", error);
+      throw new Error("Failed to update webhook configuration");
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error in updateWebhookConfig:", error);
+    throw error;
+  }
 };

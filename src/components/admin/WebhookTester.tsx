@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -108,7 +107,7 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles }) => {
       // Get webhook URL from profile
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("webhook_url")
+        .select("webhook_url, webhook_count")
         .eq("id", selectedUserId)
         .single();
 
@@ -140,10 +139,12 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles }) => {
       toast.success("Webhook request completed successfully");
       
       // Update webhook count in profile
+      const currentCount = profileData?.webhook_count || 0;
+      
       await supabase
         .from("profiles")
         .update({ 
-          webhook_count: profileData.webhook_count ? profileData.webhook_count + 1 : 1,
+          webhook_count: currentCount + 1,
           last_webhook_date: new Date().toISOString()
         })
         .eq("id", selectedUserId);
