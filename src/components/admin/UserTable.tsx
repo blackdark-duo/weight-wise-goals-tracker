@@ -37,7 +37,7 @@ const UserTable: React.FC<UserTableProps> = ({
             <th className="px-4 py-3 text-left">AI Limit</th>
             <th className="px-4 py-3 text-left">Show AI</th>
             <th className="px-4 py-3 text-left">Last Request</th>
-            <th className="px-4 py-3 text-left">API Status</th>
+            <th className="px-4 py-3 text-left">Status</th>
             <th className="px-4 py-3 text-left">Actions</th>
           </tr>
         </thead>
@@ -46,7 +46,7 @@ const UserTable: React.FC<UserTableProps> = ({
             <tr key={profile.id} className="border-b">
               <td className="px-4 py-3 flex items-center">
                 <User className="h-5 w-5 mr-2 text-muted-foreground" />
-                {profile.display_name}
+                {profile.display_name || "No Name"}
                 {profile.created_at && (
                   <span className="text-xs text-muted-foreground ml-2">
                     {new Date(profile.created_at).toLocaleDateString()}
@@ -54,7 +54,7 @@ const UserTable: React.FC<UserTableProps> = ({
                 )}
               </td>
               <td className="px-4 py-3">
-                {profile.email}
+                {profile.email || "No Email"}
               </td>
               <td className="px-4 py-3">
                 <Checkbox 

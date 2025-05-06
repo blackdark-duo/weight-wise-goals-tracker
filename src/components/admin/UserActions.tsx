@@ -1,11 +1,11 @@
 
 import React, { useState } from "react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { MoreVertical, Mail, KeyRound, UserX, AlertCircle } from "lucide-react";
-import { Profile } from "@/hooks/useAdminProfiles";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,8 +15,12 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Mail, MoreHorizontal, RefreshCw, Shield, Trash } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Profile } from "@/hooks/useAdminProfiles";
 
 interface UserActionsProps {
   profile: Profile;
@@ -31,110 +35,86 @@ const UserActions: React.FC<UserActionsProps> = ({
   onSendPasswordReset,
   fetchProfiles,
 }) => {
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const handleDeleteUser = async () => {
     try {
       setIsDeleting(true);
       
-      // Get the current user's session for authentication
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        toast.error("You must be logged in to delete users");
-        return;
-      }
-      
-      // Call our Edge Function with proper authentication
-      const { error: functionError } = await supabase.functions.invoke("delete-user", {
-        body: { userIdToDelete: profile.id },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        }
+      // Call our secure edge function to delete the user
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        body: { userId: profile.id }
       });
-      
-      if (functionError) {
-        console.error("Error deleting user:", functionError);
-        toast.error(`Failed to delete user: ${functionError.message || "Unknown error"}`);
-        return;
+
+      if (error || !data.success) {
+        throw new Error(error?.message || data?.error || 'Failed to delete user');
       }
-      
-      toast.success(`User ${profile.display_name || profile.email} has been deleted`);
-      await fetchProfiles(); // Refresh the user list
-      setIsDialogOpen(false);
-      
-    } catch (error) {
-      console.error("Error deleting user:", error);
-      toast.error(`An unexpected error occurred: ${error.message}`);
+
+      toast.success(`User ${profile.email || profile.display_name} has been deleted`);
+      fetchProfiles();
+    } catch (err: any) {
+      console.error("Error deleting user:", err);
+      toast.error(`Failed to delete user: ${err.message}`);
     } finally {
       setIsDeleting(false);
+      setIsDeleteDialogOpen(false);
     }
   };
 
   return (
-    <div>
+    <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="h-8 w-8 p-0">
+          <Button variant="ghost" size="sm">
+            <MoreHorizontal className="h-4 w-4" />
             <span className="sr-only">Open menu</span>
-            <MoreVertical className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          
           <DropdownMenuItem onClick={onSendEmail}>
-            <Mail className="mr-2 h-4 w-4" />
-            <span>Send Email</span>
+            <Mail className="h-4 w-4 mr-2" />
+            Send Email
           </DropdownMenuItem>
-          
           <DropdownMenuItem onClick={onSendPasswordReset}>
-            <KeyRound className="mr-2 h-4 w-4" />
-            <span>Password Reset</span>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Password Reset
           </DropdownMenuItem>
-          
-          <AlertDialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <AlertDialogTrigger asChild>
-              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                <UserX className="mr-2 h-4 w-4 text-destructive" />
-                <span className="text-destructive">Delete User</span>
-              </DropdownMenuItem>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle className="text-destructive flex items-center">
-                  <AlertCircle className="h-5 w-5 mr-2" />
-                  Delete User Account
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete the user
-                  account and remove all their data from the database.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  onClick={handleDeleteUser}
-                  disabled={isDeleting}
-                >
-                  {isDeleting ? (
-                    <>
-                      <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
-                      Deleting...
-                    </>
-                  ) : (
-                    "Delete User"
-                  )}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onClick={() => setIsDeleteDialogOpen(true)}
+          >
+            <Trash className="h-4 w-4 mr-2" />
+            Delete User
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-    </div>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete User Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the user account
+              and all associated data for {profile.email || profile.display_name}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteUser();
+              }}
+              disabled={isDeleting}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 

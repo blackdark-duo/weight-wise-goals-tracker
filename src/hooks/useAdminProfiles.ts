@@ -1,107 +1,152 @@
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export interface Profile {
   id: string;
-  display_name: string;
+  display_name?: string;
   email?: string;
   is_admin?: boolean;
-  webhook_limit?: number;
-  is_suspended?: boolean;
   created_at?: string;
-  preferred_unit?: string;
-  timezone?: string;
-  updated_at?: string;
+  webhook_limit?: number;
   webhook_count?: number;
-  webhook_url?: string;
   last_webhook_date?: string;
+  webhook_url?: string;
   show_ai_insights?: boolean;
 }
 
 export const useAdminProfiles = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  useEffect(() => {
-    checkAdminStatus();
-  }, []);
+  // Fetch all user profiles including those with unverified emails
+  const fetchProfiles = async () => {
+    setIsLoading(true);
+    setError(null);
 
-  const checkAdminStatus = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      // Get the current user ID for checking admin status
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+      }
+
+      // Fetch all auth users (including unverified ones)
+      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
       
-      if (!session) {
-        return;
-      }
+      if (authError) throw authError;
 
-      // Get user profile to check admin status
-      const { data: profile, error } = await supabase
-        .from("profiles")
-        .select("is_admin")
-        .eq("id", session.user.id)
-        .single();
+      // Fetch profile data for all users
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*');
+        
+      if (profileError) throw profileError;
 
-      if (error) {
-        console.error("Error fetching profile:", error);
-        toast.error("Failed to verify admin status");
-        return;
-      }
-
-      if (profile && profile.is_admin) {
-        setIsAdmin(true);
-        fetchProfiles();
-      } else if (session.user.email === "admin@cozyweight.com") {
-        // For demo purposes, also allow the default admin
-        setIsAdmin(true);
-        fetchProfiles();
-      }
-    } catch (error) {
-      console.error("Error checking admin status:", error);
-      toast.error("Authentication error. Please try again.");
+      // Combine auth and profile data
+      const combinedProfiles = authUsers.users.map(authUser => {
+        const profile = profileData?.find(p => p.id === authUser.id) || {};
+        
+        return {
+          id: authUser.id,
+          email: authUser.email,
+          created_at: authUser.created_at,
+          ...profile
+        };
+      });
+      
+      setProfiles(combinedProfiles);
+    } catch (err: any) {
+      console.error('Error fetching profiles:', err);
+      setError(err.message || 'Failed to fetch user profiles');
+      toast.error('Failed to load user profiles');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const fetchProfiles = async () => {
+  // Toggle admin status for a user
+  const toggleAdminStatus = async (profile: Profile) => {
+    if (!currentUserId) return;
+    
     try {
-      // First get profiles
-      const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles")
-        .select("*")
-        .order("display_name");
-
-      if (profilesError) throw profilesError;
-      
-      // Then get user emails from auth.users - this requires admin rights
-      // In a real app, this would be done in a Supabase Edge Function with service_role key
-      const profiles = profilesData || [];
-      
-      try {
-        // Fetch emails for all users - using auth admin API (simulated here)
-        // NOTE: In production, this should be done via an Edge Function with proper authentication
-        const { data, error: usersError } = await supabase
-          .from('profiles')  // We're actually just getting profiles again as a workaround
-          .select('id, email');  // Now we're selecting email from profiles
-          
-        if (!usersError && data) {
-          setProfiles(profiles);
-        } else {
-          // If we can't get emails, just use the profiles as is
-          setProfiles(profiles);
-        }
-      } catch (error) {
-        console.error("Error fetching user emails:", error);
-        setProfiles(profiles);
+      // Don't allow removing admin status from yourself
+      if (profile.id === currentUserId && profile.is_admin) {
+        toast.error('You cannot remove your own admin status');
+        return;
       }
-    } catch (error) {
-      console.error("Error fetching profiles:", error);
-      toast.error("Failed to load user profiles");
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_admin: !profile.is_admin })
+        .eq('id', profile.id);
+        
+      if (error) throw error;
+      
+      await fetchProfiles();
+      toast.success(`Admin status ${profile.is_admin ? 'revoked from' : 'granted to'} ${profile.display_name || profile.email}`);
+    } catch (err: any) {
+      console.error('Error toggling admin status:', err);
+      toast.error('Failed to update admin status');
+    }
+  };
+  
+  // Update webhook limit for a user
+  const updateWebhookLimit = async (profile: Profile, limit: number) => {
+    if (!currentUserId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ webhook_limit: limit })
+        .eq('id', profile.id);
+        
+      if (error) throw error;
+      
+      await fetchProfiles();
+    } catch (err: any) {
+      console.error('Error updating webhook limit:', err);
+      toast.error('Failed to update webhook limit');
+    }
+  };
+  
+  // Toggle AI insights visibility for a user
+  const toggleAIInsightsVisibility = async (profile: Profile) => {
+    if (!currentUserId) return;
+    
+    try {
+      const currentValue = profile.show_ai_insights === undefined ? true : profile.show_ai_insights;
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({ show_ai_insights: !currentValue })
+        .eq('id', profile.id);
+        
+      if (error) throw error;
+      
+      await fetchProfiles();
+      toast.success(`AI Insights ${currentValue ? 'disabled' : 'enabled'} for ${profile.display_name || profile.email}`);
+    } catch (err: any) {
+      console.error('Error toggling AI insights visibility:', err);
+      toast.error('Failed to update AI insights visibility');
     }
   };
 
-  return { profiles, isLoading, isAdmin, fetchProfiles };
+  // Initial fetch on component mount
+  useEffect(() => {
+    fetchProfiles();
+  }, []);
+
+  return {
+    profiles,
+    isLoading,
+    error,
+    fetchProfiles,
+    toggleAdminStatus,
+    updateWebhookLimit,
+    toggleAIInsightsVisibility
+  };
 };

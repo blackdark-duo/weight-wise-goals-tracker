@@ -21,9 +21,6 @@ const SignUp = () => {
     password: "",
     displayName: ""
   });
-  const [step, setStep] = useState(1); // Step 1: Initial sign up, Step 2: OTP verification
-  const [otp, setOtp] = useState("");
-  const [generatedOtp, setGeneratedOtp] = useState("");
   const navigate = useNavigate();
 
   // Check for existing session on component mount
@@ -84,18 +81,7 @@ const SignUp = () => {
     return isValid;
   };
 
-  // Generate a random 6-digit OTP
-  const generateOTP = () => {
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    console.log("Generated OTP:", otp); // For testing purposes
-    
-    // In a real app, this would be sent via email using Supabase Edge Functions
-    // For now, we'll log it and store it client-side
-    
-    return otp;
-  };
-
-  const handleInitialSignUp = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validateForm()) {
@@ -133,37 +119,8 @@ const SignUp = () => {
         setIsLoading(false);
         return;
       }
-      
-      // Generate OTP - in a real app, this would be done server-side via a Supabase Edge Function
-      const newOtp = generateOTP();
-      setGeneratedOtp(newOtp);
-      
-      // In a real app, you would send this OTP via email using Supabase Edge Functions
-      // For now, we'll just log it and move to the verification step
-      
-      toast.success("OTP sent to your email. Please check your inbox.");
-      setStep(2);
-    } catch (err: any) {
-      console.error("Sign up error:", err);
-      setError(err.message || "Failed to create account. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const handleOtpVerification = async () => {
-    setIsLoading(true);
-    setError("");
-
-    try {
-      // Verify OTP
-      if (otp !== generatedOtp) {
-        setError("Invalid OTP. Please check and try again.");
-        setIsLoading(false);
-        return;
-      }
-
-      // Sign up with Supabase auth after OTP verification
+      // Sign up with Supabase auth
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -171,6 +128,7 @@ const SignUp = () => {
           data: {
             name: displayName
           },
+          // Skip email verification
           emailRedirectTo: window.location.origin + "/dashboard"
         }
       });
@@ -180,9 +138,6 @@ const SignUp = () => {
       }
 
       if (data.user) {
-        // Create a demo session for testing
-        localStorage.setItem("demo-auth-session", "true");
-        
         // Automatically sign in the user after registration
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
@@ -227,164 +182,102 @@ const SignUp = () => {
             />
           </div>
           <CardTitle className="text-2xl font-bold bg-gradient-to-r from-[#ff7f50] to-[#ff6347] bg-clip-text text-transparent">
-            {step === 1 ? "Create an account" : "Verify your email"}
+            Create an account
           </CardTitle>
           <CardDescription>
-            {step === 1 
-              ? "Enter your details to get started with Weight Wise"
-              : "Enter the OTP sent to your email"
-            }
+            Enter your details to get started with Weight Wise
           </CardDescription>
         </CardHeader>
         
-        {step === 1 ? (
-          <form onSubmit={handleInitialSignUp}>
-            <CardContent className="space-y-4">
-              {error && (
-                <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  <span>{error}</span>
-                </div>
-              )}
-              
-              <div className="space-y-2">
-                <Label htmlFor="displayName">Display Name</Label>
-                <Input
-                  id="displayName"
-                  type="text"
-                  placeholder="John Doe"
-                  required
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  className={formErrors.displayName ? "border-destructive" : ""}
-                />
-                {formErrors.displayName && (
-                  <p className="text-xs text-destructive mt-1">{formErrors.displayName}</p>
-                )}
+        <form onSubmit={handleSignUp}>
+          <CardContent className="space-y-4">
+            {error && (
+              <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{error}</span>
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="john.doe@gmail.com"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={formErrors.email ? "border-destructive" : ""}
-                />
-                {formErrors.email && (
-                  <p className="text-xs text-destructive mt-1">{formErrors.email}</p>
-                )}
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className={formErrors.password ? "border-destructive" : ""}
-                />
-                {formErrors.password ? (
-                  <p className="text-xs text-destructive mt-1">{formErrors.password}</p>
-                ) : (
-                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                    <CheckCircle className="h-3 w-3 text-green-500" />
-                    Password must be at least 6 characters long
-                  </p>
-                )}
-              </div>
-            </CardContent>
+            )}
             
-            <CardFooter className="flex flex-col space-y-4">
-              <Button 
-                type="submit" 
-                className="w-full bg-gradient-to-r from-[#ff7f50] to-[#ff6347] hover:from-[#ff6347] hover:to-[#ff5733]"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    Continue
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </>
-                )}
-              </Button>
-              
-              <div className="text-center text-sm">
-                Already have an account?{" "}
-                <Link to="/signin" className="text-[#ff7f50] hover:underline font-medium">
-                  Sign in
-                </Link>
-              </div>
-            </CardFooter>
-          </form>
-        ) : (
-          <div>
-            <CardContent className="space-y-4">
-              {error && (
-                <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  <span>{error}</span>
-                </div>
+            <div className="space-y-2">
+              <Label htmlFor="displayName">Display Name</Label>
+              <Input
+                id="displayName"
+                type="text"
+                placeholder="John Doe"
+                required
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className={formErrors.displayName ? "border-destructive" : ""}
+              />
+              {formErrors.displayName && (
+                <p className="text-xs text-destructive mt-1">{formErrors.displayName}</p>
               )}
-              
-              <div className="space-y-2">
-                <Label htmlFor="otp" className="text-center block">Enter verification code</Label>
-                <div className="flex justify-center py-4">
-                  <InputOTP maxLength={6} value={otp} onChange={setOtp}>
-                    <InputOTPGroup>
-                      <InputOTPSlot index={0} />
-                      <InputOTPSlot index={1} />
-                      <InputOTPSlot index={2} />
-                      <InputOTPSlot index={3} />
-                      <InputOTPSlot index={4} />
-                      <InputOTPSlot index={5} />
-                    </InputOTPGroup>
-                  </InputOTP>
-                </div>
-                <p className="text-center text-sm text-muted-foreground">
-                  We've sent a verification code to {email}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="john.doe@gmail.com"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={formErrors.email ? "border-destructive" : ""}
+              />
+              {formErrors.email && (
+                <p className="text-xs text-destructive mt-1">{formErrors.email}</p>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className={formErrors.password ? "border-destructive" : ""}
+              />
+              {formErrors.password ? (
+                <p className="text-xs text-destructive mt-1">{formErrors.password}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3 text-green-500" />
+                  Password must be at least 6 characters long
                 </p>
-              </div>
-            </CardContent>
+              )}
+            </div>
+          </CardContent>
+          
+          <CardFooter className="flex flex-col space-y-4">
+            <Button 
+              type="submit" 
+              className="w-full bg-gradient-to-r from-[#ff7f50] to-[#ff6347] hover:from-[#ff6347] hover:to-[#ff5733]"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  Sign Up
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              )}
+            </Button>
             
-            <CardFooter className="flex flex-col space-y-4">
-              <Button 
-                onClick={handleOtpVerification}
-                className="w-full bg-gradient-to-r from-[#ff7f50] to-[#ff6347] hover:from-[#ff6347] hover:to-[#ff5733]"
-                disabled={isLoading || otp.length !== 6}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Verifying...
-                  </>
-                ) : (
-                  "Verify & Create Account"
-                )}
-              </Button>
-              
-              <div className="text-center text-sm">
-                <Button 
-                  variant="link" 
-                  className="text-[#ff7f50] p-0 h-auto" 
-                  onClick={() => setStep(1)}
-                >
-                  Back to sign up
-                </Button>
-              </div>
-            </CardFooter>
-          </div>
-        )}
+            <div className="text-center text-sm">
+              Already have an account?{" "}
+              <Link to="/signin" className="text-[#ff7f50] hover:underline font-medium">
+                Sign in
+              </Link>
+            </div>
+          </CardFooter>
+        </form>
       </Card>
     </div>
   );
