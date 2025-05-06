@@ -71,7 +71,7 @@ const NotesInput = ({
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium">Notes (Diet Related)</h3>
         <Badge 
-          variant={isAtLimit ? "destructive" : isNearLimit ? "warning" : "secondary"}
+          variant={isAtLimit ? "destructive" : "secondary"}
           className={`${isAtLimit ? "bg-destructive" : isNearLimit ? "bg-yellow-500" : ""}`}
         >
           {charactersRemaining} characters remaining
