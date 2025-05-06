@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,12 +14,15 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Webhook, Play, User } from "lucide-react";
 import { formatInsightsText } from "@/utils/insightsFormatter";
+import { Textarea } from "@/components/ui/textarea";
+import { fetchWebhookConfig } from "@/services/webhookService";
 
 interface WebhookTesterProps {
   profiles: any[];
+  onRefreshUsers?: () => Promise<void>;
 }
 
-const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles }) => {
+const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers }) => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [requestPayload, setRequestPayload] = useState<any | null>(null);
@@ -37,6 +41,9 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles }) => {
     setFormattedResponse(null);
 
     try {
+      // Get webhook configuration
+      const webhookConfig = await fetchWebhookConfig();
+      
       // Get user profile data
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
@@ -46,9 +53,9 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles }) => {
 
       if (profileError) throw new Error("Failed to fetch user profile");
 
-      // Get weight entries (last 30 days)
+      // Get weight entries based on configured days
       const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - (webhookConfig.days || 30));
       const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
 
       const { data: entries, error: entriesError } = await supabase
@@ -71,20 +78,27 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles }) => {
       if (goalsError) throw new Error("Failed to fetch goals");
 
       // Format data according to the standardized JSON structure
-      const payload = {
+      const payload: any = {
         account_id: selectedUserId,
         user_id: selectedUserId,
-        email: profileData?.email || "",
         unit: profileData?.preferred_unit || "kg",
-        goal_weight: goals && goals.length > 0 ? goals[0].target_weight : null,
-        goal_days: goals && goals.length > 0 && goals[0].target_date ? 
-          Math.ceil((new Date(goals[0].target_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 30,
         entries: {
           weight: entries ? entries.map(entry => entry.weight) : [],
           notes: entries ? entries.map(entry => entry.description || "") : [],
           dates: entries ? entries.map(entry => entry.date) : []
         }
       };
+      
+      // Add configurable fields based on webhook configuration
+      if (webhookConfig.include_account_fields) {
+        payload.email = profileData?.email || "";
+      }
+      
+      if (webhookConfig.fields.goal_data && goals && goals.length > 0) {
+        payload.goal_weight = goals[0].target_weight;
+        payload.goal_days = goals[0].target_date ? 
+          Math.ceil((new Date(goals[0].target_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 30;
+      }
 
       setRequestPayload(payload);
       toast.success("User data fetched successfully");
@@ -115,6 +129,24 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles }) => {
       
       const webhookUrl = profileData?.webhook_url || 'http://n8n.cozyapp.uno:5678/webhook-test/36e520c4-f7a4-4872-8e21-e469701eb68e';
 
+      // Create webhook log entry
+      const { data: webhookLog, error: webhookLogError } = await supabase
+        .from("webhook_logs")
+        .insert({
+          user_id: selectedUserId,
+          request_payload: requestPayload,
+          url: webhookUrl,
+          status: 'pending'
+        })
+        .select('id')
+        .single();
+        
+      if (webhookLogError) {
+        console.error("Error creating webhook log:", webhookLogError);
+      }
+
+      toast.info("Sending data to webhook...");
+      
       // Send request to webhook
       const webhookResponse = await fetch(webhookUrl, {
         method: 'POST',
@@ -128,13 +160,25 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles }) => {
         throw new Error(`Webhook returned ${webhookResponse.status}`);
       }
 
-      // Get plain text response
-      const responseText = await webhookResponse.text();
+      // Get plain text response - important: clone the response before reading it
+      const responseClone = webhookResponse.clone();
+      const responseText = await responseClone.text();
       setResponse(responseText);
       
       // Format the response for display
       const formatted = formatInsightsText(responseText);
       setFormattedResponse(formatted);
+
+      // Update webhook log with response
+      if (webhookLog?.id) {
+        await supabase
+          .from("webhook_logs")
+          .update({
+            response_payload: responseText,
+            status: 'success'
+          })
+          .eq("id", webhookLog.id);
+      }
 
       toast.success("Webhook request completed successfully");
       
@@ -151,6 +195,28 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles }) => {
         
     } catch (error: any) {
       console.error("Error sending to webhook:", error);
+      
+      // Update webhook log with error
+      if (selectedUserId) {
+        const { data: lastLog } = await supabase
+          .from("webhook_logs")
+          .select("id")
+          .eq("user_id", selectedUserId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+          
+        if (lastLog?.id) {
+          await supabase
+            .from("webhook_logs")
+            .update({
+              status: 'error',
+              response_payload: error.message || "Failed to send data to webhook"
+            })
+            .eq("id", lastLog.id);
+        }
+      }
+      
       toast.error(error.message || "Failed to send data to webhook");
     } finally {
       setIsLoading(false);
@@ -166,7 +232,7 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles }) => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex gap-2 items-center">
+        <div className="flex flex-wrap gap-2 items-center">
           <Select 
             onValueChange={(value) => setSelectedUserId(value)} 
             disabled={isLoading}
@@ -201,6 +267,16 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles }) => {
             <Play className="mr-2 h-4 w-4" />
             Test Webhook
           </Button>
+          
+          {onRefreshUsers && (
+            <Button 
+              onClick={onRefreshUsers}
+              variant="outline"
+              className="ml-auto"
+            >
+              Refresh User List
+            </Button>
+          )}
         </div>
         
         {requestPayload && (
@@ -216,9 +292,11 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles }) => {
           <div>
             <div className="border rounded-md p-4 mb-4">
               <h3 className="text-sm font-medium mb-2">Raw Response:</h3>
-              <pre className="text-xs bg-muted p-2 rounded-md overflow-auto max-h-[200px]">
-                {response}
-              </pre>
+              <Textarea 
+                value={response}
+                readOnly
+                className="text-xs bg-muted min-h-[100px] max-h-[200px] overflow-auto"
+              />
             </div>
             
             <div className="border rounded-md p-4">

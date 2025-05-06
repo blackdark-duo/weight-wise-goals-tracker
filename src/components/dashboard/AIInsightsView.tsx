@@ -29,6 +29,9 @@ const AIInsightsView: React.FC<AIInsightsViewProps> = ({
         <CardTitle className="flex items-center gap-2">
           <BrainCircuit className="h-5 w-5 text-emerald-500" />
           <span>Weight Wise AI Insights</span>
+          <Badge variant="outline" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-300 ml-2">
+            Beta
+          </Badge>
         </CardTitle>
         <Button 
           variant="outline" 

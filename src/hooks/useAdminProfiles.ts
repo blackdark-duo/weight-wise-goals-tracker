@@ -58,7 +58,17 @@ export const useAdminProfiles = () => {
           id: authUser.id,
           email: authUser.email,
           created_at: authUser.created_at,
-          ...profile
+          display_name: profile.display_name,
+          preferred_unit: profile.preferred_unit,
+          timezone: profile.timezone,
+          updated_at: profile.updated_at,
+          webhook_limit: profile.webhook_limit,
+          webhook_count: profile.webhook_count,
+          last_webhook_date: profile.last_webhook_date,
+          webhook_url: profile.webhook_url,
+          is_admin: profile.is_admin,
+          is_suspended: profile.is_suspended,
+          show_ai_insights: profile.show_ai_insights
         };
       });
       

@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { User, Download } from "lucide-react";
+import { User, Download, RefreshCw } from "lucide-react";
 import { Profile } from "@/hooks/useAdminProfiles";
 import UserTable from "./UserTable";
 import { useUserManagement } from "@/hooks/useUserManagement";
@@ -23,6 +23,7 @@ interface UserManagementTabProps {
   toggleAdminStatus: (profile: Profile) => Promise<void>;
   updateWebhookLimit: (profile: Profile, limit: number) => Promise<void>;
   toggleAIInsightsVisibility: (profile: Profile) => Promise<void>;
+  onRefreshUsers?: () => Promise<void>;
 }
 
 const UserManagementTab: React.FC<UserManagementTabProps> = ({ 
@@ -30,9 +31,11 @@ const UserManagementTab: React.FC<UserManagementTabProps> = ({
   fetchProfiles, 
   toggleAdminStatus, 
   updateWebhookLimit,
-  toggleAIInsightsVisibility 
+  toggleAIInsightsVisibility,
+  onRefreshUsers
 }) => {
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
+  const [isLoadingRefresh, setIsLoadingRefresh] = useState(false);
   
   const {
     selectedUserId,
@@ -52,6 +55,18 @@ const UserManagementTab: React.FC<UserManagementTabProps> = ({
     setIsEmailDialogOpen(true);
   };
 
+  const handleRefreshUsers = async () => {
+    setIsLoadingRefresh(true);
+    try {
+      await fetchProfiles();
+      if (onRefreshUsers) {
+        await onRefreshUsers();
+      }
+    } finally {
+      setIsLoadingRefresh(false);
+    }
+  };
+
   return (
     <CardContent>
       <CardHeader className="pb-3 px-0">
@@ -60,14 +75,25 @@ const UserManagementTab: React.FC<UserManagementTabProps> = ({
             <User className="mr-2 h-5 w-5" />
             <span>User Management</span>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={exportUserData}
-          >
-            <Download className="h-4 w-4 mr-1" />
-            Export User Details
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleRefreshUsers}
+              disabled={isLoadingRefresh}
+            >
+              <RefreshCw className={`h-4 w-4 mr-1 ${isLoadingRefresh ? 'animate-spin' : ''}`} />
+              Fetch All Users
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={exportUserData}
+            >
+              <Download className="h-4 w-4 mr-1" />
+              Export User Details
+            </Button>
+          </div>
         </CardTitle>
         <CardDescription>
           Manage user accounts, permissions, and access controls.
