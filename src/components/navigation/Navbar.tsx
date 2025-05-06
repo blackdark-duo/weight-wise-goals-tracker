@@ -39,7 +39,7 @@ const Navbar = () => {
   const navLinks: NavItem[] = [
     { title: "Home", href: "/", icon: Home },
     { title: "Features", href: "/features", icon: Target },
-    { title: "Pricing", href: "/pricing", icon: BarChart2 },
+    { title: "Pricing", href: "/pricing", icon: BarChart2 }, // We'll hide this but keep it in the array
     { title: "About", href: "/about", icon: UserCircle }
   ];
 
@@ -55,13 +55,16 @@ const Navbar = () => {
     { title: "Account", href: "/account", icon: UserCircle },
   ];
 
+  // List of links to hide
+  const hiddenLinks = ["Pricing"];
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-ui-border bg-white/80 backdrop-blur-md">
       <div className="container flex h-16 items-center justify-between">
         <NavLogo session={session} />
 
         {!session && (
-          <NavItems navLinks={navLinks} />
+          <NavItems navLinks={navLinks} hideLinks={hiddenLinks} />
         )}
         
         <div className="flex items-center gap-4">
@@ -96,7 +99,7 @@ const Navbar = () => {
       </div>
 
       {!session && (
-        <MobileMenu isOpen={isMenuOpen} navLinks={navLinks} setIsMenuOpen={setIsMenuOpen} />
+        <MobileMenu isOpen={isMenuOpen} navLinks={navLinks.filter(link => !hiddenLinks.includes(link.title))} setIsMenuOpen={setIsMenuOpen} />
       )}
     </header>
   );

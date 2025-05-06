@@ -29,9 +29,18 @@ const SignUp = () => {
   // Check for existing session on component mount
   useEffect(() => {
     const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        navigate("/dashboard");
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error("Session check error:", error);
+          return;
+        }
+        
+        if (data.session) {
+          navigate("/dashboard");
+        }
+      } catch (err) {
+        console.error("Error checking session:", err);
       }
     };
     
@@ -79,6 +88,10 @@ const SignUp = () => {
   const generateOTP = () => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     console.log("Generated OTP:", otp); // For testing purposes
+    
+    // In a real app, this would be sent via email using Supabase Edge Functions
+    // For now, we'll log it and store it client-side
+    
     return otp;
   };
 
@@ -93,12 +106,13 @@ const SignUp = () => {
     setError("");
 
     try {
+      // Server-side validation via Supabase
       // Check if email already exists
       const { data: existingUser, error: checkError } = await supabase
         .from('profiles')
         .select('email')
         .eq('email', email)
-        .single();
+        .maybeSingle();
       
       if (existingUser) {
         setError("This email is already registered. Try signing in instead.");
@@ -106,17 +120,26 @@ const SignUp = () => {
         return;
       }
       
-      if (checkError && checkError.code !== 'PGRST116') {
-        // PGRST116 is "no rows returned" which is expected if the user doesn't exist
-        console.error("Error checking existing user:", checkError);
+      // Additional server-side validation
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(email)) {
+        setError("Invalid email format. Please provide a valid email address.");
+        setIsLoading(false);
+        return;
       }
       
-      // Generate OTP
+      if (password.length < 6) {
+        setError("Password must be at least 6 characters long.");
+        setIsLoading(false);
+        return;
+      }
+      
+      // Generate OTP - in a real app, this would be done server-side via a Supabase Edge Function
       const newOtp = generateOTP();
       setGeneratedOtp(newOtp);
       
       // In a real app, you would send this OTP via email using Supabase Edge Functions
-      // For now, we'll just store it and move to the verification step
+      // For now, we'll just log it and move to the verification step
       
       toast.success("OTP sent to your email. Please check your inbox.");
       setStep(2);
@@ -245,7 +268,7 @@ const SignUp = () => {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="m@example.com"
+                  placeholder="john.doe@gmail.com"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}

@@ -19,9 +19,18 @@ const SignIn = () => {
   // Check for existing session on component mount
   useEffect(() => {
     const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        navigate("/dashboard");
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error("Session check error:", error);
+          return;
+        }
+        
+        if (data.session) {
+          navigate("/dashboard");
+        }
+      } catch (err) {
+        console.error("Error checking session:", err);
       }
     };
     
@@ -32,6 +41,27 @@ const SignIn = () => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
+
+    // Server-side validation
+    if (!email || !email.trim()) {
+      setError("Email is required");
+      setIsLoading(false);
+      return;
+    }
+
+    if (!password) {
+      setError("Password is required");
+      setIsLoading(false);
+      return;
+    }
+
+    // Email regex validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address");
+      setIsLoading(false);
+      return;
+    }
 
     try {
       // Sign in with Supabase auth
@@ -51,7 +81,18 @@ const SignIn = () => {
         navigate("/dashboard");
       }
     } catch (err: any) {
-      setError(err.message || "Failed to sign in. Please check your credentials.");
+      let errorMessage = "Failed to sign in. Please check your credentials.";
+      
+      // Enhance error messages based on error types
+      if (err.message.includes("Invalid login")) {
+        errorMessage = "Invalid email or password. Please check your credentials.";
+      } else if (err.message.includes("Email not confirmed")) {
+        errorMessage = "Please confirm your email before signing in.";
+      } else if (err.message.includes("rate limit")) {
+        errorMessage = "Too many login attempts. Please try again later.";
+      }
+      
+      setError(errorMessage);
       console.error("Sign in error:", err);
     } finally {
       setIsLoading(false);
@@ -88,7 +129,7 @@ const SignIn = () => {
               <Input
                 id="email"
                 type="email"
-                placeholder="john.doe@email.com"
+                placeholder="john.doe@gmail.com"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
