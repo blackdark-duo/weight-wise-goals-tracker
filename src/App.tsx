@@ -9,7 +9,6 @@ import { AuthProvider } from "./providers/auth";
 import AppRoutes from "./components/AppRoutes";
 import ScrollToTop from "./components/ScrollToTop";
 import { CustomToastProvider } from "./components/ui/custom-toast";
-import { UserPreferencesProvider } from "./hooks/use-user-preferences";
 
 // Set application name
 const APP_NAME = "WeightWise";
@@ -40,9 +39,7 @@ const App = () => {
           <AuthProvider>
             <BrowserRouter>
               <ScrollToTop />
-              <UserPreferencesProvider>
-                <AppRoutes />
-              </UserPreferencesProvider>
+              <AppRoutes />
             </BrowserRouter>
           </AuthProvider>
         </TooltipProvider>

@@ -23,11 +23,11 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Pencil, Calendar, Webhook, Key } from "lucide-react";
+import { User, Pencil, Calendar, Key } from "lucide-react";
 
 interface Profile {
   id: string;
-  email: string;
+  email: string | null;
   display_name: string | null;
   is_admin: boolean;
   created_at: string;
@@ -69,14 +69,14 @@ const AdminUserTable = () => {
         return {
           id: authUser.id,
           email: authUser.email,
-          display_name: profile.display_name || authUser.email?.split('@')[0] || 'Unknown',
-          is_admin: profile.is_admin || false,
+          display_name: (profile as any).display_name || authUser.email?.split('@')[0] || 'Unknown',
+          is_admin: (profile as any).is_admin || false,
           created_at: authUser.created_at,
-          webhook_limit: profile.webhook_limit || 5,
-          webhook_count: profile.webhook_count || 0,
-          last_webhook_date: profile.last_webhook_date || null,
-          webhook_url: profile.webhook_url || null,
-          show_ai_insights: profile.show_ai_insights !== false, // default to true
+          webhook_limit: (profile as any).webhook_limit || 5,
+          webhook_count: (profile as any).webhook_count || 0,
+          last_webhook_date: (profile as any).last_webhook_date || null,
+          webhook_url: (profile as any).webhook_url || null,
+          show_ai_insights: (profile as any).show_ai_insights !== false, // default to true
         };
       });
       
@@ -229,7 +229,7 @@ const AdminUserTable = () => {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => sendPasswordResetEmail(profile.email)}
+                          onClick={() => sendPasswordResetEmail(profile.email || '')}
                         >
                           <Key className="h-3 w-3 mr-1" />
                           Reset

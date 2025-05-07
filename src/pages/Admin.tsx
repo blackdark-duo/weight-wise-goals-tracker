@@ -5,7 +5,7 @@ import MobileNavigation from "@/components/navigation/MobileNavigation";
 import { Toaster } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Admin, User, Server, History, Settings } from "lucide-react";
+import { Settings, User, Server, History } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -68,7 +68,7 @@ const AdminPage = () => {
         <Card className="max-w-md w-full">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Admin className="h-5 w-5 text-destructive" />
+              <Settings className="h-5 w-5 text-destructive" />
               Access Denied
             </CardTitle>
             <CardDescription>

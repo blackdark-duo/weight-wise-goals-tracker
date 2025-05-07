@@ -136,10 +136,10 @@ const AdminWebhookLogs = () => {
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case 'success': return 'success';
+      case 'success': return 'default';
       case 'error': return 'destructive';
-      case 'pending': return 'warning';
-      default: return 'default';
+      case 'pending': return 'outline';
+      default: return 'outline';
     }
   };
 

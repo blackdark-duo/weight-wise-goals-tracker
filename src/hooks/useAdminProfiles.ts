@@ -62,19 +62,26 @@ export const useAdminProfiles = () => {
           created_at: authUser.created_at,
         };
         
-        // Safely add properties from profile object if they exist
+        // Safely add properties from profile object
         if (profile) {
-          if ('display_name' in profile) typedProfile.display_name = profile.display_name as string;
-          if ('preferred_unit' in profile) typedProfile.preferred_unit = profile.preferred_unit as string;
-          if ('timezone' in profile) typedProfile.timezone = profile.timezone as string;
-          if ('updated_at' in profile) typedProfile.updated_at = profile.updated_at as string;
-          if ('webhook_limit' in profile) typedProfile.webhook_limit = profile.webhook_limit as number;
-          if ('webhook_count' in profile) typedProfile.webhook_count = profile.webhook_count as number;
-          if ('last_webhook_date' in profile) typedProfile.last_webhook_date = profile.last_webhook_date as string;
-          if ('webhook_url' in profile) typedProfile.webhook_url = profile.webhook_url as string;
-          if ('is_admin' in profile) typedProfile.is_admin = profile.is_admin as boolean;
-          if ('is_suspended' in profile) typedProfile.is_suspended = profile.is_suspended as boolean;
-          if ('show_ai_insights' in profile) typedProfile.show_ai_insights = profile.show_ai_insights as boolean;
+          const typedProfile = {
+            id: authUser.id,
+            email: authUser.email,
+            created_at: authUser.created_at,
+            display_name: (profile as any).display_name,
+            preferred_unit: (profile as any).preferred_unit,
+            timezone: (profile as any).timezone,
+            updated_at: (profile as any).updated_at,
+            webhook_limit: (profile as any).webhook_limit,
+            webhook_count: (profile as any).webhook_count,
+            last_webhook_date: (profile as any).last_webhook_date,
+            webhook_url: (profile as any).webhook_url,
+            is_admin: (profile as any).is_admin,
+            is_suspended: (profile as any).is_suspended,
+            show_ai_insights: (profile as any).show_ai_insights
+          };
+          
+          return typedProfile;
         }
         
         return typedProfile;
