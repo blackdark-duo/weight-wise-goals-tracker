@@ -21,12 +21,14 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ userId }) => {
   const [webhookUrl, setWebhookUrl] = useState<string>(DEFAULT_WEBHOOK_URL);
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [testResult, setTestResult] = useState<any>(null);
 
   useEffect(() => {
     const loadUserWebhook = async () => {
       if (!userId) return;
       
+      setIsLoading(true);
       try {
         const url = await fetchUserWebhookUrl(userId);
         if (url) {
@@ -34,6 +36,8 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ userId }) => {
         }
       } catch (err) {
         console.error("Error fetching webhook URL:", err);
+      } finally {
+        setIsLoading(false);
       }
     };
     
@@ -89,10 +93,19 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ userId }) => {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="h-6 w-6 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        <span className="ml-2">Loading webhook settings...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <Webhook className="h-5 w-5 text-brand-primary" />
+        <Webhook className="h-5 w-5 text-primary" />
         <h3 className="text-lg font-medium">AI Insights Webhook</h3>
       </div>
       
@@ -131,7 +144,7 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ userId }) => {
         </Button>
         
         {testResult && (
-          <div className="mt-3 p-3 bg-muted rounded-md border border-border">
+          <div className="mt-3 p-3 bg-muted rounded-md border">
             <h4 className="text-sm font-medium mb-1">Test Response:</h4>
             <pre className="text-xs overflow-auto max-h-[200px] bg-background p-2 rounded border">
               {JSON.stringify(testResult, null, 2)}

@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { 
@@ -13,12 +13,10 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { Webhook, Play, User } from "lucide-react";
-import { formatInsightsText } from "@/utils/insightsFormatter";
-import { Textarea } from "@/components/ui/textarea";
-import { fetchWebhookConfig } from "@/services/webhookService";
+import { Profile } from "@/hooks/useAdminProfiles";
 
 interface WebhookTesterProps {
-  profiles: any[];
+  profiles: Profile[];
   onRefreshUsers?: () => Promise<void>;
 }
 
@@ -27,7 +25,6 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
   const [isLoading, setIsLoading] = useState(false);
   const [requestPayload, setRequestPayload] = useState<any | null>(null);
   const [response, setResponse] = useState<string | null>(null);
-  const [formattedResponse, setFormattedResponse] = useState<string | null>(null);
 
   const fetchUserData = async () => {
     if (!selectedUserId) {
@@ -38,11 +35,15 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
     setIsLoading(true);
     setRequestPayload(null);
     setResponse(null);
-    setFormattedResponse(null);
 
     try {
       // Get webhook configuration
-      const webhookConfig = await fetchWebhookConfig();
+      const { data: webhookConfig, error: configError } = await supabase
+        .from('webhook_config')
+        .select('*')
+        .single();
+
+      if (configError) throw new Error("Failed to fetch webhook configuration");
       
       // Get user profile data
       const { data: profileData, error: profileError } = await supabase
@@ -77,9 +78,8 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
         
       if (goalsError) throw new Error("Failed to fetch goals");
 
-      // Format data according to the standardized JSON structure
+      // Format data for webhook
       const payload: any = {
-        account_id: selectedUserId,
         user_id: selectedUserId,
         unit: profileData?.preferred_unit || "kg",
         entries: {
@@ -89,15 +89,21 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
         }
       };
       
-      // Add configurable fields based on webhook configuration
+      // Add email if configured
       if (webhookConfig.include_account_fields) {
         payload.email = profileData?.email || "";
       }
       
+      // Add goal data if available
       if (webhookConfig.fields.goal_data && goals && goals.length > 0) {
         payload.goal_weight = goals[0].target_weight;
-        payload.goal_days = goals[0].target_date ? 
-          Math.ceil((new Date(goals[0].target_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 30;
+        
+        if (goals[0].target_date) {
+          const targetDate = new Date(goals[0].target_date);
+          const today = new Date();
+          const daysRemaining = Math.ceil((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+          payload.goal_days = daysRemaining > 0 ? daysRemaining : 0;
+        }
       }
 
       setRequestPayload(payload);
@@ -118,19 +124,31 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
 
     setIsLoading(true);
     try {
-      // Get webhook URL from profile
+      // Get webhook URL
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("webhook_url, webhook_count")
+        .select("webhook_url")
         .eq("id", selectedUserId)
         .single();
 
-      if (profileError) throw new Error("Failed to fetch webhook URL");
+      if (profileError) throw new Error("Failed to fetch profile");
+
+      // Get admin webhook URL as fallback
+      const { data: webhookConfig, error: configError } = await supabase
+        .from('webhook_config')
+        .select('url')
+        .single();
+
+      if (configError) throw new Error("Failed to fetch webhook configuration");
+
+      const webhookUrl = profileData.webhook_url || webhookConfig.url;
       
-      const webhookUrl = profileData?.webhook_url || 'http://n8n.cozyapp.uno:5678/webhook-test/36e520c4-f7a4-4872-8e21-e469701eb68e';
+      if (!webhookUrl) {
+        throw new Error("No webhook URL configured");
+      }
 
       // Create webhook log entry
-      const { data: webhookLog, error: webhookLogError } = await supabase
+      const { data: logData, error: logError } = await supabase
         .from("webhook_logs")
         .insert({
           user_id: selectedUserId,
@@ -141,8 +159,8 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
         .select('id')
         .single();
         
-      if (webhookLogError) {
-        console.error("Error creating webhook log:", webhookLogError);
+      if (logError) {
+        console.error("Error creating webhook log:", logError);
       }
 
       toast.info("Sending data to webhook...");
@@ -160,30 +178,29 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
         throw new Error(`Webhook returned ${webhookResponse.status}`);
       }
 
-      // Get plain text response - important: clone the response before reading it
-      const responseClone = webhookResponse.clone();
-      const responseText = await responseClone.text();
+      // Get response
+      const responseText = await webhookResponse.text();
       setResponse(responseText);
-      
-      // Format the response for display
-      const formatted = formatInsightsText(responseText);
-      setFormattedResponse(formatted);
 
-      // Update webhook log with response
-      if (webhookLog?.id) {
+      // Update webhook log
+      if (logData?.id) {
         await supabase
           .from("webhook_logs")
           .update({
             response_payload: responseText,
             status: 'success'
           })
-          .eq("id", webhookLog.id);
+          .eq("id", logData.id);
       }
 
-      toast.success("Webhook request completed successfully");
-      
       // Update webhook count in profile
-      const currentCount = profileData?.webhook_count || 0;
+      const { data: currentProfile } = await supabase
+        .from("profiles")
+        .select("webhook_count")
+        .eq("id", selectedUserId)
+        .single();
+        
+      const currentCount = currentProfile?.webhook_count || 0;
       
       await supabase
         .from("profiles")
@@ -193,8 +210,10 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
         })
         .eq("id", selectedUserId);
         
+      toast.success("Webhook request completed successfully");
     } catch (error: any) {
       console.error("Error sending to webhook:", error);
+      toast.error(error.message || "Failed to send data to webhook");
       
       // Update webhook log with error
       if (selectedUserId) {
@@ -216,20 +235,21 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
             .eq("id", lastLog.id);
         }
       }
-      
-      toast.error(error.message || "Failed to send data to webhook");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <Card className="mb-6">
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Webhook className="h-5 w-5" />
           Webhook Tester
         </CardTitle>
+        <CardDescription>
+          Test webhook functionality with real user data
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap gap-2 items-center">
@@ -257,7 +277,7 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
             disabled={!selectedUserId || isLoading}
             variant="outline"
           >
-            Fetch Data
+            Fetch User Data
           </Button>
           
           <Button 
@@ -267,16 +287,6 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
             <Play className="mr-2 h-4 w-4" />
             Test Webhook
           </Button>
-          
-          {onRefreshUsers && (
-            <Button 
-              onClick={onRefreshUsers}
-              variant="outline"
-              className="ml-auto"
-            >
-              Refresh User List
-            </Button>
-          )}
         </div>
         
         {requestPayload && (
@@ -289,27 +299,16 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
         )}
         
         {response && (
-          <div>
-            <div className="border rounded-md p-4 mb-4">
-              <h3 className="text-sm font-medium mb-2">Raw Response:</h3>
-              <Textarea 
-                value={response}
-                readOnly
-                className="text-xs bg-muted min-h-[100px] max-h-[200px] overflow-auto"
-              />
+          <div className="border rounded-md p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="text-sm font-medium">Response:</h3>
+              <Badge>
+                Webhook Response
+              </Badge>
             </div>
-            
-            <div className="border rounded-md p-4">
-              <h3 className="text-sm font-medium mb-2 flex items-center gap-2">
-                Formatted Response
-                <Badge className="bg-emerald-500/20 text-emerald-700 hover:bg-emerald-500/30">AI Generated</Badge>
-              </h3>
-              {formattedResponse && (
-                <div className="prose prose-sm max-w-none">
-                  <div dangerouslySetInnerHTML={{ __html: formattedResponse }} />
-                </div>
-              )}
-            </div>
+            <pre className="text-xs bg-muted p-2 rounded-md overflow-auto max-h-[200px]">
+              {response}
+            </pre>
           </div>
         )}
       </CardContent>

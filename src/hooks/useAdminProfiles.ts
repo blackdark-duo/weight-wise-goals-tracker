@@ -52,27 +52,25 @@ export const useAdminProfiles = () => {
 
       // Combine auth and profile data
       const combinedProfiles = authUsers.users.map(authUser => {
-        // Find matching profile or create an empty object
+        // Find matching profile
         const profile = profileData?.find(p => p.id === authUser.id) || {};
         
-        // Create a properly typed profile with all fields
+        // Create a properly typed profile
         const typedProfile: Profile = {
           id: authUser.id,
           email: authUser.email,
           created_at: authUser.created_at,
-          
-          // Type assertions to avoid property access issues on empty profiles
-          display_name: profile.hasOwnProperty('display_name') ? (profile as any).display_name : undefined,
-          preferred_unit: profile.hasOwnProperty('preferred_unit') ? (profile as any).preferred_unit : undefined,
-          timezone: profile.hasOwnProperty('timezone') ? (profile as any).timezone : undefined,
-          updated_at: profile.hasOwnProperty('updated_at') ? (profile as any).updated_at : undefined,
-          webhook_limit: profile.hasOwnProperty('webhook_limit') ? (profile as any).webhook_limit : undefined,
-          webhook_count: profile.hasOwnProperty('webhook_count') ? (profile as any).webhook_count : undefined,
-          last_webhook_date: profile.hasOwnProperty('last_webhook_date') ? (profile as any).last_webhook_date : undefined,
-          webhook_url: profile.hasOwnProperty('webhook_url') ? (profile as any).webhook_url : undefined,
-          is_admin: profile.hasOwnProperty('is_admin') ? (profile as any).is_admin : undefined,
-          is_suspended: profile.hasOwnProperty('is_suspended') ? (profile as any).is_suspended : undefined,
-          show_ai_insights: profile.hasOwnProperty('show_ai_insights') ? (profile as any).show_ai_insights : undefined
+          display_name: profile.display_name,
+          preferred_unit: profile.preferred_unit,
+          timezone: profile.timezone,
+          updated_at: profile.updated_at,
+          webhook_limit: profile.webhook_limit,
+          webhook_count: profile.webhook_count,
+          last_webhook_date: profile.last_webhook_date,
+          webhook_url: profile.webhook_url,
+          is_admin: profile.is_admin,
+          is_suspended: profile.is_suspended,
+          show_ai_insights: profile.show_ai_insights
         };
         
         return typedProfile;
@@ -127,9 +125,30 @@ export const useAdminProfiles = () => {
       if (error) throw error;
       
       await fetchProfiles();
+      toast.success(`Updated webhook limit for ${profile.display_name || profile.email}`);
     } catch (err: any) {
       console.error('Error updating webhook limit:', err);
       toast.error('Failed to update webhook limit');
+    }
+  };
+  
+  // Update webhook URL for a user
+  const updateWebhookUrl = async (profile: Profile, url: string) => {
+    if (!currentUserId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ webhook_url: url })
+        .eq('id', profile.id);
+        
+      if (error) throw error;
+      
+      await fetchProfiles();
+      toast.success(`Updated webhook URL for ${profile.display_name || profile.email}`);
+    } catch (err: any) {
+      console.error('Error updating webhook URL:', err);
+      toast.error('Failed to update webhook URL');
     }
   };
   
@@ -167,6 +186,7 @@ export const useAdminProfiles = () => {
     fetchProfiles,
     toggleAdminStatus,
     updateWebhookLimit,
+    updateWebhookUrl,
     toggleAIInsightsVisibility
   };
 };

@@ -17,7 +17,6 @@ interface WebhookLog {
   response_payload: any;
   status: string;
   user_id: string;
-  user_email?: string;
 }
 
 const WebhookLogViewer: React.FC = () => {
@@ -42,19 +41,18 @@ const WebhookLogViewer: React.FC = () => {
       if (data && data.length > 0) {
         const userIds = [...new Set(data.map(log => log.user_id))];
         
-        for (const userId of userIds) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("id, email, display_name")
-            .eq("id", userId)
-            .single();
-            
-          if (profile) {
-            setUserEmailMap(prev => ({
-              ...prev, 
-              [userId]: profile.email || profile.display_name || userId.substring(0, 8)
-            }));
-          }
+        const { data: profiles, error: profileError } = await supabase
+          .from("profiles")
+          .select("id, email, display_name")
+          .in("id", userIds);
+          
+        if (!profileError && profiles) {
+          const emailMap: Record<string, string> = {};
+          profiles.forEach(profile => {
+            emailMap[profile.id] = profile.email || profile.display_name || profile.id.substring(0, 8);
+          });
+          
+          setUserEmailMap(emailMap);
         }
       }
     } catch (error) {
@@ -87,11 +85,11 @@ const WebhookLogViewer: React.FC = () => {
   };
   
   return (
-    <Card className="overflow-hidden shadow-sm border border-border">
+    <Card>
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-[#ff7f50]" />
+            <FileText className="h-5 w-5" />
             <span>Webhook Logs</span>
           </div>
           <div className="flex gap-2">
@@ -107,6 +105,7 @@ const WebhookLogViewer: React.FC = () => {
               variant="outline" 
               size="sm"
               onClick={exportLogs}
+              disabled={logs.length === 0}
             >
               <Download className="h-4 w-4 mr-1" />
               Export
@@ -120,7 +119,7 @@ const WebhookLogViewer: React.FC = () => {
       <CardContent>
         {isLoading ? (
           <div className="flex justify-center items-center py-8">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#ff7f50] border-t-transparent"></div>
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
             <span className="ml-3">Loading logs...</span>
           </div>
         ) : logs.length > 0 ? (

@@ -7,43 +7,22 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Webhook, Calendar, TestTube, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { 
   WebhookConfig, 
   fetchWebhookConfig, 
   updateWebhookConfig, 
-  testWebhook,
-  generateDefaultTestPayload
+  testWebhook 
 } from "@/services/webhookService";
 
-interface WebhookSettingsProps {
-  onUpdate?: () => void;
-}
-
-const DEFAULT_TEST_PAYLOAD = `{
-  "account_id": "12345",
-  "user_id": "67890",
-  "email": "user@example.com",
-  "unit": "kg",
-  "goal_weight": 75.0,
-  "goal_days": 30,
-  "entries": {
-    "weight": [78.0, 75.6, 77.0],
-    "notes": ["", "Ate dinner out at a buffet", "Ate pizza today"],
-    "dates": ["2025-05-01", "2025-05-02", "2025-05-03"]
-  }
-}`;
-
-const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
+const WebhookSettings: React.FC = () => {
   const [webhookConfig, setWebhookConfig] = useState<WebhookConfig | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isTesting, setIsTesting] = useState(false);
   const [testResponse, setTestResponse] = useState<any | null>(null);
-  const [testPayload, setTestPayload] = useState<string>(DEFAULT_TEST_PAYLOAD);
+  const [testPayload, setTestPayload] = useState<string>("");
 
   useEffect(() => {
     const loadConfig = async () => {
@@ -51,6 +30,16 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
         setIsLoading(true);
         const config = await fetchWebhookConfig();
         setWebhookConfig(config);
+        
+        // Set default test payload
+        setTestPayload(JSON.stringify({
+          user_id: "test-user",
+          unit: "kg",
+          entries: {
+            weight: [80.5, 79.8, 79.2],
+            dates: ["2025-05-01", "2025-05-02", "2025-05-03"]
+          }
+        }, null, 2));
       } catch (error) {
         console.error("Error fetching webhook config:", error);
         toast.error("Failed to load webhook configuration");
@@ -68,15 +57,11 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
     try {
       setIsSaving(true);
       
-      const result = await updateWebhookConfig(webhookConfig);
-      
-      if (!result) throw new Error("Failed to save webhook configuration");
-      
+      await updateWebhookConfig(webhookConfig);
       toast.success("Webhook configuration saved successfully");
-      if (onUpdate) onUpdate();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving webhook config:", error);
-      toast.error(`Failed to save webhook configuration: ${(error as Error).message}`);
+      toast.error(`Failed to save webhook configuration: ${error.message}`);
     } finally {
       setIsSaving(false);
     }
@@ -100,44 +85,25 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
       const response = await testWebhook(webhookConfig.url, payloadObj);
       setTestResponse(response);
       toast.success("Webhook test completed successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error testing webhook:", error);
-      toast.error(`Failed to test webhook: ${(error as Error).message}`);
+      toast.error(`Failed to test webhook: ${error.message}`);
     } finally {
       setIsTesting(false);
     }
   };
 
-  const generateMockResponse = () => {
-    const mockInsights = [
-      "Weight Trend Summary:",
-      "- Your weight has shown a general downward trend over the last 3 days (from 78.0 kg to 77.0 kg), which is a great step toward your goal of 75.0 kg in 30 days.",
-      "- Despite a slight fluctuation on 2025-05-02 (75.6 kg), your consistency is commendable.",
-      "Dietary Insights:",
-      "- On 2025-05-02, dining out at a buffet may have influenced the weight drop; monitor portion sizes in such settings.",
-      "- On 2025-05-03, consuming pizza could impact progress; consider balancing with lighter meals or increased activity."
-    ];
-    
-    setTestResponse({
-      status: "success",
-      message: "Webhook test successful",
-      timestamp: new Date().toISOString(),
-      insights: mockInsights
-    });
-  };
-
   if (isLoading || !webhookConfig) {
     return (
-      <Card className="overflow-hidden shadow-sm border border-[#ff7f50]/5">
-        <div className="h-1 bg-[#ff7f50]"></div>
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <Webhook className="h-5 w-5 text-[#ff7f50]" />
-            AI Insights Webhook Configuration
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Webhook className="h-5 w-5" />
+            Webhook Configuration
           </CardTitle>
         </CardHeader>
         <CardContent className="flex justify-center items-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#ff7f50] border-t-transparent"></div>
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
           <span className="ml-3">Loading webhook configuration...</span>
         </CardContent>
       </Card>
@@ -145,15 +111,14 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
   }
 
   return (
-    <Card className="overflow-hidden shadow-sm border border-[#ff7f50]/5">
-      <div className="h-1 bg-[#ff7f50]"></div>
-      <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2 text-xl">
-          <Webhook className="h-5 w-5 text-[#ff7f50]" />
-          AI Insights Webhook Configuration
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Webhook className="h-5 w-5" />
+          Webhook Configuration
         </CardTitle>
         <CardDescription>
-          Configure the webhook that will process AI insights requests and receive data from Weight Wise.
+          Configure the webhook that processes AI insights requests
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -202,46 +167,6 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
                 <Calendar className="h-4 w-4 mr-1" />
                 90d
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setWebhookConfig({...webhookConfig, days: 365})}
-              >
-                <Calendar className="h-4 w-4 mr-1" />
-                1y
-              </Button>
-            </div>
-          </div>
-        </div>
-        
-        <div className="space-y-2">
-          <Label>Account & User Data</Label>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="includeAccountFields" 
-                checked={webhookConfig.include_account_fields}
-                onCheckedChange={(checked) => 
-                  setWebhookConfig({
-                    ...webhookConfig, 
-                    include_account_fields: !!checked
-                  })
-                }
-              />
-              <Label htmlFor="includeAccountFields">Include Account Fields</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="includeUserFields" 
-                checked={webhookConfig.include_user_fields}
-                onCheckedChange={(checked) => 
-                  setWebhookConfig({
-                    ...webhookConfig, 
-                    include_user_fields: !!checked
-                  })
-                }
-              />
-              <Label htmlFor="includeUserFields">Include User Fields</Label>
             </div>
           </div>
         </div>
@@ -301,47 +226,27 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
               />
               <Label htmlFor="activityData">Activity Data</Label>
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="detailedAnalysis" 
-                checked={webhookConfig.fields.detailed_analysis}
-                onCheckedChange={(checked) => 
-                  setWebhookConfig({
-                    ...webhookConfig, 
-                    fields: {...webhookConfig.fields, detailed_analysis: !!checked}
-                  })
-                }
-              />
-              <Label htmlFor="detailedAnalysis">Detailed Analysis</Label>
-            </div>
           </div>
         </div>
         
         <div className="pt-4 flex flex-col md:flex-row gap-3">
           <Button 
-            className="w-full md:w-auto bg-[#ff7f50] hover:bg-[#ff6347] text-white"
             onClick={saveWebhookConfig}
             disabled={isSaving}
+            className="w-full md:w-auto"
           >
             {isSaving ? (
               <>
                 <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
                 Saving...
               </>
-            ) : "Save Webhook Configuration"}
-          </Button>
-          <Button 
-            className="w-full md:w-auto"
-            variant="outline"
-            onClick={() => setWebhookConfig({...webhookConfig, url: "http://n8n.cozyapp.uno:5678/webhook-test/2c26d7e3-525a-4080-9282-21b6af883cf2"})}
-          >
-            Reset to Default URL
+            ) : "Save Configuration"}
           </Button>
         </div>
         
         <div className="border-t border-border pt-6 mt-4">
           <h3 className="text-lg font-medium mb-3 flex items-center">
-            <TestTube className="h-5 w-5 mr-2 text-[#ff7f50]" />
+            <TestTube className="h-5 w-5 mr-2" />
             Test Webhook
           </h3>
           
@@ -350,81 +255,45 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ onUpdate }) => {
               <Label htmlFor="testPayload" className="mb-2 block">Test Payload (JSON)</Label>
               <textarea
                 id="testPayload"
-                className="min-h-[180px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground"
+                className="min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground"
                 value={testPayload}
                 onChange={(e) => setTestPayload(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                This is an example payload that will be sent to your webhook. Edit as needed.
-              </p>
             </div>
             
-            <div className="flex justify-between">
-              <Button 
-                onClick={handleTestWebhook}
-                disabled={isTesting}
-                className="bg-[#ff7f50] hover:bg-[#ff6347] text-white"
-                variant="default"
-              >
-                {isTesting ? (
-                  <>
-                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
-                    Testing...
-                  </>
-                ) : (
-                  <>
-                    <TestTube className="h-4 w-4 mr-2" />
-                    Test Webhook
-                  </>
-                )}
-              </Button>
-              
-              <Button
-                onClick={generateMockResponse}
-                variant="outline"
-                disabled={isTesting}
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Generate Mock Response
-              </Button>
-            </div>
+            <Button 
+              onClick={handleTestWebhook}
+              disabled={isTesting}
+              variant="outline"
+            >
+              {isTesting ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                  Testing...
+                </>
+              ) : (
+                <>
+                  <TestTube className="h-4 w-4 mr-2" />
+                  Test Webhook
+                </>
+              )}
+            </Button>
             
             {testResponse && (
-              <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="response">
-                  <AccordionTrigger className="text-sm font-medium">
+              <Alert className="mt-4">
+                <AlertDescription>
+                  <div className="space-y-2">
                     <div className="flex items-center">
-                      <Badge className="mr-2 bg-green-100 text-green-800 hover:bg-green-200">
+                      <Badge className="mr-2 bg-green-100 text-green-800">
                         Response Received
                       </Badge>
-                      <span>View Response Details</span>
                     </div>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <Alert className="bg-muted/50">
-                      <AlertDescription>
-                        <div className="space-y-4">
-                          {testResponse.insights ? (
-                            <div className="bg-background p-4 rounded-md border text-sm">
-                              {testResponse.insights.map((line: string, index: number) => (
-                                <div key={index} className={line.startsWith('-') ? 'pl-4' : 'font-bold mt-2'}>
-                                  {line}
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <ScrollArea className="h-[200px]">
-                              <pre className="text-xs overflow-auto p-2">
-                                {JSON.stringify(testResponse, null, 2)}
-                              </pre>
-                            </ScrollArea>
-                          )}
-                        </div>
-                      </AlertDescription>
-                    </Alert>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
+                    <pre className="text-xs overflow-auto p-2 bg-muted rounded-md max-h-[200px]">
+                      {JSON.stringify(testResponse, null, 2)}
+                    </pre>
+                  </div>
+                </AlertDescription>
+              </Alert>
             )}
           </div>
         </div>

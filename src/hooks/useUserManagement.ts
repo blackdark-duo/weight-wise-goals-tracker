@@ -5,56 +5,12 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { Profile } from "./useAdminProfiles";
 
-// Since we're importing the Profile interface from useAdminProfiles.ts,
-// we don't need to redefine it here. The TypeScript error is happening
-// because the Profile interface imported from useAdminProfiles lacks
-// some properties that are being used in this file.
-// The proper solution is to update the Profile interface in useAdminProfiles.ts
-
 export const useUserManagement = (profiles: Profile[], fetchProfiles: () => Promise<void>) => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [emailSubject, setEmailSubject] = useState("");
   const [emailContent, setEmailContent] = useState("");
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [isSendingReset, setIsSendingReset] = useState(false);
-
-  const toggleAdminStatus = async (profile: Profile) => {
-    try {
-      const newStatus = !profile.is_admin;
-      
-      const { error } = await supabase
-        .from("profiles")
-        .update({ is_admin: newStatus })
-        .eq("id", profile.id);
-      
-      if (error) throw error;
-      
-      await fetchProfiles();
-      
-      toast.success(`${profile.display_name} is now ${newStatus ? "an admin" : "a regular user"}`);
-    } catch (error) {
-      console.error("Error updating admin status:", error);
-      toast.error("Failed to update user privileges");
-    }
-  };
-
-  const updateWebhookLimit = async (profile: Profile, limit: number) => {
-    try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ webhook_limit: limit })
-        .eq("id", profile.id);
-      
-      if (error) throw error;
-      
-      await fetchProfiles();
-      
-      toast.success(`Updated webhook limit for ${profile.display_name}`);
-    } catch (error) {
-      console.error("Error updating webhook limit:", error);
-      toast.error("Failed to update webhook limit");
-    }
-  };
 
   const sendPasswordReset = async (userId: string) => {
     try {
@@ -72,7 +28,7 @@ export const useUserManagement = (profiles: Profile[], fetchProfiles: () => Prom
       if (error) throw error;
       
       toast.success(`Password reset email sent to ${user.email}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error sending password reset:", error);
       toast.error("Failed to send password reset email");
     } finally {
@@ -100,7 +56,7 @@ export const useUserManagement = (profiles: Profile[], fetchProfiles: () => Prom
       
       setEmailSubject("");
       setEmailContent("");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error sending email:", error);
       toast.error("Failed to send email");
     } finally {
@@ -116,7 +72,7 @@ export const useUserManagement = (profiles: Profile[], fetchProfiles: () => Prom
         // Data rows
         ...profiles.map(p => [
           p.id,
-          p.display_name,
+          p.display_name || "",
           p.email || "",
           p.is_admin ? "Yes" : "No",
           p.preferred_unit || "",
@@ -142,7 +98,7 @@ export const useUserManagement = (profiles: Profile[], fetchProfiles: () => Prom
       URL.revokeObjectURL(href);
       
       toast.success("User data exported successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error exporting user data:", error);
       toast.error("Failed to export user data");
     }
@@ -157,8 +113,6 @@ export const useUserManagement = (profiles: Profile[], fetchProfiles: () => Prom
     setEmailContent,
     isSendingEmail,
     isSendingReset,
-    toggleAdminStatus,
-    updateWebhookLimit,
     sendPasswordReset,
     sendEmail,
     exportUserData,

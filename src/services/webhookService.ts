@@ -125,17 +125,17 @@ export const generateDefaultTestPayload = (overrides = {}): any => {
  */
 export const fetchWebhookConfig = async (): Promise<WebhookConfig> => {
   try {
-    const { data: config, error } = await supabase
-      .functions.invoke('get_webhook_config', {
-        method: 'GET',
-      });
+    const { data, error } = await supabase
+      .from('webhook_config')
+      .select('*')
+      .single();
 
     if (error) {
       console.error("Error fetching webhook config:", error);
       throw new Error("Failed to fetch webhook configuration");
     }
 
-    if (!config || !config.data) {
+    if (!data) {
       // Return default config if none exists
       return {
         url: DEFAULT_WEBHOOK_URL,
@@ -152,7 +152,7 @@ export const fetchWebhookConfig = async (): Promise<WebhookConfig> => {
       };
     }
 
-    return config.data;
+    return data as WebhookConfig;
   } catch (error) {
     console.error("Error in fetchWebhookConfig:", error);
     // Return default config in case of error
@@ -177,21 +177,20 @@ export const fetchWebhookConfig = async (): Promise<WebhookConfig> => {
  */
 export const updateWebhookConfig = async (config: WebhookConfig): Promise<boolean> => {
   try {
-    const { data, error } = await supabase
-      .functions.invoke('update_webhook_config', {
-        method: 'POST',
-        body: { 
-          url: config.url,
-          days: config.days,
-          fields: config.fields,
-          include_account_fields: config.include_account_fields,
-          include_user_fields: config.include_user_fields
-        }
-      });
+    const { error } = await supabase
+      .from('webhook_config')
+      .update({ 
+        url: config.url,
+        days: config.days,
+        fields: config.fields,
+        include_account_fields: config.include_account_fields,
+        include_user_fields: config.include_user_fields
+      })
+      .eq('id', 1);
 
     if (error) {
       console.error("Error updating webhook config:", error);
-      throw new Error("Failed to update webhook configuration");
+      throw new Error(`Failed to update webhook configuration: ${error.message}`);
     }
 
     return true;

@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders, authenticateUser, checkWebhookLimit } from "./auth.ts";
 import { 
@@ -32,8 +31,9 @@ serve(async (req) => {
       throw new Error('Default webhook URL not configured by admin');
     }
 
-    // Always use the admin-configured URL for consistency and security
-    const webhookUrl = webhookConfig.url;
+    // If user has their own webhook URL configured, use that instead
+    // Otherwise fallback to the admin-configured URL
+    const webhookUrl = profile.webhook_url || webhookConfig.url;
     
     // Get data for the user
     const daysToFetch = webhookConfig.days || 30;
