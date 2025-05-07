@@ -42,7 +42,7 @@ const AccountActions: React.FC<AccountActionsProps> = ({ userId }) => {
         .update({
           scheduled_for_deletion: true,
           deletion_date: deletionDate.toISOString()
-        } as any)
+        })
         .eq('id', userId);
       
       if (error) throw error;

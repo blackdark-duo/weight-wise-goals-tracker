@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { AlertCircle, Loader2, CheckCircle, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 const SignUp = () => {
   const [email, setEmail] = useState("");
@@ -93,19 +92,6 @@ const SignUp = () => {
 
     try {
       // Server-side validation via Supabase
-      // Check if email already exists
-      const { data: existingUser, error: checkError } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('email', email)
-        .maybeSingle();
-      
-      if (existingUser) {
-        setError("This email is already registered. Try signing in instead.");
-        setIsLoading(false);
-        return;
-      }
-      
       // Additional server-side validation
       const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
       if (!emailRegex.test(email)) {
@@ -120,7 +106,7 @@ const SignUp = () => {
         return;
       }
 
-      // Sign up with Supabase auth
+      // Sign up with Supabase auth - skip email verification
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -128,24 +114,48 @@ const SignUp = () => {
           data: {
             name: displayName
           },
-          // Skip email verification
           emailRedirectTo: window.location.origin + "/dashboard"
         }
       });
 
       if (error) {
+        if (error.message.includes('already')) {
+          // User may already exist but not confirmed
+          // Try to sign them in directly
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email,
+            password
+          });
+          
+          if (signInError) {
+            throw signInError;
+          } else {
+            toast.success("Signed in to existing account!");
+            navigate("/dashboard");
+            return;
+          }
+        }
         throw error;
       }
 
       if (data.user) {
-        // Automatically sign in the user after registration
+        // Automatically sign in after registration
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password
         });
         
-        if (signInError) {
-          throw signInError;
+        if (signInError) throw signInError;
+        
+        // Send welcome/confirmation email but don't require verification
+        try {
+          await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: window.location.origin + "/reset-password"
+          });
+          console.log("Password reset/welcome email sent");
+        } catch (emailErr) {
+          console.error("Failed to send welcome email:", emailErr);
+          // Non-blocking error, continue with signup
         }
         
         toast.success("Account created successfully! Welcome to Weight Wise.");

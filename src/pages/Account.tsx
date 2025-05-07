@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Cog, Settings } from "lucide-react";
+import { User, Cog, Settings, Key } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Toaster } from "sonner";
@@ -11,6 +11,7 @@ import MobileNavigation from "@/components/MobileNavigation";
 import ProfileSection from "@/components/account/ProfileSection";
 import PreferencesSection from "@/components/account/PreferencesSection";
 import AccountActions from "@/components/account/AccountActions";
+import ChangePassword from "@/components/account/ChangePassword";
 
 const Account = () => {
   const [userName, setUserName] = useState<string | null>(null);
@@ -89,6 +90,10 @@ const Account = () => {
                   <Settings className="h-4 w-4" />
                   Preferences
                 </TabsTrigger>
+                <TabsTrigger value="security" className="flex gap-2 items-center">
+                  <Key className="h-4 w-4" />
+                  Security
+                </TabsTrigger>
               </TabsList>
             </div>
 
@@ -100,8 +105,6 @@ const Account = () => {
                 setIsLoading={setIsLoading}
                 updateProfile={updateProfile}
               />
-              
-              <AccountActions userId={userId} />
             </TabsContent>
 
             <TabsContent value="preferences" className="space-y-6">
@@ -112,6 +115,11 @@ const Account = () => {
                 setIsLoading={setIsLoading}
                 updateProfile={updateProfile}
               />
+            </TabsContent>
+            
+            <TabsContent value="security" className="space-y-6">
+              <ChangePassword userId={userId} />
+              <AccountActions userId={userId} />
             </TabsContent>
           </Tabs>
         </div>

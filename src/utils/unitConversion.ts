@@ -39,7 +39,7 @@ export function convertTimezone(
   
   // If from and to timezones are the same, just return the formatted date
   if (fromTimezone === toTimezone) {
-    return date.toLocaleString('en-US', { timeZone: 'UTC' });
+    return date.toLocaleString('en-US', { timeZone: toTimezone });
   }
   
   try {

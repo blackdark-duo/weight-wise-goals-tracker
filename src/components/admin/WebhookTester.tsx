@@ -14,7 +14,6 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Webhook, Play, User } from "lucide-react";
 import { Profile } from "@/hooks/useAdminProfiles";
-import { Json } from "@/integrations/supabase/types";
 
 interface WebhookTesterProps {
   profiles: Profile[];
@@ -35,7 +34,7 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
   const [requestPayload, setRequestPayload] = useState<any | null>(null);
   const [response, setResponse] = useState<string | null>(null);
 
-  const parseWebhookFields = (fieldsJson: Json | null): WebhookFields => {
+  const parseWebhookFields = (fieldsJson: any): WebhookFields => {
     // Default values
     const defaultFields = {
       user_data: true,
@@ -47,16 +46,31 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
     
     if (!fieldsJson) return defaultFields;
     
-    if (typeof fieldsJson === 'object' && fieldsJson !== null && !Array.isArray(fieldsJson)) {
-      // Create a new object with the right type
-      const parsedFields: WebhookFields = {
-        user_data: Boolean(fieldsJson.user_data ?? true),
-        weight_data: Boolean(fieldsJson.weight_data ?? true),
-        goal_data: Boolean(fieldsJson.goal_data ?? true),
-        activity_data: Boolean(fieldsJson.activity_data ?? false),
-        detailed_analysis: Boolean(fieldsJson.detailed_analysis ?? false)
-      };
-      return parsedFields;
+    try {
+      // If it's a string, try to parse it
+      if (typeof fieldsJson === 'string') {
+        const parsed = JSON.parse(fieldsJson);
+        return {
+          user_data: Boolean(parsed.user_data ?? true),
+          weight_data: Boolean(parsed.weight_data ?? true),
+          goal_data: Boolean(parsed.goal_data ?? true),
+          activity_data: Boolean(parsed.activity_data ?? false),
+          detailed_analysis: Boolean(parsed.detailed_analysis ?? false)
+        };
+      }
+      
+      // If it's already an object
+      if (typeof fieldsJson === 'object' && fieldsJson !== null && !Array.isArray(fieldsJson)) {
+        return {
+          user_data: Boolean(fieldsJson.user_data ?? true),
+          weight_data: Boolean(fieldsJson.weight_data ?? true),
+          goal_data: Boolean(fieldsJson.goal_data ?? true),
+          activity_data: Boolean(fieldsJson.activity_data ?? false),
+          detailed_analysis: Boolean(fieldsJson.detailed_analysis ?? false)
+        };
+      }
+    } catch (error) {
+      console.error("Error parsing webhook fields:", error);
     }
     
     return defaultFields;
@@ -114,11 +128,8 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
         
       if (goalsError) throw new Error("Failed to fetch goals");
 
-      // Parse fields from JSON to proper type
-      const fields = parseWebhookFields(webhookConfig.fields);
-      
-      // Format data for webhook
-      const payload: any = {
+      // Format data for webhook - new format as requested
+      const payload = {
         user_id: selectedUserId,
         displayName: profileData?.display_name || "",
         email: profileData?.email || "",
@@ -130,8 +141,8 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
         }
       };
       
-      // Add goal data if available and if configured to include goal data
-      if (fields.goal_data && goals && goals.length > 0) {
+      // Add goal data if available
+      if (goals && goals.length > 0) {
         payload.goal_weight = goals[0].target_weight;
         
         if (goals[0].target_date) {

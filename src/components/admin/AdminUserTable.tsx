@@ -23,22 +23,15 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Pencil, Calendar, Key } from "lucide-react";
+import { User, Pencil, Calendar, Key, Mail } from "lucide-react";
+import { Profile } from "@/hooks/useAdminProfiles";
 
-interface Profile {
-  id: string;
-  email: string | null;
-  display_name: string | null;
-  is_admin: boolean;
-  created_at: string;
-  webhook_limit: number;
-  webhook_count: number;
-  last_webhook_date: string | null;
-  webhook_url: string | null;
-  show_ai_insights: boolean;
+interface AdminUserTableProps {
+  onSendEmail?: (userId: string) => void;
+  onSendPasswordReset?: (userId: string, email: string) => void;
 }
 
-const AdminUserTable = () => {
+const AdminUserTable: React.FC<AdminUserTableProps> = ({ onSendEmail, onSendPasswordReset }) => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
@@ -77,6 +70,12 @@ const AdminUserTable = () => {
           last_webhook_date: (profile as any).last_webhook_date || null,
           webhook_url: (profile as any).webhook_url || null,
           show_ai_insights: (profile as any).show_ai_insights !== false, // default to true
+          is_suspended: (profile as any).is_suspended || false,
+          preferred_unit: (profile as any).preferred_unit || 'kg',
+          timezone: (profile as any).timezone || 'UTC',
+          updated_at: (profile as any).updated_at || null,
+          scheduled_for_deletion: (profile as any).scheduled_for_deletion || false,
+          deletion_date: (profile as any).deletion_date || null
         };
       });
       
@@ -112,7 +111,7 @@ const AdminUserTable = () => {
 
   const openWebhookLimitDialog = (profile: Profile) => {
     setSelectedUser(profile);
-    setNewWebhookLimit(profile.webhook_limit);
+    setNewWebhookLimit(profile.webhook_limit || 5);
     setIsWebhookLimitDialogOpen(true);
   };
 
@@ -148,6 +147,18 @@ const AdminUserTable = () => {
     } catch (error) {
       console.error("Error sending password reset:", error);
       toast.error("Failed to send password reset email");
+    }
+  };
+
+  const handleSendEmail = (userId: string) => {
+    if (onSendEmail) {
+      onSendEmail(userId);
+    } else {
+      // Default behavior if no prop provided
+      const user = profiles.find(p => p.id === userId);
+      if (user && user.email) {
+        toast.info(`Would send email to ${user.email}`);
+      }
     }
   };
 
@@ -189,13 +200,13 @@ const AdminUserTable = () => {
                       <div className="flex items-center gap-1">
                         <Calendar className="h-3 w-3 text-muted-foreground" />
                         <span className="text-xs">
-                          {new Date(profile.created_at).toLocaleDateString()}
+                          {profile.created_at ? new Date(profile.created_at).toLocaleDateString() : 'Unknown'}
                         </span>
                       </div>
                     </TableCell>
                     <TableCell>
                       <Checkbox 
-                        checked={profile.is_admin}
+                        checked={profile.is_admin || false}
                         onCheckedChange={() => toggleAdminStatus(profile)}
                       />
                     </TableCell>
@@ -206,13 +217,13 @@ const AdminUserTable = () => {
                         onClick={() => openWebhookLimitDialog(profile)}
                         className="flex items-center gap-1"
                       >
-                        {profile.webhook_limit}
+                        {profile.webhook_limit || 5}
                         <Pencil className="h-3 w-3 ml-1" />
                       </Button>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={profile.webhook_count >= profile.webhook_limit ? "destructive" : "outline"}>
-                        {profile.webhook_count} / {profile.webhook_limit}
+                      <Badge variant={(profile.webhook_count || 0) >= (profile.webhook_limit || 5) ? "destructive" : "outline"}>
+                        {profile.webhook_count || 0} / {profile.webhook_limit || 5}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -233,6 +244,14 @@ const AdminUserTable = () => {
                         >
                           <Key className="h-3 w-3 mr-1" />
                           Reset
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSendEmail(profile.id)}
+                        >
+                          <Mail className="h-3 w-3 mr-1" />
+                          Email
                         </Button>
                       </div>
                     </TableCell>

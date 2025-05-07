@@ -18,6 +18,8 @@ export interface Profile {
   preferred_unit?: string;
   timezone?: string;
   is_suspended?: boolean;
+  scheduled_for_deletion?: boolean;
+  deletion_date?: string;
 }
 
 export const useAdminProfiles = () => {
@@ -56,35 +58,24 @@ export const useAdminProfiles = () => {
         const profile = profileData?.find(p => p.id === authUser.id) || {};
         
         // Create a properly typed profile with safe property access
-        const typedProfile: Profile = {
+        return {
           id: authUser.id,
           email: authUser.email,
           created_at: authUser.created_at,
-        };
-        
-        // Safely add properties from profile object
-        if (profile) {
-          const typedProfile = {
-            id: authUser.id,
-            email: authUser.email,
-            created_at: authUser.created_at,
-            display_name: (profile as any).display_name,
-            preferred_unit: (profile as any).preferred_unit,
-            timezone: (profile as any).timezone,
-            updated_at: (profile as any).updated_at,
-            webhook_limit: (profile as any).webhook_limit,
-            webhook_count: (profile as any).webhook_count,
-            last_webhook_date: (profile as any).last_webhook_date,
-            webhook_url: (profile as any).webhook_url,
-            is_admin: (profile as any).is_admin,
-            is_suspended: (profile as any).is_suspended,
-            show_ai_insights: (profile as any).show_ai_insights
-          };
-          
-          return typedProfile;
-        }
-        
-        return typedProfile;
+          display_name: profile.display_name,
+          preferred_unit: profile.preferred_unit,
+          timezone: profile.timezone,
+          updated_at: profile.updated_at,
+          webhook_limit: profile.webhook_limit,
+          webhook_count: profile.webhook_count,
+          last_webhook_date: profile.last_webhook_date,
+          webhook_url: profile.webhook_url,
+          is_admin: profile.is_admin,
+          is_suspended: profile.is_suspended,
+          show_ai_insights: profile.show_ai_insights,
+          scheduled_for_deletion: profile.scheduled_for_deletion,
+          deletion_date: profile.deletion_date
+        } as Profile;
       });
       
       setProfiles(combinedProfiles);
