@@ -15,7 +15,6 @@ import WeightChart from "@/components/dashboard/WeightChart";
 import RecentEntries from "@/components/dashboard/RecentEntries";
 import QuickActions from "@/components/dashboard/QuickActions";
 import { Badge } from "@/components/ui/badge";
-import NotesInput from "@/components/notes/NotesInput";
 
 interface WeightEntry {
   id: string;
@@ -232,15 +231,7 @@ const Dashboard = () => {
         <WeightEntryForm onEntryAdded={handleEntryAdded} preferredUnit={preferredUnit} />
         
         {showAIInsights && (
-          <div className="relative">
-            <div className="flex items-center gap-2 mb-2">
-              <h2 className="text-lg font-semibold">AI Insights</h2>
-              <Badge variant="outline" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-300">
-                Coming Soon
-              </Badge>
-            </div>
-            <AIInsights userId={userId} />
-          </div>
+          <AIInsights userId={userId} />
         )}
 
         {chartData.length > 1 && (
@@ -262,12 +253,6 @@ const Dashboard = () => {
             <RecentEntries entries={recentEntries} />
           </div>
           
-          <div className="md:col-span-2 lg:col-span-4">
-            <div className="bg-white p-4 rounded-lg shadow-sm border">
-              <NotesInput userId={userId || undefined} maxLength={1000} />
-            </div>
-          </div>
-
           <div className="md:col-span-2 lg:col-span-4">
             <QuickActions />
           </div>

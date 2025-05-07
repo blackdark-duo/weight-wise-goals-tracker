@@ -4,19 +4,21 @@ import { Json } from "@/integrations/supabase/types";
 
 export const DEFAULT_WEBHOOK_URL = 'http://n8n.cozyapp.uno:5678/webhook-test/36e520c4-f7a4-4872-8e21-e469701eb68e';
 
+export interface WebhookFields {
+  user_data: boolean;
+  weight_data: boolean;
+  goal_data: boolean;
+  activity_data: boolean;
+  detailed_analysis: boolean;
+}
+
 export interface WebhookConfig {
   id?: number;
   url: string;
   days: number;
   include_account_fields: boolean;
   include_user_fields: boolean;
-  fields: {
-    user_data: boolean;
-    weight_data: boolean;
-    goal_data: boolean;
-    activity_data: boolean;
-    detailed_analysis: boolean;
-  };
+  fields: WebhookFields;
   include_goals?: boolean;
   include_weight_entries?: boolean;
   webhook_version?: string;
@@ -103,8 +105,8 @@ export const generateDefaultTestPayload = (overrides = {}): any => {
   return {
     timestamp: new Date().toISOString(),
     test_mode: true,
-    account_id: "test-user-id",
     user_id: "test-user-id",
+    displayName: "Test User",
     email: "test@example.com",
     unit: "kg",
     goal_weight: 75.0,
@@ -122,6 +124,33 @@ export const generateDefaultTestPayload = (overrides = {}): any => {
     },
     ...overrides
   };
+};
+
+/**
+ * Parse webhook fields from JSON
+ */
+export const parseWebhookFields = (fieldsJson: Json | null): WebhookFields => {
+  const defaultFields: WebhookFields = {
+    user_data: true,
+    weight_data: true,
+    goal_data: true,
+    activity_data: false,
+    detailed_analysis: false
+  };
+  
+  if (!fieldsJson) return defaultFields;
+  
+  if (typeof fieldsJson === 'object' && fieldsJson !== null && !Array.isArray(fieldsJson)) {
+    return {
+      user_data: Boolean(fieldsJson.user_data ?? true),
+      weight_data: Boolean(fieldsJson.weight_data ?? true),
+      goal_data: Boolean(fieldsJson.goal_data ?? true),
+      activity_data: Boolean(fieldsJson.activity_data ?? false),
+      detailed_analysis: Boolean(fieldsJson.detailed_analysis ?? false)
+    };
+  }
+  
+  return defaultFields;
 };
 
 /**
@@ -156,37 +185,17 @@ export const fetchWebhookConfig = async (): Promise<WebhookConfig> => {
       };
     }
 
-    // Transform the data to match our WebhookConfig interface
-    const fieldsFromJson = data.fields as Json;
-    let transformedFields;
+    // Parse fields from JSON
+    const fields = parseWebhookFields(data.fields);
     
-    if (typeof fieldsFromJson === 'object' && fieldsFromJson !== null && !Array.isArray(fieldsFromJson)) {
-      // JSON object type from database
-      transformedFields = {
-        user_data: Boolean(fieldsFromJson.user_data ?? true),
-        weight_data: Boolean(fieldsFromJson.weight_data ?? true),
-        goal_data: Boolean(fieldsFromJson.goal_data ?? true),
-        activity_data: Boolean(fieldsFromJson.activity_data ?? false),
-        detailed_analysis: Boolean(fieldsFromJson.detailed_analysis ?? false)
-      };
-    } else {
-      // Default fields if data is not in expected format
-      transformedFields = {
-        user_data: true,
-        weight_data: true,
-        goal_data: true,
-        activity_data: false,
-        detailed_analysis: false
-      };
-    }
-
+    // Return the complete config
     return {
       id: data.id,
       url: data.url || DEFAULT_WEBHOOK_URL,
       days: data.days || 30,
       include_account_fields: data.include_account_fields !== false,
       include_user_fields: data.include_user_fields !== false,
-      fields: transformedFields,
+      fields: fields,
       include_goals: data.include_goals,
       include_weight_entries: data.include_weight_entries,
       webhook_version: data.webhook_version

@@ -21,11 +21,46 @@ interface WebhookTesterProps {
   onRefreshUsers?: () => Promise<void>;
 }
 
+interface WebhookFields {
+  user_data: boolean;
+  weight_data: boolean;
+  goal_data: boolean;
+  activity_data: boolean;
+  detailed_analysis: boolean;
+}
+
 const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers }) => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [requestPayload, setRequestPayload] = useState<any | null>(null);
   const [response, setResponse] = useState<string | null>(null);
+
+  const parseWebhookFields = (fieldsJson: Json | null): WebhookFields => {
+    // Default values
+    const defaultFields = {
+      user_data: true,
+      weight_data: true,
+      goal_data: true,
+      activity_data: false,
+      detailed_analysis: false
+    };
+    
+    if (!fieldsJson) return defaultFields;
+    
+    if (typeof fieldsJson === 'object' && fieldsJson !== null && !Array.isArray(fieldsJson)) {
+      // Create a new object with the right type
+      const parsedFields: WebhookFields = {
+        user_data: Boolean(fieldsJson.user_data ?? true),
+        weight_data: Boolean(fieldsJson.weight_data ?? true),
+        goal_data: Boolean(fieldsJson.goal_data ?? true),
+        activity_data: Boolean(fieldsJson.activity_data ?? false),
+        detailed_analysis: Boolean(fieldsJson.detailed_analysis ?? false)
+      };
+      return parsedFields;
+    }
+    
+    return defaultFields;
+  };
 
   const fetchUserData = async () => {
     if (!selectedUserId) {
@@ -79,9 +114,14 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
         
       if (goalsError) throw new Error("Failed to fetch goals");
 
+      // Parse fields from JSON to proper type
+      const fields = parseWebhookFields(webhookConfig.fields);
+      
       // Format data for webhook
       const payload: any = {
         user_id: selectedUserId,
+        displayName: profileData?.display_name || "",
+        email: profileData?.email || "",
         unit: profileData?.preferred_unit || "kg",
         entries: {
           weight: entries ? entries.map(entry => entry.weight) : [],
@@ -89,14 +129,6 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
           dates: entries ? entries.map(entry => entry.date) : []
         }
       };
-      
-      // Add email if configured
-      if (webhookConfig.include_account_fields) {
-        payload.email = profileData?.email || "";
-      }
-      
-      // Parse fields from JSON
-      const fields = parseWebhookFields(webhookConfig.fields);
       
       // Add goal data if available and if configured to include goal data
       if (fields.goal_data && goals && goals.length > 0) {
@@ -120,34 +152,6 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
     }
   };
 
-  // Helper function to parse webhook fields from Json
-  const parseWebhookFields = (fieldsJson: Json): { 
-    user_data: boolean; 
-    weight_data: boolean; 
-    goal_data: boolean; 
-    activity_data: boolean; 
-    detailed_analysis: boolean; 
-  } => {
-    if (typeof fieldsJson === 'object' && fieldsJson !== null && !Array.isArray(fieldsJson)) {
-      return {
-        user_data: Boolean(fieldsJson.user_data ?? true),
-        weight_data: Boolean(fieldsJson.weight_data ?? true),
-        goal_data: Boolean(fieldsJson.goal_data ?? true),
-        activity_data: Boolean(fieldsJson.activity_data ?? false),
-        detailed_analysis: Boolean(fieldsJson.detailed_analysis ?? false)
-      };
-    }
-    
-    // Default values if fieldsJson is not in expected format
-    return {
-      user_data: true,
-      weight_data: true,
-      goal_data: true,
-      activity_data: false,
-      detailed_analysis: false
-    };
-  };
-
   const sendToWebhook = async () => {
     if (!requestPayload || !selectedUserId) {
       toast.error("Please fetch user data first");
@@ -156,24 +160,15 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
 
     setIsLoading(true);
     try {
-      // Get webhook URL
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("webhook_url")
-        .eq("id", selectedUserId)
-        .single();
-
-      if (profileError) throw new Error("Failed to fetch profile");
-
-      // Get admin webhook URL as fallback
+      // Get webhook URL from config (admin webhook)
       const { data: webhookConfig, error: configError } = await supabase
         .from('webhook_config')
         .select('url')
         .single();
 
       if (configError) throw new Error("Failed to fetch webhook configuration");
-
-      const webhookUrl = profileData.webhook_url || webhookConfig.url;
+      
+      const webhookUrl = webhookConfig.url;
       
       if (!webhookUrl) {
         throw new Error("No webhook URL configured");
@@ -243,6 +238,11 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
         .eq("id", selectedUserId);
         
       toast.success("Webhook request completed successfully");
+      
+      // Refresh users data if needed
+      if (onRefreshUsers) {
+        await onRefreshUsers();
+      }
     } catch (error: any) {
       console.error("Error sending to webhook:", error);
       toast.error(error.message || "Failed to send data to webhook");
@@ -338,9 +338,14 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
                 Webhook Response
               </Badge>
             </div>
-            <pre className="text-xs bg-muted p-2 rounded-md overflow-auto max-h-[200px]">
-              {response}
-            </pre>
+            <div className="bg-white p-2 rounded-md overflow-auto max-h-[300px] border">
+              <iframe
+                srcDoc={response}
+                className="w-full h-[200px] border-0"
+                title="Webhook Response"
+                sandbox="allow-scripts"
+              />
+            </div>
           </div>
         )}
       </CardContent>

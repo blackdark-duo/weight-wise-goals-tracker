@@ -1,128 +1,147 @@
 
-import React, { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Users, RefreshCw } from "lucide-react";
+import React, { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import MobileNavigation from "@/components/navigation/MobileNavigation";
 import { Toaster } from "sonner";
-import { Button } from "@/components/ui/button";
-import { useAdminAuth } from "@/hooks/useAdminAuth";
-import { useAdminProfiles } from "@/hooks/useAdminProfiles";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Admin, User, Server, History, Settings } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
-// Import admin components
-import AdminHeader from "@/components/admin/AdminHeader";
-import AdminLoader from "@/components/admin/AdminLoader";
-import AdminAuthMessage from "@/components/admin/AdminAuthMessage";
-import WebhookSettings from "@/components/admin/WebhookSettings";
-import WebhookLogViewer from "@/components/admin/WebhookLogViewer";
-import WebhookTester from "@/components/admin/WebhookTester";
-import UserTable from "@/components/admin/UserTable";
+import AdminUserTable from "@/components/admin/AdminUserTable";
+import AdminWebhookTester from "@/components/admin/AdminWebhookTester";
+import AdminWebhookLogs from "@/components/admin/AdminWebhookLogs";
+import AdminWebhookConfig from "@/components/admin/AdminWebhookConfig";
 
 const AdminPage = () => {
-  const { 
-    isLoading: isAuthLoading, 
-    isAuthenticated, 
-    isAdmin, 
-    error: authError 
-  } = useAdminAuth();
-  
-  const { 
-    profiles, 
-    fetchProfiles, 
-    toggleAdminStatus, 
-    updateWebhookLimit,
-    updateWebhookUrl,
-    toggleAIInsightsVisibility,
-    isLoading: isProfilesLoading
-  } = useAdminProfiles();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("users");
 
-  const [activeTab, setActiveTab] = useState("app-controls");
+  useEffect(() => {
+    checkAdminStatus();
+  }, []);
 
-  const handleRefreshUsers = async () => {
+  const checkAdminStatus = async () => {
     try {
-      toast.info("Refreshing user data...");
-      await fetchProfiles();
-      toast.success("User data refreshed successfully");
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        setIsAdmin(false);
+        setIsLoading(false);
+        return;
+      }
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single();
+        
+      if (error) throw error;
+      
+      setIsAdmin(data?.is_admin || false);
     } catch (error) {
-      console.error("Error refreshing users:", error);
-      toast.error("Failed to refresh user data");
+      console.error("Error checking admin status:", error);
+      toast.error("Failed to verify admin access");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  if (isAuthLoading) {
-    return <AdminLoader />;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-2">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+          <p>Verifying admin access...</p>
+        </div>
+      </div>
+    );
   }
-  
-  if (!isAuthenticated) {
-    return <AdminAuthMessage type="auth" />;
-  }
-  
+
   if (!isAdmin) {
-    return <AdminAuthMessage type="access" />;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="max-w-md w-full">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Admin className="h-5 w-5 text-destructive" />
+              Access Denied
+            </CardTitle>
+            <CardDescription>
+              You don't have admin privileges to access this page.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Please contact the system administrator if you believe this is an error.
+            </p>
+            <Button variant="default" onClick={() => window.location.href = "/"}>
+              Return to Dashboard
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
-  
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <AdminHeader error={authError} />
-          <Button 
-            onClick={handleRefreshUsers}
-            className="flex items-center gap-2"
-            disabled={isProfilesLoading}
-          >
-            <RefreshCw className={`h-4 w-4 ${isProfilesLoading ? 'animate-spin' : ''}`} />
-            Refresh User Data
-          </Button>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
+          <p className="text-muted-foreground">
+            Manage users, webhooks, and application settings.
+          </p>
         </div>
 
-        <Tabs 
-          defaultValue={activeTab} 
-          className="w-full"
-          onValueChange={(value) => setActiveTab(value)}
+        <Tabs
+          defaultValue={activeTab}
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-6"
         >
-          <TabsList className="mb-8">
-            <TabsTrigger value="app-controls" className="flex items-center">
-              <Settings className="mr-2 h-5 w-5" />
-              App Controls
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="users" className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              <span className="hidden sm:inline">User Management</span>
+              <span className="sm:hidden">Users</span>
             </TabsTrigger>
-            <TabsTrigger value="user-controls" className="flex items-center">
-              <Users className="mr-2 h-5 w-5" />
-              User Management
+            <TabsTrigger value="webhook-config" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              <span className="hidden sm:inline">Webhook Settings</span>
+              <span className="sm:hidden">Settings</span>
+            </TabsTrigger>
+            <TabsTrigger value="webhook-tester" className="flex items-center gap-2">
+              <Server className="h-4 w-4" />
+              <span className="hidden sm:inline">Webhook Tester</span>
+              <span className="sm:hidden">Test</span>
+            </TabsTrigger>
+            <TabsTrigger value="webhook-logs" className="flex items-center gap-2">
+              <History className="h-4 w-4" />
+              <span className="hidden sm:inline">Webhook Logs</span>
+              <span className="sm:hidden">Logs</span>
             </TabsTrigger>
           </TabsList>
-          
-          <TabsContent value="app-controls">
-            <div className="space-y-6">
-              <WebhookTester profiles={profiles} onRefreshUsers={handleRefreshUsers} />
-              <WebhookSettings />
-              <WebhookLogViewer />
-            </div>
+
+          <TabsContent value="users" className="space-y-4">
+            <AdminUserTable />
           </TabsContent>
-          
-          <TabsContent value="user-controls">
-            <div className="bg-card rounded-lg border p-6">
-              <div className="mb-4">
-                <h2 className="text-lg font-semibold flex items-center">
-                  <Users className="mr-2 h-5 w-5" />
-                  User Management
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Manage user accounts, permissions, and access controls.
-                </p>
-              </div>
-              
-              <UserTable 
-                profiles={profiles}
-                fetchProfiles={fetchProfiles}
-                toggleAdminStatus={toggleAdminStatus}
-                updateWebhookLimit={updateWebhookLimit}
-                updateWebhookUrl={updateWebhookUrl}
-                toggleAIInsightsVisibility={toggleAIInsightsVisibility}
-              />
-            </div>
+
+          <TabsContent value="webhook-config" className="space-y-4">
+            <AdminWebhookConfig />
+          </TabsContent>
+
+          <TabsContent value="webhook-tester" className="space-y-4">
+            <AdminWebhookTester />
+          </TabsContent>
+
+          <TabsContent value="webhook-logs" className="space-y-4">
+            <AdminWebhookLogs />
           </TabsContent>
         </Tabs>
       </div>

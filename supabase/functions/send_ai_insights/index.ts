@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders, authenticateUser, checkWebhookLimit } from "./auth.ts";
 import { 
@@ -31,18 +32,18 @@ serve(async (req) => {
       throw new Error('Default webhook URL not configured by admin');
     }
 
-    // If user has their own webhook URL configured, use that instead
-    // Otherwise fallback to the admin-configured URL
-    const webhookUrl = profile.webhook_url || webhookConfig.url;
+    // Always use the admin-configured URL (override user URL)
+    const webhookUrl = webhookConfig.url;
     
     // Get data for the user
     const daysToFetch = webhookConfig.days || 30;
     const { weightData, goalData } = await fetchUserData(supabaseClient, user.id, daysToFetch);
     
-    // Build payload
+    // Build payload with new format
     const payload = buildPayload(
       user.id, 
-      profile.email || user.email, 
+      profile.email || user.email,
+      profile.display_name,
       profile.preferred_unit, 
       weightData, 
       goalData
@@ -65,7 +66,7 @@ serve(async (req) => {
       throw new Error(`Webhook returned ${webhookResponse.status} ${webhookResponse.statusText}`);
     }
     
-    // Get plain text response
+    // Get HTML response
     const responseText = await webhookResponse.text();
     
     // Update webhook log with response
@@ -82,7 +83,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: responseText.substring(0, 1000) // Limit to 1000 characters
+        message: responseText // Return the full HTML response
       }),
       { 
         headers: { 

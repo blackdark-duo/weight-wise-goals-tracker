@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Webhook } from 'lucide-react';
-import { formatInsightsText } from '@/utils/insightsFormatter';
 
 interface AIInsightsProps {
   userId: string | null;
@@ -14,7 +13,7 @@ interface AIInsightsProps {
 
 const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [insights, setInsights] = useState<string | null>(null);
+  const [insightsHTML, setInsightsHTML] = useState<string | null>(null);
   const [webhookLimit, setWebhookLimit] = useState<number>(0);
   const [webhookCount, setWebhookCount] = useState<number>(0);
   const [lastWebhookDate, setLastWebhookDate] = useState<string | null>(null);
@@ -44,8 +43,55 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
         setLastWebhookDate(data.last_webhook_date);
         setWebhookUrl(data.webhook_url);
       }
+      
+      // Also check for recent responses
+      checkRecentInsights();
     } catch (err) {
       console.error('Error fetching user profile:', err);
+    }
+  };
+  
+  const checkRecentInsights = async () => {
+    if (!userId) return;
+    
+    try {
+      // Get the most recent webhook log for this user
+      const { data: recentLogs, error } = await supabase
+        .from('webhook_logs')
+        .select('response_payload, created_at')
+        .eq('user_id', userId)
+        .eq('status', 'success')
+        .order('created_at', { ascending: false })
+        .limit(1);
+      
+      if (error) throw error;
+      
+      // If there's a recent log within the last hour, use it
+      const oneHourAgo = new Date();
+      oneHourAgo.setHours(oneHourAgo.getHours() - 1);
+      
+      if (recentLogs && recentLogs.length > 0 && 
+          new Date(recentLogs[0].created_at) > oneHourAgo &&
+          recentLogs[0].response_payload) {
+        
+        // Use cached insights
+        let responseText = '';
+        const responsePayload = recentLogs[0].response_payload;
+        
+        if (typeof responsePayload === 'string') {
+          responseText = responsePayload;
+        } else if (responsePayload && typeof responsePayload === 'object') {
+          // If it's an object, convert to string
+          responseText = JSON.stringify(responsePayload);
+        } else {
+          // Fallback
+          responseText = String(responsePayload || '');
+        }
+        
+        setInsightsHTML(responseText);
+      }
+    } catch (err) {
+      console.error('Error checking recent insights:', err);
     }
   };
 
@@ -56,62 +102,24 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
     }
 
     setIsLoading(true);
-    setInsights(null);
+    setInsightsHTML(null);
     
     try {
-      // Get the most recent webhookLog entry for this user
-      const { data: recentLogs, error: logsError } = await supabase
-        .from('webhook_logs')
-        .select('response_payload, created_at')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(1);
+      // Request new insights from the edge function
+      const { data, error } = await supabase.functions.invoke('send_ai_insights', {
+        method: 'POST',
+      });
       
-      if (logsError) throw logsError;
+      if (error) throw error;
       
-      // If there's a recent log within the last hour, use it
-      const oneHourAgo = new Date();
-      oneHourAgo.setHours(oneHourAgo.getHours() - 1);
-      
-      if (recentLogs && recentLogs.length > 0 && 
-          new Date(recentLogs[0].created_at) > oneHourAgo &&
-          recentLogs[0].response_payload) {
-        // Use cached insights
-        let responseText = '';
+      if (data && data.message) {
+        setInsightsHTML(data.message);
         
-        // Handle different response_payload types
-        const responsePayload = recentLogs[0].response_payload;
-        if (typeof responsePayload === 'string') {
-          responseText = responsePayload;
-        } else if (typeof responsePayload === 'object' && responsePayload !== null) {
-          // If it's an object, convert to JSON string
-          responseText = JSON.stringify(responsePayload);
-        } else {
-          // Fallback for unexpected types
-          responseText = String(responsePayload);
-        }
-        
-        const formattedInsights = formatInsightsText(responseText);
-        setInsights(formattedInsights);
-        toast.info('Showing recent insights');
+        // Update webhook count in state
+        setWebhookCount(prev => prev + 1);
+        setLastWebhookDate(new Date().toISOString());
       } else {
-        // Request new insights from the edge function
-        const { data, error } = await supabase.functions.invoke('send_ai_insights', {
-          method: 'POST',
-        });
-        
-        if (error) throw error;
-        
-        if (data && data.message) {
-          const formattedInsights = formatInsightsText(data.message);
-          setInsights(formattedInsights);
-          
-          // Update webhook count in state
-          setWebhookCount(prev => prev + 1);
-          setLastWebhookDate(new Date().toISOString());
-        } else {
-          throw new Error('No insights returned');
-        }
+        throw new Error('No insights returned');
       }
     } catch (err: any) {
       console.error('Error fetching AI insights:', err);
@@ -132,6 +140,9 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
             <div className="flex items-center gap-2">
               <Webhook className="h-5 w-5 text-primary" />
               <h3 className="font-medium">AI Weight Analysis</h3>
+              <Badge variant="outline" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-300">
+                Beta
+              </Badge>
             </div>
             
             <div className="flex items-center gap-2">
@@ -142,7 +153,7 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
               <Button
                 size="sm"
                 onClick={fetchInsights}
-                disabled={isLoading || isLimitExceeded || !webhookUrl}
+                disabled={isLoading || isLimitExceeded}
               >
                 {isLoading ? (
                   <>
@@ -156,13 +167,7 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
             </div>
           </div>
           
-          {!webhookUrl && (
-            <div className="text-sm text-muted-foreground bg-muted/30 p-3 rounded">
-              <p>Please set up your webhook URL in your account settings to use AI insights.</p>
-            </div>
-          )}
-          
-          {webhookUrl && isLimitExceeded && (
+          {isLimitExceeded && (
             <div className="text-sm text-muted-foreground bg-muted/30 p-3 rounded">
               <p>You've reached your AI insights limit for today. 
                  {lastWebhookDate && 
@@ -171,9 +176,16 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
             </div>
           )}
           
-          {insights ? (
+          {insightsHTML ? (
             <div className="prose prose-sm max-w-none mt-2">
-              <div dangerouslySetInnerHTML={{ __html: insights }} />
+              <div className="bg-white rounded border border-gray-200 p-4">
+                <iframe 
+                  srcDoc={insightsHTML} 
+                  className="w-full min-h-[200px] border-0"
+                  title="AI Insights" 
+                  sandbox="allow-scripts"
+                />
+              </div>
             </div>
           ) : (
             <div className="text-sm text-muted-foreground">

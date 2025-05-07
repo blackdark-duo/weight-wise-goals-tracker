@@ -1,56 +1,100 @@
 
-import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-export async function fetchUserData(supabaseClient: SupabaseClient, userId: string, days: number) {
-  // Get data for the specified time range
-  const endDate = new Date();
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - days);
+// Fetch user data including weight entries and goals
+export async function fetchUserData(
+  supabaseClient: SupabaseClient,
+  userId: string,
+  daysToFetch: number
+) {
+  // Calculate date range
+  const today = new Date();
+  const pastDate = new Date();
+  pastDate.setDate(today.getDate() - daysToFetch);
+  const pastDateStr = pastDate.toISOString().split('T')[0];
   
-  // Get weight entries
-  const { data: weightData, error: weightError } = await supabaseClient
+  // Fetch weight entries
+  const { data: weightEntries, error: entriesError } = await supabaseClient
     .from('weight_entries')
     .select('*')
     .eq('user_id', userId)
-    .gte('date', startDate.toISOString().split('T')[0])
-    .lte('date', endDate.toISOString().split('T')[0])
+    .gte('date', pastDateStr)
     .order('date', { ascending: true });
     
-  if (weightError) throw weightError;
-  
-  // Get goals
-  const { data: goalData, error: goalError } = await supabaseClient
+  if (entriesError) {
+    console.error("Error fetching weight entries:", entriesError);
+    throw entriesError;
+  }
+
+  // Fetch latest goal
+  const { data: goals, error: goalsError } = await supabaseClient
     .from('goals')
     .select('*')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(1);
     
-  if (goalError) throw goalError;
-  
-  return { weightData, goalData };
-}
+  if (goalsError) {
+    console.error("Error fetching goals:", goalsError);
+    throw goalsError;
+  }
 
-export function buildPayload(userId: string, email: string, preferredUnit: string, weightData: any[], goalData: any[]) {
-  // Build standardized payload structure
   return {
-    account_id: userId,
-    user_id: userId,
-    email: email,
-    unit: preferredUnit || "kg",
-    goal_weight: goalData && goalData.length > 0 ? goalData[0].target_weight : null,
-    goal_days: goalData && goalData.length > 0 && goalData[0].target_date ? 
-      Math.ceil((new Date(goalData[0].target_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 30,
-    entries: {
-      weight: weightData ? weightData.map(entry => entry.weight) : [],
-      notes: weightData ? weightData.map(entry => entry.description || "") : [],
-      dates: weightData ? weightData.map(entry => entry.date) : []
-    }
+    weightData: weightEntries || [],
+    goalData: goals && goals.length > 0 ? goals[0] : null
   };
 }
 
-export async function createWebhookLog(supabaseClient: SupabaseClient, userId: string, payload: any, webhookUrl: string) {
-  const { data: webhookLog, error: webhookLogError } = await supabaseClient
+// Build webhook payload in the new format
+export function buildPayload(
+  userId: string,
+  email: string | null,
+  displayName: string | null,
+  preferredUnit: string | null,
+  weightData: any[],
+  goalData: any
+) {
+  // Format entries data
+  const weights = weightData.map(entry => entry.weight);
+  const notes = weightData.map(entry => entry.description || "");
+  const dates = weightData.map(entry => entry.date);
+  
+  // Build the payload in the new format
+  const payload = {
+    user_id: userId,
+    displayName: displayName || "",
+    email: email || "",
+    unit: preferredUnit || "kg",
+    entries: {
+      weight: weights,
+      notes: notes,
+      dates: dates
+    }
+  };
+  
+  // Add goal data if available
+  if (goalData) {
+    payload["goal_weight"] = goalData.target_weight;
+    
+    if (goalData.target_date) {
+      const targetDate = new Date(goalData.target_date);
+      const today = new Date();
+      const daysRemaining = Math.ceil((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      payload["goal_days"] = daysRemaining > 0 ? daysRemaining : 0;
+    }
+  }
+  
+  return payload;
+}
+
+// Create webhook log entry
+export async function createWebhookLog(
+  supabaseClient: SupabaseClient,
+  userId: string,
+  payload: any,
+  webhookUrl: string
+) {
+  const { data, error } = await supabaseClient
     .from('webhook_logs')
     .insert({
       user_id: userId,
@@ -60,36 +104,55 @@ export async function createWebhookLog(supabaseClient: SupabaseClient, userId: s
     })
     .select('id')
     .single();
-
-  if (webhookLogError) {
-    console.error('Error creating webhook log:', webhookLogError);
+    
+  if (error) {
+    console.error("Error creating webhook log:", error);
+    throw error;
   }
-
-  return webhookLog?.id;
+  
+  return data.id;
 }
 
-export async function updateWebhookLog(supabaseClient: SupabaseClient, logId: string, responseText: string, success: boolean) {
-  if (!logId) return;
-  
-  await supabaseClient
+// Update webhook log with response data
+export async function updateWebhookLog(
+  supabaseClient: SupabaseClient,
+  logId: string,
+  responseText: string,
+  success: boolean
+) {
+  const { error } = await supabaseClient
     .from('webhook_logs')
     .update({
       response_payload: responseText,
       status: success ? 'success' : 'error'
     })
     .eq('id', logId);
+    
+  if (error) {
+    console.error("Error updating webhook log:", error);
+    throw error;
+  }
 }
 
-export async function updateWebhookCount(supabaseClient: SupabaseClient, userId: string, isNewDay: boolean, currentCount: number) {
-  const { error: updateError } = await supabaseClient
+// Update webhook count for user
+export async function updateWebhookCount(
+  supabaseClient: SupabaseClient,
+  userId: string,
+  isNewDay: boolean,
+  currentCount: number = 0
+) {
+  const newCount = isNewDay ? 1 : (currentCount + 1);
+  
+  const { error } = await supabaseClient
     .from('profiles')
     .update({
-      webhook_count: isNewDay ? 1 : (currentCount + 1),
+      webhook_count: newCount,
       last_webhook_date: new Date().toISOString()
     })
     .eq('id', userId);
     
-  if (updateError) {
-    console.error('Error updating webhook count:', updateError);
+  if (error) {
+    console.error("Error updating webhook count:", error);
+    throw error;
   }
 }

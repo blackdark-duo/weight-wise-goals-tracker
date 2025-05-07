@@ -55,23 +55,27 @@ export const useAdminProfiles = () => {
         // Find matching profile or use empty object if not found
         const profile = profileData?.find(p => p.id === authUser.id) || {};
         
-        // Create a properly typed profile with safe type assertions
+        // Create a properly typed profile with safe property access
         const typedProfile: Profile = {
           id: authUser.id,
           email: authUser.email,
           created_at: authUser.created_at,
-          display_name: getProfileProperty<string>(profile, 'display_name'),
-          preferred_unit: getProfileProperty<string>(profile, 'preferred_unit'),
-          timezone: getProfileProperty<string>(profile, 'timezone'),
-          updated_at: getProfileProperty<string>(profile, 'updated_at'),
-          webhook_limit: getProfileProperty<number>(profile, 'webhook_limit'),
-          webhook_count: getProfileProperty<number>(profile, 'webhook_count'),
-          last_webhook_date: getProfileProperty<string>(profile, 'last_webhook_date'),
-          webhook_url: getProfileProperty<string>(profile, 'webhook_url'),
-          is_admin: getProfileProperty<boolean>(profile, 'is_admin'),
-          is_suspended: getProfileProperty<boolean>(profile, 'is_suspended'),
-          show_ai_insights: getProfileProperty<boolean>(profile, 'show_ai_insights')
         };
+        
+        // Safely add properties from profile object if they exist
+        if (profile) {
+          if ('display_name' in profile) typedProfile.display_name = profile.display_name as string;
+          if ('preferred_unit' in profile) typedProfile.preferred_unit = profile.preferred_unit as string;
+          if ('timezone' in profile) typedProfile.timezone = profile.timezone as string;
+          if ('updated_at' in profile) typedProfile.updated_at = profile.updated_at as string;
+          if ('webhook_limit' in profile) typedProfile.webhook_limit = profile.webhook_limit as number;
+          if ('webhook_count' in profile) typedProfile.webhook_count = profile.webhook_count as number;
+          if ('last_webhook_date' in profile) typedProfile.last_webhook_date = profile.last_webhook_date as string;
+          if ('webhook_url' in profile) typedProfile.webhook_url = profile.webhook_url as string;
+          if ('is_admin' in profile) typedProfile.is_admin = profile.is_admin as boolean;
+          if ('is_suspended' in profile) typedProfile.is_suspended = profile.is_suspended as boolean;
+          if ('show_ai_insights' in profile) typedProfile.show_ai_insights = profile.show_ai_insights as boolean;
+        }
         
         return typedProfile;
       });
@@ -85,14 +89,6 @@ export const useAdminProfiles = () => {
       setIsLoading(false);
     }
   };
-
-  // Helper function to safely get properties from a profile object
-  function getProfileProperty<T>(profile: Record<string, any>, propertyName: string): T | undefined {
-    if (profile && typeof profile === 'object' && propertyName in profile) {
-      return profile[propertyName] as T;
-    }
-    return undefined;
-  }
 
   // Toggle admin status for a user
   const toggleAdminStatus = async (profile: Profile) => {

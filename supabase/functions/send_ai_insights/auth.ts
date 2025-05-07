@@ -1,78 +1,74 @@
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-export interface Profile {
-  webhook_limit: number;
-  webhook_count: number;
-  last_webhook_date: string | null;
-  webhook_url: string | null;
-  preferred_unit: string;
-  is_admin: boolean;
-  is_suspended: boolean;
-  email: string | null;
-  show_ai_insights: boolean;
-}
-
+// Authenticate user and get profile data
 export async function authenticateUser(req: Request) {
-  const supabaseClient = Deno.env.get('SUPABASE_URL') 
-    ? createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-        { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-      )
-    : null;
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 
-  if (!supabaseClient) {
-    throw new Error('Supabase client not initialized');
+  // Create authenticated Supabase client
+  const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+
+  // Get the authorization header
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader) {
+    throw new Error('Missing Authorization header');
   }
-
-  // Check if user is authenticated
-  const {
-    data: { user },
-    error: userError,
-  } = await supabaseClient.auth.getUser();
+  
+  // Get the JWT token
+  const accessToken = authHeader.replace('Bearer ', '');
+  
+  // Get user from JWT
+  const { data: { user }, error: userError } = await supabaseClient.auth.getUser(accessToken);
 
   if (userError || !user) {
-    throw new Error('Unauthorized: Authentication required');
+    throw new Error('Invalid user token');
   }
-
-  // Check if user exists and has not exceeded limit
+  
+  // Get user profile
   const { data: profile, error: profileError } = await supabaseClient
     .from('profiles')
-    .select('*, webhook_limit, webhook_count, last_webhook_date, webhook_url, preferred_unit, timezone, is_admin, is_suspended, created_at, updated_at, email')
+    .select('*')
     .eq('id', user.id)
-    .maybeSingle();
-
-  if (profileError) throw profileError;
-  if (!profile) throw new Error('User profile not found');
-
-  // Check if user is suspended
-  if (profile.is_suspended) {
-    throw new Error('Your account has been suspended. Please contact support.');
+    .single();
+    
+  if (profileError) {
+    console.error("Error fetching profile:", profileError);
+    throw new Error('Error fetching user profile');
   }
-
-  return { user, profile, supabaseClient };
+  
+  return {
+    user,
+    profile,
+    supabaseClient
+  };
 }
 
-export function checkWebhookLimit(profile: Profile): { canProceed: boolean; isNewDay: boolean } {
-  // Check if user has exceeded their webhook limit
-  const currentDate = new Date();
-  const lastWebhookDate = profile.last_webhook_date ? new Date(profile.last_webhook_date) : null;
-  const isNewDay = !lastWebhookDate || 
-                  currentDate.getDate() !== lastWebhookDate.getDate() ||
-                  currentDate.getMonth() !== lastWebhookDate.getMonth() ||
-                  currentDate.getFullYear() !== lastWebhookDate.getFullYear();
+// Check if user has exceeded their webhook limit
+export function checkWebhookLimit(profile: any) {
+  const webhookCount = profile.webhook_count || 0;
+  const webhookLimit = profile.webhook_limit || 5;
   
-  const canProceed = isNewDay || (profile.webhook_count < profile.webhook_limit);
-  
-  if (!canProceed) {
-    throw new Error(`You have reached your daily limit of ${profile.webhook_limit} AI analyses. Please try again tomorrow or upgrade to a premium plan.`);
+  if (webhookCount >= webhookLimit) {
+    // Check if it's a new day to reset the counter
+    const lastWebhookDate = profile.last_webhook_date ? new Date(profile.last_webhook_date) : null;
+    const today = new Date();
+    const isNewDay = !lastWebhookDate || 
+      lastWebhookDate.getDate() !== today.getDate() || 
+      lastWebhookDate.getMonth() !== today.getMonth() || 
+      lastWebhookDate.getFullYear() !== today.getFullYear();
+      
+    if (!isNewDay) {
+      throw new Error(`Webhook limit reached (${webhookCount}/${webhookLimit})`);
+    }
+    
+    return { isNewDay };
   }
   
-  return { canProceed, isNewDay };
+  return { isNewDay: false };
 }
