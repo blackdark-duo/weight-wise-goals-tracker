@@ -80,7 +80,7 @@ const AppControlsTab: React.FC<AppControlsTabProps> = ({ onRefreshUsers }) => {
         </Button>
       </div>
       <WebhookTester profiles={profiles} onRefreshUsers={handleRefresh} />
-      <WebhookSettings onUpdate={() => console.log('Webhook settings updated')} />
+      <WebhookSettings />
       <WebhookLogViewer />
     </div>
   );

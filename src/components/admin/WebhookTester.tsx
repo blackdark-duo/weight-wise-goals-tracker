@@ -14,6 +14,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Webhook, Play, User } from "lucide-react";
 import { Profile } from "@/hooks/useAdminProfiles";
+import { Json } from "@/integrations/supabase/types";
 
 interface WebhookTesterProps {
   profiles: Profile[];
@@ -94,8 +95,11 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
         payload.email = profileData?.email || "";
       }
       
-      // Add goal data if available
-      if (webhookConfig.fields.goal_data && goals && goals.length > 0) {
+      // Parse fields from JSON
+      const fields = parseWebhookFields(webhookConfig.fields);
+      
+      // Add goal data if available and if configured to include goal data
+      if (fields.goal_data && goals && goals.length > 0) {
         payload.goal_weight = goals[0].target_weight;
         
         if (goals[0].target_date) {
@@ -114,6 +118,34 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Helper function to parse webhook fields from Json
+  const parseWebhookFields = (fieldsJson: Json): { 
+    user_data: boolean; 
+    weight_data: boolean; 
+    goal_data: boolean; 
+    activity_data: boolean; 
+    detailed_analysis: boolean; 
+  } => {
+    if (typeof fieldsJson === 'object' && fieldsJson !== null && !Array.isArray(fieldsJson)) {
+      return {
+        user_data: Boolean(fieldsJson.user_data ?? true),
+        weight_data: Boolean(fieldsJson.weight_data ?? true),
+        goal_data: Boolean(fieldsJson.goal_data ?? true),
+        activity_data: Boolean(fieldsJson.activity_data ?? false),
+        detailed_analysis: Boolean(fieldsJson.detailed_analysis ?? false)
+      };
+    }
+    
+    // Default values if fieldsJson is not in expected format
+    return {
+      user_data: true,
+      weight_data: true,
+      goal_data: true,
+      activity_data: false,
+      detailed_analysis: false
+    };
   };
 
   const sendToWebhook = async () => {

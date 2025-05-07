@@ -52,25 +52,25 @@ export const useAdminProfiles = () => {
 
       // Combine auth and profile data
       const combinedProfiles = authUsers.users.map(authUser => {
-        // Find matching profile
+        // Find matching profile or use empty object if not found
         const profile = profileData?.find(p => p.id === authUser.id) || {};
         
-        // Create a properly typed profile
+        // Create a properly typed profile with safe type assertions
         const typedProfile: Profile = {
           id: authUser.id,
           email: authUser.email,
           created_at: authUser.created_at,
-          display_name: profile.display_name,
-          preferred_unit: profile.preferred_unit,
-          timezone: profile.timezone,
-          updated_at: profile.updated_at,
-          webhook_limit: profile.webhook_limit,
-          webhook_count: profile.webhook_count,
-          last_webhook_date: profile.last_webhook_date,
-          webhook_url: profile.webhook_url,
-          is_admin: profile.is_admin,
-          is_suspended: profile.is_suspended,
-          show_ai_insights: profile.show_ai_insights
+          display_name: getProfileProperty<string>(profile, 'display_name'),
+          preferred_unit: getProfileProperty<string>(profile, 'preferred_unit'),
+          timezone: getProfileProperty<string>(profile, 'timezone'),
+          updated_at: getProfileProperty<string>(profile, 'updated_at'),
+          webhook_limit: getProfileProperty<number>(profile, 'webhook_limit'),
+          webhook_count: getProfileProperty<number>(profile, 'webhook_count'),
+          last_webhook_date: getProfileProperty<string>(profile, 'last_webhook_date'),
+          webhook_url: getProfileProperty<string>(profile, 'webhook_url'),
+          is_admin: getProfileProperty<boolean>(profile, 'is_admin'),
+          is_suspended: getProfileProperty<boolean>(profile, 'is_suspended'),
+          show_ai_insights: getProfileProperty<boolean>(profile, 'show_ai_insights')
         };
         
         return typedProfile;
@@ -85,6 +85,14 @@ export const useAdminProfiles = () => {
       setIsLoading(false);
     }
   };
+
+  // Helper function to safely get properties from a profile object
+  function getProfileProperty<T>(profile: Record<string, any>, propertyName: string): T | undefined {
+    if (profile && typeof profile === 'object' && propertyName in profile) {
+      return profile[propertyName] as T;
+    }
+    return undefined;
+  }
 
   // Toggle admin status for a user
   const toggleAdminStatus = async (profile: Profile) => {

@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { Json } from "@/integrations/supabase/types";
 
 export const DEFAULT_WEBHOOK_URL = 'http://n8n.cozyapp.uno:5678/webhook-test/36e520c4-f7a4-4872-8e21-e469701eb68e';
 
@@ -16,6 +17,9 @@ export interface WebhookConfig {
     activity_data: boolean;
     detailed_analysis: boolean;
   };
+  include_goals?: boolean;
+  include_weight_entries?: boolean;
+  webhook_version?: string;
 }
 
 /**
@@ -152,7 +156,41 @@ export const fetchWebhookConfig = async (): Promise<WebhookConfig> => {
       };
     }
 
-    return data as WebhookConfig;
+    // Transform the data to match our WebhookConfig interface
+    const fieldsFromJson = data.fields as Json;
+    let transformedFields;
+    
+    if (typeof fieldsFromJson === 'object' && fieldsFromJson !== null && !Array.isArray(fieldsFromJson)) {
+      // JSON object type from database
+      transformedFields = {
+        user_data: Boolean(fieldsFromJson.user_data ?? true),
+        weight_data: Boolean(fieldsFromJson.weight_data ?? true),
+        goal_data: Boolean(fieldsFromJson.goal_data ?? true),
+        activity_data: Boolean(fieldsFromJson.activity_data ?? false),
+        detailed_analysis: Boolean(fieldsFromJson.detailed_analysis ?? false)
+      };
+    } else {
+      // Default fields if data is not in expected format
+      transformedFields = {
+        user_data: true,
+        weight_data: true,
+        goal_data: true,
+        activity_data: false,
+        detailed_analysis: false
+      };
+    }
+
+    return {
+      id: data.id,
+      url: data.url || DEFAULT_WEBHOOK_URL,
+      days: data.days || 30,
+      include_account_fields: data.include_account_fields !== false,
+      include_user_fields: data.include_user_fields !== false,
+      fields: transformedFields,
+      include_goals: data.include_goals,
+      include_weight_entries: data.include_weight_entries,
+      webhook_version: data.webhook_version
+    };
   } catch (error) {
     console.error("Error in fetchWebhookConfig:", error);
     // Return default config in case of error
@@ -182,11 +220,14 @@ export const updateWebhookConfig = async (config: WebhookConfig): Promise<boolea
       .update({ 
         url: config.url,
         days: config.days,
-        fields: config.fields,
+        fields: config.fields as any,
         include_account_fields: config.include_account_fields,
-        include_user_fields: config.include_user_fields
+        include_user_fields: config.include_user_fields,
+        include_goals: config.include_goals,
+        include_weight_entries: config.include_weight_entries,
+        webhook_version: config.webhook_version
       })
-      .eq('id', 1);
+      .eq('id', config.id || 1);
 
     if (error) {
       console.error("Error updating webhook config:", error);

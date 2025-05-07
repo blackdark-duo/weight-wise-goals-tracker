@@ -32,6 +32,8 @@ interface UserTableProps {
   updateWebhookLimit: (profile: Profile, limit: number) => Promise<void>;
   updateWebhookUrl?: (profile: Profile, url: string) => Promise<void>;
   toggleAIInsightsVisibility: (profile: Profile) => Promise<void>;
+  onSendEmail?: (userId: string) => void;
+  onSendPasswordReset?: (userId: string) => void;
 }
 
 const UserTable: React.FC<UserTableProps> = ({
@@ -41,6 +43,8 @@ const UserTable: React.FC<UserTableProps> = ({
   updateWebhookLimit,
   updateWebhookUrl,
   toggleAIInsightsVisibility,
+  onSendEmail,
+  onSendPasswordReset
 }) => {
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [isWebhookDialogOpen, setIsWebhookDialogOpen] = useState(false);
@@ -60,12 +64,21 @@ const UserTable: React.FC<UserTableProps> = ({
 
   const handleSendEmail = (profile: Profile) => {
     setSelectedProfile(profile);
-    setIsEmailDialogOpen(true);
+    if (onSendEmail) {
+      onSendEmail(profile.id);
+    } else {
+      setIsEmailDialogOpen(true);
+    }
   };
 
   const handleSendPasswordReset = (profile: Profile) => {
     if (!profile.id) return;
-    sendPasswordReset(profile.id);
+    
+    if (onSendPasswordReset) {
+      onSendPasswordReset(profile.id);
+    } else {
+      sendPasswordReset(profile.id);
+    }
   };
 
   const handleEditWebhookUrl = (profile: Profile) => {

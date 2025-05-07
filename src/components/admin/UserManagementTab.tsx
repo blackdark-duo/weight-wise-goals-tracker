@@ -106,8 +106,6 @@ const UserManagementTab: React.FC<UserManagementTabProps> = ({
         toggleAdminStatus={toggleAdminStatus}
         updateWebhookLimit={updateWebhookLimit}
         toggleAIInsightsVisibility={toggleAIInsightsVisibility}
-        onSendEmail={handleSendEmail}
-        onSendPasswordReset={sendPasswordReset}
       />
 
       {/* Email Dialog */}

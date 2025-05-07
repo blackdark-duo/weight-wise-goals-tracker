@@ -77,7 +77,21 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
           new Date(recentLogs[0].created_at) > oneHourAgo &&
           recentLogs[0].response_payload) {
         // Use cached insights
-        const formattedInsights = formatInsightsText(recentLogs[0].response_payload);
+        let responseText = '';
+        
+        // Handle different response_payload types
+        const responsePayload = recentLogs[0].response_payload;
+        if (typeof responsePayload === 'string') {
+          responseText = responsePayload;
+        } else if (typeof responsePayload === 'object' && responsePayload !== null) {
+          // If it's an object, convert to JSON string
+          responseText = JSON.stringify(responsePayload);
+        } else {
+          // Fallback for unexpected types
+          responseText = String(responsePayload);
+        }
+        
+        const formattedInsights = formatInsightsText(responseText);
         setInsights(formattedInsights);
         toast.info('Showing recent insights');
       } else {
