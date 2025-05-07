@@ -2,9 +2,9 @@
 import React, { useEffect, useState } from 'react';
 import WebhookSettings from './WebhookSettings';
 import WebhookLogViewer from './WebhookLogViewer';
-import WebhookTester from './WebhookTester';
+import WebhookTester from './webhook/WebhookTester';
 import { supabase } from '@/integrations/supabase/client';
-import { Profile } from '@/hooks/useAdminProfiles';
+import { Profile } from '@/types/webhook';
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -41,7 +41,7 @@ const AppControlsTab: React.FC<AppControlsTabProps> = ({ onRefreshUsers }) => {
           email: authUser.email,
           created_at: authUser.created_at,
           ...profile
-        };
+        } as Profile;
       });
       
       setProfiles(combinedProfiles);

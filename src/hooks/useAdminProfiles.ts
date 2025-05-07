@@ -1,25 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Profile } from '@/types/webhook';
 
-export interface Profile {
-  id: string;
-  display_name?: string;
-  email?: string;
-  is_admin?: boolean;
-  created_at?: string;
-  updated_at?: string;
-  webhook_limit?: number;
-  webhook_count?: number;
-  last_webhook_date?: string;
-  webhook_url?: string;
-  show_ai_insights?: boolean;
-  preferred_unit?: string;
-  timezone?: string;
-  is_suspended?: boolean;
-  scheduled_for_deletion?: boolean;
-  deletion_date?: string;
-}
+export { type Profile } from '@/types/webhook';
 
 export const useAdminProfiles = () => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -60,19 +45,19 @@ export const useAdminProfiles = () => {
           id: authUser.id,
           email: authUser.email,
           created_at: authUser.created_at,
-          display_name: profile.display_name,
-          preferred_unit: profile.preferred_unit,
-          timezone: profile.timezone,
-          updated_at: profile.updated_at,
-          webhook_limit: profile.webhook_limit,
-          webhook_count: profile.webhook_count,
-          last_webhook_date: profile.last_webhook_date,
-          webhook_url: profile.webhook_url,
-          is_admin: profile.is_admin,
-          is_suspended: profile.is_suspended,
-          show_ai_insights: profile.show_ai_insights,
-          scheduled_for_deletion: profile.scheduled_for_deletion,
-          deletion_date: profile.deletion_date
+          display_name: profile.display_name as string | undefined,
+          preferred_unit: profile.preferred_unit as string | undefined,
+          timezone: profile.timezone as string | undefined,
+          updated_at: profile.updated_at as string | undefined,
+          webhook_limit: profile.webhook_limit as number | undefined,
+          webhook_count: profile.webhook_count as number | undefined,
+          last_webhook_date: profile.last_webhook_date as string | undefined,
+          webhook_url: profile.webhook_url as string | undefined,
+          is_admin: profile.is_admin as boolean | undefined,
+          is_suspended: profile.is_suspended as boolean | undefined,
+          show_ai_insights: profile.show_ai_insights as boolean | undefined,
+          scheduled_for_deletion: profile.scheduled_for_deletion as boolean | undefined,
+          deletion_date: profile.deletion_date as string | undefined
         } as Profile;
       });
       

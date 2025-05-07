@@ -9,16 +9,18 @@ import { Settings, User, Server, History } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { useAdminProfiles } from "@/hooks/useAdminProfiles";
 
 import AdminUserTable from "@/components/admin/AdminUserTable";
-import AdminWebhookTester from "@/components/admin/AdminWebhookTester";
-import AdminWebhookLogs from "@/components/admin/AdminWebhookLogs";
 import AdminWebhookConfig from "@/components/admin/AdminWebhookConfig";
+import AdminWebhookLogs from "@/components/admin/webhook/AdminWebhookLogs";
+import WebhookTester from "@/components/admin/webhook/WebhookTester";
 
 const AdminPage = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("users");
+  const { profiles, fetchProfiles } = useAdminProfiles();
 
   useEffect(() => {
     checkAdminStatus();
@@ -137,7 +139,7 @@ const AdminPage = () => {
           </TabsContent>
 
           <TabsContent value="webhook-tester" className="space-y-4">
-            <AdminWebhookTester />
+            <WebhookTester profiles={profiles} onRefreshUsers={fetchProfiles} />
           </TabsContent>
 
           <TabsContent value="webhook-logs" className="space-y-4">

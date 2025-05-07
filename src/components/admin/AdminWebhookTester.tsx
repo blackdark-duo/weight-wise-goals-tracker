@@ -2,23 +2,19 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Play, User, RefreshCw } from "lucide-react";
-
-interface Profile {
-  id: string;
-  email: string;
-  display_name: string | null;
-}
+import WebhookUserSelector from "./webhook/WebhookUserSelector";
+import WebhookPayloadViewer from "./webhook/WebhookPayloadViewer"; 
+import { WebhookPayload, Profile } from "@/types/webhook";
 
 const AdminWebhookTester = () => {
   const [users, setUsers] = useState<Profile[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingUsers, setIsFetchingUsers] = useState(true);
-  const [requestPayload, setRequestPayload] = useState<any | null>(null);
+  const [requestPayload, setRequestPayload] = useState<WebhookPayload | null>(null);
   const [responseData, setResponseData] = useState<string | null>(null);
 
   useEffect(() => {
@@ -46,7 +42,7 @@ const AdminWebhookTester = () => {
           id: user.id,
           email: user.email || "",
           display_name: profile?.display_name || user.email?.split('@')[0] || "Unknown"
-        };
+        } as Profile;
       });
       
       setUsers(combinedUsers);
@@ -103,14 +99,14 @@ const AdminWebhookTester = () => {
       };
       
       // Create sample payload
-      const payload = {
+      const payload: WebhookPayload = {
         user_id: selectedUserId,
         displayName: selectedUser?.display_name || "",
         email: selectedUser?.email || "",
         unit: profileData?.preferred_unit || "kg",
+        entries: sampleEntries,
         goal_weight: 75.0,
-        goal_days: 30,
-        entries: sampleEntries
+        goal_days: 30
       };
       
       setRequestPayload(payload);
@@ -133,25 +129,12 @@ const AdminWebhookTester = () => {
       <CardContent className="space-y-6">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex-grow max-w-xs">
-            <Select
-              disabled={isFetchingUsers}
-              value={selectedUserId || ""}
-              onValueChange={setSelectedUserId}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a user" />
-              </SelectTrigger>
-              <SelectContent>
-                {users.map(user => (
-                  <SelectItem key={user.id} value={user.id}>
-                    <div className="flex items-center">
-                      <User className="h-4 w-4 mr-2" />
-                      <span>{user.display_name} ({user.email})</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <WebhookUserSelector
+              profiles={users}
+              selectedUserId={selectedUserId}
+              onSelectUser={setSelectedUserId}
+              isLoading={isFetchingUsers}
+            />
           </div>
           
           <Button 
@@ -181,31 +164,10 @@ const AdminWebhookTester = () => {
           </Button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {requestPayload && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium">Request Payload</h3>
-              <div className="bg-muted rounded-md p-4 overflow-auto max-h-[400px]">
-                <pre className="text-xs whitespace-pre-wrap">
-                  {JSON.stringify(requestPayload, null, 2)}
-                </pre>
-              </div>
-            </div>
-          )}
-          
-          {responseData && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium">HTML Response</h3>
-              <div className="bg-muted rounded-md p-4 overflow-auto max-h-[400px]">
-                <iframe
-                  srcDoc={responseData}
-                  className="w-full h-[350px] border-0"
-                  title="Webhook Response"
-                />
-              </div>
-            </div>
-          )}
-        </div>
+        <WebhookPayloadViewer 
+          requestPayload={requestPayload}
+          response={responseData}
+        />
       </CardContent>
     </Card>
   );
