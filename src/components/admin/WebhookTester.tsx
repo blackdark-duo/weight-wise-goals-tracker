@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -28,10 +27,24 @@ interface WebhookFields {
   detailed_analysis: boolean;
 }
 
+interface WebhookPayload {
+  user_id: string;
+  displayName: string;
+  email: string;
+  unit: string;
+  entries: {
+    weight: number[];
+    notes: string[];
+    dates: string[];
+  };
+  goal_weight?: number;
+  goal_days?: number;
+}
+
 const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers }) => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [requestPayload, setRequestPayload] = useState<any | null>(null);
+  const [requestPayload, setRequestPayload] = useState<WebhookPayload | null>(null);
   const [response, setResponse] = useState<string | null>(null);
 
   const parseWebhookFields = (fieldsJson: any): WebhookFields => {
@@ -128,8 +141,8 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
         
       if (goalsError) throw new Error("Failed to fetch goals");
 
-      // Format data for webhook - new format as requested
-      const payload = {
+      // Format data for webhook
+      const payload: WebhookPayload = {
         user_id: selectedUserId,
         displayName: profileData?.display_name || "",
         email: profileData?.email || "",
@@ -294,7 +307,7 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
           Test webhook functionality with real user data
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent>
         <div className="flex flex-wrap gap-2 items-center">
           <Select 
             onValueChange={(value) => setSelectedUserId(value)} 

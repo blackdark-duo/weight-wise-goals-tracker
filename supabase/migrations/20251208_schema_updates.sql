@@ -44,4 +44,3 @@ SET
   original_unit = unit,
   original_time = time
 WHERE original_weight IS NULL;
-

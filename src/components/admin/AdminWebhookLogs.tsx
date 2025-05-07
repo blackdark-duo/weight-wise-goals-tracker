@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -114,16 +113,16 @@ const AdminWebhookLogs: React.FC = () => {
     }
   };
 
-  const getStatusBadgeVariant = (status: string) => {
+  const getStatusBadgeVariant = (status: string): "default" | "destructive" | "outline" | "secondary" => {
     switch (status?.toLowerCase()) {
       case 'success':
-        return 'success';
+        return 'outline';
       case 'error':
         return 'destructive';
       case 'pending':
-        return 'warning';
-      default:
         return 'secondary';
+      default:
+        return 'default';
     }
   };
 

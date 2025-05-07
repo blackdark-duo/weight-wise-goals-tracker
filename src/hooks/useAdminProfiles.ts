@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -57,7 +56,6 @@ export const useAdminProfiles = () => {
         // Find matching profile or use empty object if not found
         const profile = profileData?.find(p => p.id === authUser.id) || {};
         
-        // Create a properly typed profile with safe property access
         return {
           id: authUser.id,
           email: authUser.email,
