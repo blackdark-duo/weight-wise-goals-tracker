@@ -53,7 +53,7 @@ export const useAdminProfiles = () => {
           is_suspended: undefined,
           show_ai_insights: undefined,
           scheduled_for_deletion: undefined,
-          deletion_date: undefined
+          deletion_date: null
         };
         
         // Create a complete profile with all necessary properties

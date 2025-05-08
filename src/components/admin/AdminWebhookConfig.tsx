@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,10 +48,7 @@ const AdminWebhookConfig = () => {
       setIsLoading(true);
       
       // Use the RPC function that's more reliable
-      const { data, error } = await supabase.rpc('get_webhook_config', {}) as { 
-        data: WebhookConfigResponse | null;
-        error: Error | null;
-      };
+      const { data, error } = await supabase.rpc('get_webhook_config', {});
       
       if (error) throw error;
       
@@ -96,10 +92,7 @@ const AdminWebhookConfig = () => {
         config_url: config.url,
         config_days: config.days,
         config_fields: config.fields
-      }, {}) as {
-        data: WebhookConfigResponse | null;
-        error: Error | null;
-      };
+      });
       
       if (error) throw error;
       
