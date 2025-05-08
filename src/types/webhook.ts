@@ -49,6 +49,6 @@ export interface Profile {
   preferred_unit?: string;
   timezone?: string;
   is_suspended?: boolean;
-  scheduled_for_deletion?: boolean; // Add missing field
-  deletion_date?: string; // Add missing field
+  scheduled_for_deletion?: boolean;
+  deletion_date?: string;
 }

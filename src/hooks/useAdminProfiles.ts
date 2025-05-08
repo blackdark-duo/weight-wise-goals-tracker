@@ -39,7 +39,7 @@ export const useAdminProfiles = () => {
       // Combine auth and profile data
       const combinedProfiles = authUsers.users.map(authUser => {
         // Find matching profile or create empty object with proper typing
-        const profile = profileData?.find(p => p.id === authUser.id) || {} as Profile;
+        const profile = profileData?.find(p => p.id === authUser.id) || {} as Partial<Profile>;
         
         return {
           id: authUser.id,

@@ -33,7 +33,7 @@ export function AccountActions() {
         .update({
           scheduled_for_deletion: true, 
           deletion_date: deletionDate.toISOString()
-        } as any) // Cast to any to bypass type checking
+        })
         .eq('id', user.id);
         
       if (error) throw error;
@@ -62,10 +62,10 @@ export function AccountActions() {
       // Update profile to remove deletion flag and date
       const { error } = await supabase
         .from('profiles')
-        .update({ 
+        .update({
           scheduled_for_deletion: false, 
           deletion_date: null 
-        } as any) // Cast to any to bypass type checking
+        })
         .eq('id', user.id);
         
       if (error) throw error;
