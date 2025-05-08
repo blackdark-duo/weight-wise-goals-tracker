@@ -7,18 +7,28 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Save, Webhook } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { WebhookFields } from "@/types/webhook";
 
 interface WebhookConfig {
-  id: number;
+  id?: number;
   url: string;
   days: number;
+  fields: WebhookFields;
 }
 
 const AdminWebhookConfig = () => {
   const [config, setConfig] = useState<WebhookConfig>({
     id: 1,
     url: "https://n8n.cozyapp.uno/webhook/2c26d7e3-525a-4080-9282-21b6af883cf2",
-    days: 30
+    days: 30,
+    fields: {
+      user_data: true,
+      weight_data: true,
+      goal_data: true,
+      activity_data: false,
+      detailed_analysis: false
+    }
   });
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -30,18 +40,24 @@ const AdminWebhookConfig = () => {
   const fetchWebhookConfig = async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from('webhook_config')
-        .select('*')
-        .single();
+      
+      // Use the RPC function that's more reliable
+      const { data, error } = await supabase.rpc('get_webhook_config');
       
       if (error) throw error;
       
       if (data) {
         setConfig({
-          id: data.id || 1,
+          id: 1,
           url: data.url || "https://n8n.cozyapp.uno/webhook/2c26d7e3-525a-4080-9282-21b6af883cf2",
-          days: data.days || 30
+          days: data.days || 30,
+          fields: data.fields || {
+            user_data: true,
+            weight_data: true,
+            goal_data: true,
+            activity_data: false,
+            detailed_analysis: false
+          }
         });
       }
     } catch (error) {
@@ -65,16 +81,14 @@ const AdminWebhookConfig = () => {
         throw new Error("Days must be a positive number");
       }
       
-      // Update global configuration
-      const { error: configError } = await supabase
-        .from('webhook_config')
-        .update({
-          url: config.url,
-          days: config.days
-        })
-        .eq('id', config.id);
+      // Use the RPC function to update the webhook config
+      const { data, error } = await supabase.rpc('update_webhook_config', {
+        config_url: config.url,
+        config_days: config.days,
+        config_fields: config.fields
+      });
       
-      if (configError) throw configError;
+      if (error) throw error;
       
       // Update all user profiles to use this URL
       const { error: profilesError } = await supabase
@@ -92,6 +106,16 @@ const AdminWebhookConfig = () => {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const updateField = (field: keyof WebhookFields, value: boolean) => {
+    setConfig({
+      ...config,
+      fields: {
+        ...config.fields,
+        [field]: value
+      }
+    });
   };
 
   if (isLoading) {
@@ -139,6 +163,52 @@ const AdminWebhookConfig = () => {
           <p className="text-xs text-muted-foreground">
             Number of days of historical data to include in webhook requests
           </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-base">Data Fields to Include</Label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pt-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="user_data"
+                checked={config.fields.user_data} 
+                onCheckedChange={(checked) => updateField('user_data', checked === true)}
+              />
+              <Label htmlFor="user_data">User Data</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="weight_data"
+                checked={config.fields.weight_data} 
+                onCheckedChange={(checked) => updateField('weight_data', checked === true)}
+              />
+              <Label htmlFor="weight_data">Weight Data</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="goal_data"
+                checked={config.fields.goal_data} 
+                onCheckedChange={(checked) => updateField('goal_data', checked === true)}
+              />
+              <Label htmlFor="goal_data">Goal Data</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="activity_data"
+                checked={config.fields.activity_data} 
+                onCheckedChange={(checked) => updateField('activity_data', checked === true)}
+              />
+              <Label htmlFor="activity_data">Activity Data</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="detailed_analysis"
+                checked={config.fields.detailed_analysis} 
+                onCheckedChange={(checked) => updateField('detailed_analysis', checked === true)}
+              />
+              <Label htmlFor="detailed_analysis">Detailed Analysis</Label>
+            </div>
+          </div>
         </div>
         
         <Button 

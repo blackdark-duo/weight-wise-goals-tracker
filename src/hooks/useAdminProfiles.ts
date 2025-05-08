@@ -51,9 +51,7 @@ export const useAdminProfiles = () => {
           webhook_url: undefined,
           is_admin: undefined,
           is_suspended: undefined,
-          show_ai_insights: undefined,
-          scheduled_for_deletion: undefined,
-          deletion_date: undefined
+          show_ai_insights: undefined
         };
         
         // Create a complete profile with all necessary properties
