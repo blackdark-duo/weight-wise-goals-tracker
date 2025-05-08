@@ -41,7 +41,8 @@ export const useAdminProfiles = () => {
         // Find matching profile or create empty object with proper typing
         const profile = profileData?.find(p => p.id === authUser.id) || {} as Partial<Profile>;
         
-        return {
+        // Create a complete profile with all necessary properties
+        const completeProfile: Profile = {
           id: authUser.id,
           email: authUser.email,
           created_at: authUser.created_at,
@@ -58,7 +59,9 @@ export const useAdminProfiles = () => {
           show_ai_insights: profile.show_ai_insights,
           scheduled_for_deletion: profile.scheduled_for_deletion,
           deletion_date: profile.deletion_date
-        } as Profile;
+        };
+        
+        return completeProfile;
       });
       
       setProfiles(combinedProfiles);
