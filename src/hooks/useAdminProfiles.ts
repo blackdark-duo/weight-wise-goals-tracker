@@ -38,28 +38,28 @@ export const useAdminProfiles = () => {
 
       // Combine auth and profile data
       const combinedProfiles = authUsers.users.map(authUser => {
-        // Find matching profile or create empty object with proper typing
-        const profile = profileData?.find(p => p.id === authUser.id) || {} as Partial<Profile>;
+        // Find matching profile or create empty object
+        const profile = profileData?.find(p => p.id === authUser.id) || {};
         
         // Create a complete profile with all necessary properties
         const completeProfile: Profile = {
           id: authUser.id,
           email: authUser.email,
           created_at: authUser.created_at,
-          display_name: profile.display_name,
-          preferred_unit: profile.preferred_unit,
-          timezone: profile.timezone,
-          updated_at: profile.updated_at,
-          webhook_limit: profile.webhook_limit,
-          webhook_count: profile.webhook_count,
-          last_webhook_date: profile.last_webhook_date,
-          webhook_url: profile.webhook_url,
-          is_admin: profile.is_admin,
-          is_suspended: profile.is_suspended,
-          show_ai_insights: profile.show_ai_insights,
-          // Include the properties that were causing TypeScript errors
-          scheduled_for_deletion: profile.scheduled_for_deletion || false,
-          deletion_date: profile.deletion_date || null
+          display_name: profile.display_name as string | undefined,
+          preferred_unit: profile.preferred_unit as string | undefined,
+          timezone: profile.timezone as string | undefined,
+          updated_at: profile.updated_at as string | undefined,
+          webhook_limit: profile.webhook_limit as number | undefined,
+          webhook_count: profile.webhook_count as number | undefined,
+          last_webhook_date: profile.last_webhook_date as string | undefined,
+          webhook_url: profile.webhook_url as string | undefined,
+          is_admin: profile.is_admin as boolean | undefined,
+          is_suspended: profile.is_suspended as boolean | undefined,
+          show_ai_insights: profile.show_ai_insights as boolean | undefined,
+          // Explicitly type these properties from the profile object
+          scheduled_for_deletion: profile.scheduled_for_deletion as boolean | undefined || false,
+          deletion_date: profile.deletion_date as string | null | undefined || null
         };
         
         return completeProfile;
