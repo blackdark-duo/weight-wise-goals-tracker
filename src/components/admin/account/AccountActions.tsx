@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,7 @@ export function AccountActions() {
         .update({
           scheduled_for_deletion: true, 
           deletion_date: deletionDate.toISOString()
-        } as any) // Use type assertion as a temporary fix
+        } as any)
         .eq('id', user.id);
         
       if (error) throw error;
@@ -64,7 +65,7 @@ export function AccountActions() {
         .update({
           scheduled_for_deletion: false, 
           deletion_date: null 
-        } as any) // Use type assertion as a temporary fix
+        } as any)
         .eq('id', user.id);
         
       if (error) throw error;

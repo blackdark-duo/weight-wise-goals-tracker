@@ -57,7 +57,7 @@ export const useAdminProfiles = () => {
           is_admin: profile.is_admin,
           is_suspended: profile.is_suspended,
           show_ai_insights: profile.show_ai_insights,
-          scheduled_for_deletion: profile.scheduled_for_deletion,
+          scheduled_for_deletion: profile.scheduled_for_deletion || false,
           deletion_date: profile.deletion_date
         };
         
