@@ -50,5 +50,5 @@ export interface Profile {
   timezone?: string;
   is_suspended?: boolean;
   scheduled_for_deletion?: boolean;
-  deletion_date?: string;
+  deletion_date?: string | null;
 }

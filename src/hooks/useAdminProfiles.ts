@@ -39,7 +39,7 @@ export const useAdminProfiles = () => {
       // Combine auth and profile data
       const combinedProfiles = authUsers.users.map(authUser => {
         // Find matching profile or create empty object with proper typing
-        const profile = profileData?.find(p => p.id === authUser.id) || {} as Profile;
+        const profile = profileData?.find(p => p.id === authUser.id) || {} as Partial<Profile>;
         
         // Create a complete profile with all necessary properties
         const completeProfile: Profile = {
@@ -57,8 +57,8 @@ export const useAdminProfiles = () => {
           is_admin: profile.is_admin,
           is_suspended: profile.is_suspended,
           show_ai_insights: profile.show_ai_insights,
-          // Handle the properties causing the TypeScript errors
-          scheduled_for_deletion: profile.scheduled_for_deletion === true ? true : false,
+          // Include the properties that were causing TypeScript errors
+          scheduled_for_deletion: profile.scheduled_for_deletion || false,
           deletion_date: profile.deletion_date || null
         };
         

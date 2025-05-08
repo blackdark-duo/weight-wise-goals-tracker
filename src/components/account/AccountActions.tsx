@@ -37,13 +37,13 @@ const AccountActions: React.FC<AccountActionsProps> = ({ userId }) => {
       const deletionDate = new Date();
       deletionDate.setDate(deletionDate.getDate() + 7); // 7 days from now
       
-      // Update profile with correct typing
+      // Use type assertion to tell TypeScript these properties are valid
       const { error } = await supabase
         .from('profiles')
         .update({
           scheduled_for_deletion: true,
           deletion_date: deletionDate.toISOString()
-        })
+        } as any)
         .eq('id', userId);
       
       if (error) throw error;
