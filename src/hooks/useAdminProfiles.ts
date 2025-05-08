@@ -52,7 +52,7 @@ export const useAdminProfiles = () => {
           is_admin: undefined,
           is_suspended: undefined,
           show_ai_insights: undefined,
-          scheduled_for_deletion: undefined,
+          scheduled_for_deletion: false,
           deletion_date: null
         };
         

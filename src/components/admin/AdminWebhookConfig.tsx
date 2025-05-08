@@ -48,8 +48,8 @@ const AdminWebhookConfig = () => {
     try {
       setIsLoading(true);
       
-      // Use the RPC function that's more reliable
-      const { data, error } = await supabase.rpc('get_webhook_config') as { 
+      // Use the RPC function with proper type casting
+      const { data, error } = await supabase.rpc('get_webhook_config') as unknown as { 
         data: WebhookConfigResponse; 
         error: any;
       };
@@ -91,12 +91,12 @@ const AdminWebhookConfig = () => {
         throw new Error("Days must be a positive number");
       }
       
-      // Use the RPC function to update the webhook config
+      // Use the RPC function with proper type casting
       const { data, error } = await supabase.rpc('update_webhook_config', {
         config_url: config.url,
         config_days: config.days,
         config_fields: config.fields
-      }) as { 
+      }) as unknown as { 
         data: WebhookConfigResponse; 
         error: any;
       };
