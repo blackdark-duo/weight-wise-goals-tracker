@@ -49,7 +49,7 @@ const AdminWebhookConfig = () => {
       setIsLoading(true);
       
       // Use the RPC function that's more reliable
-      const { data, error } = await supabase.rpc('get_webhook_config') as { 
+      const { data, error } = await supabase.rpc('get_webhook_config', {}) as { 
         data: WebhookConfigResponse | null;
         error: Error | null;
       };
@@ -96,7 +96,7 @@ const AdminWebhookConfig = () => {
         config_url: config.url,
         config_days: config.days,
         config_fields: config.fields
-      }) as {
+      }, {}) as {
         data: WebhookConfigResponse | null;
         error: Error | null;
       };
