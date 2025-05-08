@@ -42,7 +42,7 @@ serve(async (req) => {
     if (profileError) throw profileError;
     
     // Check webhook limit
-    if ((profile.webhook_count || 0) >= (profile.webhook_limit || 5)) {
+    if ((profile.webhook_count || 0) >= (profile.webhook_limit || 10)) {
       throw new Error("Webhook limit exceeded for this user");
     }
     
@@ -143,15 +143,23 @@ serve(async (req) => {
       throw new Error(`Webhook returned ${webhookResponse.status} ${webhookResponse.statusText}`);
     }
     
-    // Get HTML response
+    // Get response
     const responseText = await webhookResponse.text();
+    let responsePayload;
+    
+    // Try to parse the response as JSON, if it fails, store as a string
+    try {
+      responsePayload = JSON.parse(responseText);
+    } catch (e) {
+      responsePayload = { text: responseText };
+    }
     
     // Update webhook log with response
     if (logData?.id) {
       await supabase
         .from("webhook_logs")
         .update({
-          response_payload: responseText,
+          response_payload: responsePayload,
           status: 'success'
         })
         .eq("id", logData.id);
@@ -178,7 +186,7 @@ serve(async (req) => {
         } 
       }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error processing AI insights request:', error);
     return new Response(
       JSON.stringify({ error: error.message }),

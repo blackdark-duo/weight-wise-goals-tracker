@@ -17,7 +17,7 @@ interface WebhookConfig {
 const AdminWebhookConfig = () => {
   const [config, setConfig] = useState<WebhookConfig>({
     id: 1,
-    url: "",
+    url: "https://n8n.cozyapp.uno/webhook/2c26d7e3-525a-4080-9282-21b6af883cf2",
     days: 30
   });
   const [isSaving, setIsSaving] = useState(false);
@@ -40,7 +40,7 @@ const AdminWebhookConfig = () => {
       if (data) {
         setConfig({
           id: data.id || 1,
-          url: data.url || "",
+          url: data.url || "https://n8n.cozyapp.uno/webhook/2c26d7e3-525a-4080-9282-21b6af883cf2",
           days: data.days || 30
         });
       }
@@ -55,6 +55,15 @@ const AdminWebhookConfig = () => {
   const saveConfig = async () => {
     try {
       setIsSaving(true);
+      
+      // Validate URL format
+      if (!config.url || !config.url.trim()) {
+        throw new Error("Webhook URL cannot be empty");
+      }
+      
+      if (config.days <= 0) {
+        throw new Error("Days must be a positive number");
+      }
       
       // Update global configuration
       const { error: configError } = await supabase
@@ -77,9 +86,9 @@ const AdminWebhookConfig = () => {
       if (profilesError) throw profilesError;
       
       toast.success("Webhook configuration saved and applied to all users");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving webhook config:", error);
-      toast.error("Failed to save webhook configuration");
+      toast.error(error.message || "Failed to save webhook configuration");
     } finally {
       setIsSaving(false);
     }
@@ -125,7 +134,7 @@ const AdminWebhookConfig = () => {
             min={1}
             max={365}
             value={config.days}
-            onChange={(e) => setConfig({ ...config, days: parseInt(e.target.value) })}
+            onChange={(e) => setConfig({ ...config, days: parseInt(e.target.value) || 30 })}
           />
           <p className="text-xs text-muted-foreground">
             Number of days of historical data to include in webhook requests

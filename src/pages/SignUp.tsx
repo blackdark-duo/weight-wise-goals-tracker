@@ -91,22 +91,7 @@ const SignUp = () => {
     setError("");
 
     try {
-      // Server-side validation via Supabase
-      // Additional server-side validation
-      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-      if (!emailRegex.test(email)) {
-        setError("Invalid email format. Please provide a valid email address.");
-        setIsLoading(false);
-        return;
-      }
-      
-      if (password.length < 6) {
-        setError("Password must be at least 6 characters long.");
-        setIsLoading(false);
-        return;
-      }
-
-      // Sign up with Supabase auth - skip email verification
+      // Sign up with Supabase auth
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -146,17 +131,6 @@ const SignUp = () => {
         });
         
         if (signInError) throw signInError;
-        
-        // Send welcome/confirmation email but don't require verification
-        try {
-          await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: window.location.origin + "/reset-password"
-          });
-          console.log("Password reset/welcome email sent");
-        } catch (emailErr) {
-          console.error("Failed to send welcome email:", emailErr);
-          // Non-blocking error, continue with signup
-        }
         
         toast.success("Account created successfully! Welcome to Weight Wise.");
         navigate("/dashboard");

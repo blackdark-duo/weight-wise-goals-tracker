@@ -40,6 +40,7 @@ export const useAdminProfiles = () => {
       const combinedProfiles = authUsers.users.map(authUser => {
         // Find matching profile or create a default profile object
         const profile = profileData?.find(p => p.id === authUser.id) || {
+          id: authUser.id,
           display_name: undefined,
           preferred_unit: undefined,
           timezone: undefined,
@@ -71,9 +72,8 @@ export const useAdminProfiles = () => {
           is_admin: profile.is_admin,
           is_suspended: profile.is_suspended,
           show_ai_insights: profile.show_ai_insights,
-          // Use type assertion to ensure TypeScript recognizes these properties
-          scheduled_for_deletion: (profile as any).scheduled_for_deletion || false,
-          deletion_date: (profile as any).deletion_date || null
+          scheduled_for_deletion: profile.scheduled_for_deletion || false,
+          deletion_date: profile.deletion_date || null
         };
         
         return completeProfile;
