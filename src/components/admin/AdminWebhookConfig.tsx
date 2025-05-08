@@ -17,6 +17,13 @@ interface WebhookConfig {
   fields: WebhookFields;
 }
 
+interface WebhookConfigResponse {
+  url?: string;
+  days?: number;
+  fields?: WebhookFields;
+  [key: string]: any;
+}
+
 const AdminWebhookConfig = () => {
   const [config, setConfig] = useState<WebhookConfig>({
     id: 1,
@@ -42,7 +49,7 @@ const AdminWebhookConfig = () => {
       setIsLoading(true);
       
       // Use the RPC function that's more reliable
-      const { data, error } = await supabase.rpc('get_webhook_config');
+      const { data, error } = await supabase.rpc<WebhookConfigResponse>('get_webhook_config');
       
       if (error) throw error;
       
@@ -82,7 +89,7 @@ const AdminWebhookConfig = () => {
       }
       
       // Use the RPC function to update the webhook config
-      const { data, error } = await supabase.rpc('update_webhook_config', {
+      const { data, error } = await supabase.rpc<WebhookConfigResponse>('update_webhook_config', {
         config_url: config.url,
         config_days: config.days,
         config_fields: config.fields
