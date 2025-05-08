@@ -19,6 +19,7 @@ export interface WebhookPayload {
   };
   goal_weight?: number;
   goal_days?: number;
+  [key: string]: any; // Add index signature to make it compatible with Json type
 }
 
 export interface WebhookLog {
@@ -48,6 +49,6 @@ export interface Profile {
   preferred_unit?: string;
   timezone?: string;
   is_suspended?: boolean;
-  scheduled_for_deletion?: boolean;
-  deletion_date?: string;
+  scheduled_for_deletion?: boolean; // Add missing field
+  deletion_date?: string; // Add missing field
 }

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -13,6 +14,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Webhook, Play, User } from "lucide-react";
 import { Profile } from "@/hooks/useAdminProfiles";
+import { WebhookPayload } from "@/types/webhook";
 
 interface WebhookTesterProps {
   profiles: Profile[];
@@ -25,20 +27,6 @@ interface WebhookFields {
   goal_data: boolean;
   activity_data: boolean;
   detailed_analysis: boolean;
-}
-
-interface WebhookPayload {
-  user_id: string;
-  displayName: string;
-  email: string;
-  unit: string;
-  entries: {
-    weight: number[];
-    notes: string[];
-    dates: string[];
-  };
-  goal_weight?: number;
-  goal_days?: number;
 }
 
 const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers }) => {
@@ -198,12 +186,12 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
         throw new Error("No webhook URL configured");
       }
 
-      // Create webhook log entry
+      // Create webhook log entry - convert the requestPayload to a plain object to satisfy Json type
       const { data: logData, error: logError } = await supabase
         .from("webhook_logs")
         .insert({
           user_id: selectedUserId,
-          request_payload: requestPayload,
+          request_payload: JSON.parse(JSON.stringify(requestPayload)),
           url: webhookUrl,
           status: 'pending'
         })
@@ -346,7 +334,7 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
         </div>
         
         {requestPayload && (
-          <div className="border rounded-md p-4">
+          <div className="border rounded-md p-4 mt-4">
             <h3 className="text-sm font-medium mb-2">Request Payload:</h3>
             <pre className="text-xs bg-muted p-2 rounded-md overflow-auto max-h-[200px]">
               {JSON.stringify(requestPayload, null, 2)}
@@ -355,7 +343,7 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({ profiles, onRefreshUsers 
         )}
         
         {response && (
-          <div className="border rounded-md p-4">
+          <div className="border rounded-md p-4 mt-4">
             <div className="flex items-center gap-2 mb-2">
               <h3 className="text-sm font-medium">Response:</h3>
               <Badge>
