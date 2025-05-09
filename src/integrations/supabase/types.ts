@@ -105,6 +105,7 @@ export type Database = {
       webhook_config: {
         Row: {
           days: number | null
+          default_webhook_limit: number
           fields: Json | null
           id: number
           include_account_fields: boolean | null
@@ -116,6 +117,7 @@ export type Database = {
         }
         Insert: {
           days?: number | null
+          default_webhook_limit?: number
           fields?: Json | null
           id?: number
           include_account_fields?: boolean | null
@@ -127,6 +129,7 @@ export type Database = {
         }
         Update: {
           days?: number | null
+          default_webhook_limit?: number
           fields?: Json | null
           id?: number
           include_account_fields?: boolean | null
