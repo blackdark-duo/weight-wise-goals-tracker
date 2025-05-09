@@ -49,6 +49,6 @@ export interface Profile {
   preferred_unit?: string;
   timezone?: string;
   is_suspended?: boolean;
-  scheduled_for_deletion?: boolean;
-  deletion_date?: string | null;
+  scheduled_for_deletion?: boolean;  // Added this field
+  deletion_date?: string | null;     // Added this field
 }
