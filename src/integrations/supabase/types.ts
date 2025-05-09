@@ -48,6 +48,7 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string | null
+          deletion_date: string | null
           display_name: string | null
           email: string | null
           id: string
@@ -55,6 +56,7 @@ export type Database = {
           is_suspended: boolean | null
           last_webhook_date: string | null
           preferred_unit: string | null
+          scheduled_for_deletion: boolean | null
           show_ai_insights: boolean | null
           timezone: string | null
           updated_at: string | null
@@ -64,6 +66,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          deletion_date?: string | null
           display_name?: string | null
           email?: string | null
           id: string
@@ -71,6 +74,7 @@ export type Database = {
           is_suspended?: boolean | null
           last_webhook_date?: string | null
           preferred_unit?: string | null
+          scheduled_for_deletion?: boolean | null
           show_ai_insights?: boolean | null
           timezone?: string | null
           updated_at?: string | null
@@ -80,6 +84,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          deletion_date?: string | null
           display_name?: string | null
           email?: string | null
           id?: string
@@ -87,6 +92,7 @@ export type Database = {
           is_suspended?: boolean | null
           last_webhook_date?: string | null
           preferred_unit?: string | null
+          scheduled_for_deletion?: boolean | null
           show_ai_insights?: boolean | null
           timezone?: string | null
           updated_at?: string | null
