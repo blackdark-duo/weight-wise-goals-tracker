@@ -14,6 +14,24 @@ serve(async (req) => {
   }
 
   try {
+    // Get request data with improved validation
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (e) {
+      console.error("Error parsing request JSON:", e);
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON in request body" }),
+        { 
+          status: 400, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
+    }
+    
     // Initialize Supabase client with admin privileges
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -24,8 +42,7 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    // Get request body
-    const requestData = await req.json();
+    // Get user ID from request and validate
     const userId = requestData.user_id;
     
     if (!userId) {
@@ -39,20 +56,26 @@ serve(async (req) => {
       .eq('id', userId)
       .single();
       
-    if (profileError) throw profileError;
+    if (profileError) {
+      console.error("Error fetching profile:", profileError);
+      throw new Error(`Profile not found: ${profileError.message}`);
+    }
     
     // Check webhook limit
     if ((profile.webhook_count || 0) >= (profile.webhook_limit || 10)) {
       throw new Error("Webhook limit exceeded for this user");
     }
     
-    // Get webhook URL from webhook_config (admin config)
+    // Get webhook config from webhook_config (admin config)
     const { data: webhookConfig, error: webhookConfigError } = await supabase
       .from('webhook_config')
       .select('*')
       .single();
     
-    if (webhookConfigError) throw webhookConfigError;
+    if (webhookConfigError) {
+      console.error("Error fetching webhook config:", webhookConfigError);
+      throw new Error(`Failed to load webhook configuration: ${webhookConfigError.message}`);
+    }
     
     if (!webhookConfig || !webhookConfig.url) {
       throw new Error('Default webhook URL not configured by admin');
@@ -75,7 +98,10 @@ serve(async (req) => {
       .gte('date', thirtyDaysAgoStr)
       .order('date', { ascending: true });
       
-    if (weightError) throw weightError;
+    if (weightError) {
+      console.error("Error fetching weight data:", weightError);
+      throw new Error(`Failed to fetch weight data: ${weightError.message}`);
+    }
     
     // Get goals
     const { data: goals, error: goalsError } = await supabase
@@ -85,7 +111,10 @@ serve(async (req) => {
       .order('created_at', { ascending: false })
       .limit(1);
       
-    if (goalsError) throw goalsError;
+    if (goalsError) {
+      console.error("Error fetching goals:", goalsError);
+      throw new Error(`Failed to fetch goals: ${goalsError.message}`);
+    }
     
     // Create payload in new format
     const payload = {
@@ -129,40 +158,63 @@ serve(async (req) => {
       console.error("Error creating webhook log:", logError);
     }
     
+    let logId = logData?.id;
+    
     // Send data to webhook
     console.log(`Sending data to webhook: ${webhookUrl}`);
-    const webhookResponse = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
     
-    if (!webhookResponse.ok) {
-      throw new Error(`Webhook returned ${webhookResponse.status} ${webhookResponse.statusText}`);
-    }
-    
-    // Get response
-    const responseText = await webhookResponse.text();
+    let webhookResponse;
+    let responseText;
     let responsePayload;
     
-    // Try to parse the response as JSON, if it fails, store as a string
     try {
-      responsePayload = JSON.parse(responseText);
-    } catch (e) {
-      responsePayload = { text: responseText };
+      webhookResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      
+      if (!webhookResponse.ok) {
+        throw new Error(`Webhook returned ${webhookResponse.status} ${webhookResponse.statusText}`);
+      }
+      
+      // Get response
+      responseText = await webhookResponse.text();
+      
+      // Try to parse the response as JSON, if it fails, store as a string
+      try {
+        responsePayload = JSON.parse(responseText);
+      } catch (e) {
+        responsePayload = { text: responseText };
+      }
+    } catch (webhookError) {
+      console.error("Webhook request failed:", webhookError);
+      
+      // Update webhook log with error
+      if (logId) {
+        await supabase
+          .from("webhook_logs")
+          .update({
+            status: 'failed',
+            response_payload: { error: webhookError.message }
+          })
+          .eq("id", logId);
+      }
+      
+      throw new Error(`Webhook request failed: ${webhookError.message}`);
     }
     
     // Update webhook log with response
-    if (logData?.id) {
+    if (logId) {
       await supabase
         .from("webhook_logs")
         .update({
           response_payload: responsePayload,
           status: 'success'
         })
-        .eq("id", logData.id);
+        .eq("id", logId);
     }
     
     // Increment webhook count

@@ -2,7 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 
-export const corsHeaders = {
+const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
@@ -10,29 +10,65 @@ export const corsHeaders = {
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseClient = Deno.env.get('SUPABASE_URL') 
-      ? createClient(
-          Deno.env.get('SUPABASE_URL') ?? '',
-          Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-          { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-        )
-      : null;
-
-    if (!supabaseClient) {
-      throw new Error('Supabase client not initialized');
+    // Parse request body
+    let body;
+    try {
+      body = await req.json();
+    } catch (e) {
+      console.error("Error parsing request JSON:", e);
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON in request body" }),
+        { 
+          status: 400, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
     }
 
-    // Check if user is authorized (admin)
+    const { url, days, fields, default_webhook_limit } = body;
+
+    // Validate inputs
+    if (!url || typeof url !== 'string') {
+      throw new Error('URL is required and must be a string');
+    }
+
+    if (!days || typeof days !== 'number' || days <= 0) {
+      throw new Error('Days must be a positive number');
+    }
+
+    if (!fields || typeof fields !== 'object') {
+      throw new Error('Fields must be an object');
+    }
+
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error('Supabase environment variables are not set');
+    }
+    
+    const supabaseClient = createClient(
+      supabaseUrl,
+      supabaseAnonKey,
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    );
+
+    // Check if user is authenticated
     const {
       data: { user },
       error: userError,
     } = await supabaseClient.auth.getUser();
 
     if (userError || !user) {
+      console.error("Authentication error:", userError);
       throw new Error('Unauthorized: Authentication required');
     }
 
@@ -43,56 +79,75 @@ serve(async (req) => {
       .eq('id', user.id)
       .single();
 
-    if (profileError) throw profileError;
+    if (profileError) {
+      console.error("Error fetching profile:", profileError);
+      throw new Error(`Error fetching profile: ${profileError.message}`);
+    }
 
     if (!profile?.is_admin) {
       throw new Error('Unauthorized: Admin privileges required');
     }
 
-    // Get the request body
-    const { url, days, fields } = await req.json();
+    // Update webhook config
+    const updateData = {
+      url,
+      days,
+      fields,
+    };
     
-    // Validate the request data
-    if (!url) throw new Error('Webhook URL is required');
-    if (!days || isNaN(days) || days < 1) throw new Error('Days must be a positive number');
-    if (!fields) throw new Error('Fields configuration is required');
-    
-    // Update the webhook config
+    // Add default_webhook_limit if provided
+    if (default_webhook_limit !== undefined && typeof default_webhook_limit === 'number') {
+      Object.assign(updateData, { default_webhook_limit });
+    }
+
     const { data, error } = await supabaseClient
       .from('webhook_config')
-      .update({
-        url,
-        days,
-        fields
-      })
+      .update(updateData)
       .eq('id', 1)
-      .select()
-      .single();
+      .select();
 
     if (error) {
-      throw error;
+      console.error("Error updating webhook config:", error);
+      throw new Error(`Error updating webhook config: ${error.message}`);
+    }
+
+    // Also update all user profiles to use this URL
+    const { error: profilesError } = await supabaseClient
+      .from('profiles')
+      .update({ webhook_url: url });
+
+    if (profilesError) {
+      console.warn("Error updating profile webhook URLs:", profilesError);
+      // Continue execution, don't throw here to avoid failing the whole operation
     }
 
     return new Response(
-      JSON.stringify({ success: true, data }),
-      { 
-        headers: { 
+      JSON.stringify({
+        message: 'Webhook configuration updated successfully',
+        data,
+      }),
+      {
+        status: 200,
+        headers: {
           'Content-Type': 'application/json',
           ...corsHeaders
-        } 
+        }
       }
-    )
-  } catch (error) {
-    console.error('Error updating webhook config:', error);
+    );
+  } catch (error: any) {
+    console.error('Error in update_webhook_config:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { 
-        status: 400, 
-        headers: { 
+      JSON.stringify({
+        error: error.message,
+        stack: error.stack
+      }),
+      {
+        status: 400,
+        headers: {
           'Content-Type': 'application/json',
           ...corsHeaders
-        } 
+        }
       }
-    )
+    );
   }
-})
+});

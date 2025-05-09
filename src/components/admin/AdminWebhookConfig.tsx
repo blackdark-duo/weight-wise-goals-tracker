@@ -12,6 +12,7 @@ const AdminWebhookConfig: React.FC = () => {
     updateUrl,
     updateDays,
     updateField,
+    updateDefaultWebhookLimit,
     saveConfig,
   } = useWebhookConfig();
 
@@ -24,10 +25,12 @@ const AdminWebhookConfig: React.FC = () => {
       url={config.url}
       days={config.days}
       fields={config.fields}
+      defaultWebhookLimit={config.default_webhook_limit}
       isSaving={isSaving}
       onUrlChange={updateUrl}
       onDaysChange={updateDays}
       onFieldChange={updateField}
+      onDefaultWebhookLimitChange={updateDefaultWebhookLimit}
       onSave={saveConfig}
     />
   );

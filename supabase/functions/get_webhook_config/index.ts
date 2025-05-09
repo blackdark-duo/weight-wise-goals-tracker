@@ -14,17 +14,18 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = Deno.env.get('SUPABASE_URL') 
-      ? createClient(
-          Deno.env.get('SUPABASE_URL') ?? '',
-          Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-          { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-        )
-      : null;
-
-    if (!supabaseClient) {
-      throw new Error('Supabase client not initialized');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error('Supabase environment variables are not set');
     }
+    
+    const supabaseClient = createClient(
+      supabaseUrl,
+      supabaseAnonKey,
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    );
 
     // Check if user is authenticated
     const {
@@ -33,6 +34,7 @@ serve(async (req) => {
     } = await supabaseClient.auth.getUser();
 
     if (userError || !user) {
+      console.error("Authentication error:", userError);
       throw new Error('Unauthorized: Authentication required');
     }
 
@@ -43,7 +45,10 @@ serve(async (req) => {
       .eq('id', user.id)
       .single();
 
-    if (profileError) throw profileError;
+    if (profileError) {
+      console.error("Error fetching profile:", profileError);
+      throw new Error(`Error fetching profile: ${profileError.message}`);
+    }
 
     if (!profile?.is_admin) {
       throw new Error('Unauthorized: Admin privileges required');
@@ -56,7 +61,12 @@ serve(async (req) => {
       .single();
 
     if (error) {
-      throw error;
+      console.error("Error fetching webhook config:", error);
+      throw new Error(`Error fetching webhook config: ${error.message}`);
+    }
+    
+    if (!data) {
+      throw new Error('No webhook configuration found');
     }
 
     return new Response(
@@ -68,10 +78,13 @@ serve(async (req) => {
         } 
       }
     )
-  } catch (error) {
-    console.error('Error fetching webhook config:', error);
+  } catch (error: any) {
+    console.error('Error in get_webhook_config:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        stack: error.stack
+      }),
       { 
         status: 400, 
         headers: { 

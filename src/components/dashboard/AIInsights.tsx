@@ -105,25 +105,44 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
     setInsightsHTML(null);
     
     try {
-      // Request new insights from the edge function
-      const { data, error } = await supabase.functions.invoke('send_ai_insights', {
+      // Request new insights from the edge function with improved error handling
+      console.log('Calling send_ai_insights edge function...');
+      const response = await supabase.functions.invoke('send_ai_insights', {
         method: 'POST',
+        body: { user_id: userId }
       });
       
-      if (error) throw error;
+      console.log('Edge function response:', response);
       
-      if (data && data.message) {
-        setInsightsHTML(data.message);
+      // Check if we have an error object
+      if (response.error) {
+        console.error('Edge Function error:', response.error);
+        throw new Error(`Edge Function error: ${response.error.message || 'Unknown error'}`);
+      }
+      
+      // Check if we have data
+      if (response.data && response.data.message) {
+        setInsightsHTML(response.data.message);
         
         // Update webhook count in state
         setWebhookCount(prev => prev + 1);
         setLastWebhookDate(new Date().toISOString());
       } else {
-        throw new Error('No insights returned');
+        // Handle case where we got a successful response but no data
+        throw new Error('No insights returned from Edge Function');
       }
     } catch (err: any) {
       console.error('Error fetching AI insights:', err);
-      toast.error(err.message || 'Failed to fetch AI insights');
+      
+      // Provide a more user-friendly error message
+      if (err.message?.includes('non-2xx status code')) {
+        toast.error('The AI insights service is currently unavailable. Please try again later.');
+      } else {
+        toast.error(err.message || 'Failed to fetch AI insights');
+      }
+      
+      // Optionally, provide a fallback experience
+      setInsightsHTML('<p>Unable to generate insights at this time. Please try again later.</p>');
     } finally {
       setIsLoading(false);
     }
