@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { WebhookFields } from "@/types/webhook";
+import { Json } from "@/integrations/supabase/types";
 
 interface WebhookConfig {
   id?: number;
@@ -13,12 +14,49 @@ interface WebhookConfig {
 }
 
 interface WebhookConfigResponse {
+  id?: number;
   url?: string;
   days?: number;
-  fields?: WebhookFields;
+  fields?: Json;
   default_webhook_limit?: number;
   [key: string]: any;
 }
+
+// Helper function to convert Json to WebhookFields
+const parseWebhookFields = (fieldsJson: Json | null | undefined): WebhookFields => {
+  const defaultFields: WebhookFields = {
+    user_data: true,
+    weight_data: true,
+    goal_data: true,
+    activity_data: false,
+    detailed_analysis: false
+  };
+
+  if (!fieldsJson) return defaultFields;
+
+  if (typeof fieldsJson === 'object' && fieldsJson !== null && !Array.isArray(fieldsJson)) {
+    return {
+      user_data: Boolean((fieldsJson as any).user_data ?? true),
+      weight_data: Boolean((fieldsJson as any).weight_data ?? true),
+      goal_data: Boolean((fieldsJson as any).goal_data ?? true),
+      activity_data: Boolean((fieldsJson as any).activity_data ?? false),
+      detailed_analysis: Boolean((fieldsJson as any).detailed_analysis ?? false)
+    };
+  }
+
+  return defaultFields;
+};
+
+// Helper function to convert WebhookFields to Json
+const webhookFieldsToJson = (fields: WebhookFields): Json => {
+  return {
+    user_data: fields.user_data,
+    weight_data: fields.weight_data,
+    goal_data: fields.goal_data,
+    activity_data: fields.activity_data,
+    detailed_analysis: fields.detailed_analysis
+  } as Json;
+};
 
 export const useWebhookConfig = () => {
   const [config, setConfig] = useState<WebhookConfig>({
@@ -77,17 +115,13 @@ export const useWebhookConfig = () => {
       }
       
       if (configData) {
+        const parsedFields = parseWebhookFields(configData.fields);
+        
         setConfig({
           id: configData.id || 1,
           url: configData.url || "https://n8n.cozyapp.uno/webhook/2c26d7e3-525a-4080-9282-21b6af883cf2",
           days: configData.days || 30,
-          fields: configData.fields || {
-            user_data: true,
-            weight_data: true,
-            goal_data: true,
-            activity_data: false,
-            detailed_analysis: false
-          },
+          fields: parsedFields,
           default_webhook_limit: configData.default_webhook_limit || 10
         });
       }
@@ -124,7 +158,7 @@ export const useWebhookConfig = () => {
           body: {
             url: config.url,
             days: config.days,
-            fields: config.fields,
+            fields: webhookFieldsToJson(config.fields),
             default_webhook_limit: config.default_webhook_limit
           }
         }) as {
@@ -149,7 +183,7 @@ export const useWebhookConfig = () => {
           .update({
             url: config.url,
             days: config.days,
-            fields: config.fields,
+            fields: webhookFieldsToJson(config.fields),
             default_webhook_limit: config.default_webhook_limit || 10
           })
           .eq('id', config.id || 1);

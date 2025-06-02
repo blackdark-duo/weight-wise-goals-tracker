@@ -88,7 +88,7 @@ export const WebhookConfigCard: React.FC<WebhookConfigCardProps> = ({
           </div>
         )}
 
-        <WebhookFieldsSelector fields={fields} onChange={onFieldChange} />
+        <WebhookFieldsSelector fields={fields} onFieldChange={onFieldChange} />
 
         <div className="pt-4">
           <Button 
