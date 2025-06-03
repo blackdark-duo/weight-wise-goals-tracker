@@ -91,7 +91,7 @@ const RecentEntries: React.FC<RecentEntriesProps> = ({ entries }) => {
                       {displayWeight(entry.weight, entry.unit)} {preferredUnit}
                     </TableCell>
                     <TableCell>
-                      <div className="max-w-xs truncate">
+                      <div className="max-w-[120px] sm:max-w-[200px] md:max-w-[300px] lg:max-w-[400px] break-words whitespace-normal">
                         {entry.description || <span className="text-muted-foreground text-sm">No notes</span>}
                       </div>
                     </TableCell>

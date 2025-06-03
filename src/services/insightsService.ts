@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { formatInsightsText } from "@/utils/insightsFormatter";
-import { fetchUserWebhookUrl, DEFAULT_WEBHOOK_URL } from "./webhookService";
+import { fetchUserWebhookUrl } from "./webhookService";
+import { webhookService } from "./centralizedWebhookService";
 
 interface UserProfile {
   display_name: string;
@@ -40,10 +41,10 @@ export const fetchInsightsData = async (userId: string): Promise<InsightsResult>
     throw new Error("Failed to fetch user profile");
   }
 
-  // Use the user's webhook URL or fall back to the default URL
+  // Use the user's webhook URL or fall back to the centralized webhook URL
   const webhookUrl = await fetchUserWebhookUrl(userId) || 
                      profileData?.webhook_url || 
-                     DEFAULT_WEBHOOK_URL;
+                     await webhookService.getWebhookUrl();
                      
   const displayName = profileData?.display_name || 'User';
   const email = profileData?.email || '';

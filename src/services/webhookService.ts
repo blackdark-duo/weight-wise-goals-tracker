@@ -1,8 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { Json } from "@/integrations/supabase/types";
-
-export const DEFAULT_WEBHOOK_URL = 'http://n8n.cozyapp.uno:5678/webhook-test/36e520c4-f7a4-4872-8e21-e469701eb68e';
+import { webhookService } from "./centralizedWebhookService";
 
 export interface WebhookFields {
   user_data: boolean;
@@ -26,21 +25,11 @@ export interface WebhookConfig {
 
 /**
  * Fetch the webhook URL for a user from their profile
+ * Now uses centralized webhook service
  */
 export const fetchUserWebhookUrl = async (userId: string): Promise<string | null> => {
   try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('webhook_url')
-      .eq('id', userId)
-      .single();
-    
-    if (error) {
-      console.error("Error fetching user webhook URL:", error);
-      return null;
-    }
-    
-    return data?.webhook_url || null;
+    return await webhookService.getUserWebhookUrl(userId);
   } catch (error) {
     console.error("Exception fetching user webhook URL:", error);
     return null;
@@ -49,20 +38,11 @@ export const fetchUserWebhookUrl = async (userId: string): Promise<string | null
 
 /**
  * Update the webhook URL for a user in their profile
+ * Now uses centralized webhook service
  */
 export const updateUserWebhookUrl = async (userId: string, url: string): Promise<boolean> => {
   try {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ webhook_url: url })
-      .eq('id', userId);
-    
-    if (error) {
-      console.error("Error updating user webhook URL:", error);
-      return false;
-    }
-    
-    return true;
+    return await webhookService.updateUserWebhookUrl(userId, url);
   } catch (error) {
     console.error("Exception updating user webhook URL:", error);
     return false;
@@ -71,27 +51,11 @@ export const updateUserWebhookUrl = async (userId: string, url: string): Promise
 
 /**
  * Test a webhook by sending a request with test data
+ * Now uses centralized webhook service
  */
 export const testWebhook = async (url: string, payload: any): Promise<any> => {
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Webhook test failed with status: ${response.status}`);
-    }
-    
-    // Try to parse as JSON, but fall back to text if needed
-    try {
-      return await response.json();
-    } catch (e) {
-      return await response.text();
-    }
+    return await webhookService.testWebhook(url, payload);
   } catch (error: any) {
     console.error("Error testing webhook:", error);
     throw error;
@@ -155,6 +119,7 @@ export const parseWebhookFields = (fieldsJson: Json | null): WebhookFields => {
 
 /**
  * Fetch the global webhook configuration
+ * Now uses centralized webhook service for URL
  */
 export const fetchWebhookConfig = async (): Promise<WebhookConfig> => {
   try {
@@ -168,10 +133,13 @@ export const fetchWebhookConfig = async (): Promise<WebhookConfig> => {
       throw new Error("Failed to fetch webhook configuration");
     }
 
+    // Get URL from centralized service
+    const webhookUrl = await webhookService.getWebhookUrl();
+
     if (!data) {
       // Return default config if none exists
       return {
-        url: DEFAULT_WEBHOOK_URL,
+        url: webhookUrl,
         days: 30,
         include_account_fields: true,
         include_user_fields: true,
@@ -191,7 +159,7 @@ export const fetchWebhookConfig = async (): Promise<WebhookConfig> => {
     // Return the complete config
     return {
       id: data.id,
-      url: data.url || DEFAULT_WEBHOOK_URL,
+      url: webhookUrl,
       days: data.days || 30,
       include_account_fields: data.include_account_fields !== false,
       include_user_fields: data.include_user_fields !== false,
@@ -202,9 +170,12 @@ export const fetchWebhookConfig = async (): Promise<WebhookConfig> => {
     };
   } catch (error) {
     console.error("Error in fetchWebhookConfig:", error);
+    // Get fallback URL from centralized service
+    const fallbackUrl = await webhookService.getWebhookUrl().catch(() => 'https://n8n.cozyapp.uno/webhook/2c26d7e3-525a-4080-9282-21b6af883cf2');
+    
     // Return default config in case of error
     return {
-      url: DEFAULT_WEBHOOK_URL,
+      url: fallbackUrl,
       days: 30,
       include_account_fields: true,
       include_user_fields: true,

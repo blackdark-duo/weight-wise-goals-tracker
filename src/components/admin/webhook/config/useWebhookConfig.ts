@@ -61,7 +61,7 @@ const webhookFieldsToJson = (fields: WebhookFields): Json => {
 export const useWebhookConfig = () => {
   const [config, setConfig] = useState<WebhookConfig>({
     id: 1,
-    url: "https://n8n.cozyapp.uno/webhook/2c26d7e3-525a-4080-9282-21b6af883cf2",
+    url: "",
     days: 30,
     fields: {
       user_data: true,
@@ -119,7 +119,7 @@ export const useWebhookConfig = () => {
         
         setConfig({
           id: configData.id || 1,
-          url: configData.url || "https://n8n.cozyapp.uno/webhook/2c26d7e3-525a-4080-9282-21b6af883cf2",
+          url: configData.url || "",
           days: configData.days || 30,
           fields: parsedFields,
           default_webhook_limit: configData.default_webhook_limit || 10

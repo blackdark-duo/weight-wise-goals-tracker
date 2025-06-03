@@ -9,16 +9,16 @@ import {
   fetchUserWebhookUrl, 
   updateUserWebhookUrl, 
   testWebhook, 
-  generateDefaultTestPayload,
-  DEFAULT_WEBHOOK_URL
+  generateDefaultTestPayload
 } from "@/services/webhookService";
+import { webhookService } from "@/services/centralizedWebhookService";
 
 interface WebhookSettingsProps {
   userId: string | null;
 }
 
 const WebhookSettings: React.FC<WebhookSettingsProps> = ({ userId }) => {
-  const [webhookUrl, setWebhookUrl] = useState<string>(DEFAULT_WEBHOOK_URL);
+  const [webhookUrl, setWebhookUrl] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,9 +33,15 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ userId }) => {
         const url = await fetchUserWebhookUrl(userId);
         if (url) {
           setWebhookUrl(url);
+        } else {
+          // Fallback to global webhook URL
+          const globalUrl = await webhookService.getWebhookUrl();
+          setWebhookUrl(globalUrl);
         }
       } catch (err) {
         console.error("Error fetching webhook URL:", err);
+        // Use fallback URL as last resort
+        setWebhookUrl('https://n8n.cozyapp.uno/webhook/2c26d7e3-525a-4080-9282-21b6af883cf2');
       } finally {
         setIsLoading(false);
       }
