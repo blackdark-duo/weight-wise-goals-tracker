@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Scale, Plus } from 'lucide-react';
+import { validateWeight, sanitizeText } from '@/utils/inputValidation';
 
 interface WeightEntry {
   id: string;
@@ -44,18 +45,12 @@ const WeightEntryForm: React.FC<WeightEntryFormProps> = ({ onEntryAdded, preferr
 
     const weight = parseFloat(newWeight);
 
-    if (isNaN(weight) || weight <= 0) {
+    // Validate weight using security utility
+    const weightValidation = validateWeight(weight, weightUnit);
+    if (!weightValidation.isValid) {
       toast({
         title: "Error",
-        description: "Please enter a valid weight value",
-        variant: "destructive"
-      });
-      return;
-    }
-    if (weight < 1 || weight > 500) {
-      toast({
-        title: "Error",
-        description: "Weight must be between 1 and 500",
+        description: weightValidation.error,
         variant: "destructive"
       });
       return;
@@ -75,15 +70,6 @@ const WeightEntryForm: React.FC<WeightEntryFormProps> = ({ onEntryAdded, preferr
     setIsSubmitting(true);
     
     try {
-      if (isNaN(weight) || weight <= 0) {
-        toast({
-          title: "Error",
-          description: "Please enter a valid weight value",
-          variant: "destructive"
-        });
-        return;
-      }
-      
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
@@ -94,6 +80,9 @@ const WeightEntryForm: React.FC<WeightEntryFormProps> = ({ onEntryAdded, preferr
         });
         return;
       }
+
+      // Sanitize description input
+      const sanitizedDescription = sanitizeText(description, 500);
       
       const entryData = {
         user_id: user.id,
@@ -101,7 +90,7 @@ const WeightEntryForm: React.FC<WeightEntryFormProps> = ({ onEntryAdded, preferr
         unit: weightUnit,
         date: entryDate,
         time: entryTime,
-        description: description.trim() || null
+        description: sanitizedDescription || null
       };
       
       const { data, error } = await supabase

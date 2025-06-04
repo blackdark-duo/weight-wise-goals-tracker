@@ -96,6 +96,24 @@ export const fetchInsightsData = async (userId: string): Promise<InsightsResult>
   };
 
   try {
+    // Check rate limits for insights requests
+    const { data: rateLimitOk } = await supabase.rpc('check_webhook_rate_limit', {
+      p_user_id: userId,
+      p_operation: 'ai_insights',
+      p_max_requests: 10, // 10 insights per hour
+      p_window_minutes: 60
+    });
+
+    if (!rateLimitOk) {
+      throw new Error('Too many AI insights requests. Please wait before requesting more insights.');
+    }
+
+    // Record the insights request
+    await supabase.rpc('record_webhook_request', {
+      p_user_id: userId,
+      p_operation: 'ai_insights'
+    });
+
     // Send data to webhook
     const response = await fetch(webhookUrl, {
       method: 'POST',
@@ -103,6 +121,8 @@ export const fetchInsightsData = async (userId: string): Promise<InsightsResult>
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(formattedData),
+      // Add timeout to prevent hanging
+      signal: AbortSignal.timeout(30000) // 30 seconds
     });
 
     if (!response.ok) {

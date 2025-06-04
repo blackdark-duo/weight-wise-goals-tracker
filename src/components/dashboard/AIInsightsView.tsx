@@ -64,7 +64,7 @@ const AIInsightsView: React.FC<AIInsightsViewProps> = ({
           <div className="prose dark:prose-invert max-w-none">
             <div className="bg-muted/40 rounded-lg p-4 border border-border">
               <Badge className="mb-2 bg-emerald-500/20 text-emerald-700 hover:bg-emerald-500/30">AI Generated</Badge>
-              <div dangerouslySetInnerHTML={{ __html: insights }} />
+              <div className="whitespace-pre-wrap">{insights}</div>
             </div>
           </div>
         )}

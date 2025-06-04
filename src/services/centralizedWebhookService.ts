@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { validateWebhookUrl } from "@/utils/inputValidation";
 
 /**
  * Centralized webhook service that ensures all webhook calls use the same URL source
@@ -91,6 +92,13 @@ export class CentralizedWebhookService {
    */
   async updateWebhookUrl(url: string): Promise<boolean> {
     try {
+      // Validate URL before updating
+      const validation = validateWebhookUrl(url);
+      if (!validation.isValid) {
+        console.error("Invalid webhook URL:", validation.error);
+        throw new Error(validation.error);
+      }
+
       const { error } = await supabase
         .from('webhook_config')
         .update({ url })
@@ -115,6 +123,13 @@ export class CentralizedWebhookService {
    */
   async updateUserWebhookUrl(userId: string, url: string): Promise<boolean> {
     try {
+      // Validate URL before updating
+      const validation = validateWebhookUrl(url);
+      if (!validation.isValid) {
+        console.error("Invalid webhook URL:", validation.error);
+        throw new Error(validation.error);
+      }
+
       const { error } = await supabase
         .from('profiles')
         .update({ webhook_url: url })
@@ -145,12 +160,41 @@ export class CentralizedWebhookService {
    */
   async testWebhook(url: string, payload: any): Promise<any> {
     try {
+      // Validate URL before testing
+      const validation = validateWebhookUrl(url);
+      if (!validation.isValid) {
+        throw new Error(`Invalid webhook URL: ${validation.error}`);
+      }
+
+      // Check rate limits for webhook testing
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: rateLimitOk } = await supabase.rpc('check_webhook_rate_limit', {
+          p_user_id: user.id,
+          p_operation: 'test_webhook',
+          p_max_requests: 5, // 5 tests per hour
+          p_window_minutes: 60
+        });
+
+        if (!rateLimitOk) {
+          throw new Error('Too many webhook tests. Please wait before testing again.');
+        }
+
+        // Record the test request
+        await supabase.rpc('record_webhook_request', {
+          p_user_id: user.id,
+          p_operation: 'test_webhook'
+        });
+      }
+
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
+        // Add timeout to prevent hanging
+        signal: AbortSignal.timeout(10000) // 10 seconds
       });
 
       if (!response.ok) {
