@@ -14,40 +14,58 @@ interface AIInsightsProps {
 const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [insightsHTML, setInsightsHTML] = useState<string | null>(null);
-  const [webhookLimit, setWebhookLimit] = useState<number>(0);
-  const [webhookCount, setWebhookCount] = useState<number>(0);
+  const [insightsLimit, setInsightsLimit] = useState<number>(0);
+  const [insightsUsed, setInsightsUsed] = useState<number>(0);
   const [lastWebhookDate, setLastWebhookDate] = useState<string | null>(null);
-  const [webhookUrl, setWebhookUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (userId) {
-      fetchUserProfile();
+      fetchInsightsLimits();
     }
   }, [userId]);
 
-  const fetchUserProfile = async () => {
+  const fetchInsightsLimits = async () => {
     if (!userId) return;
     
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('webhook_limit, webhook_count, last_webhook_date, webhook_url')
-        .eq('id', userId)
+      // Get centralized insights limits from webhook_config
+      const { data: configData, error: configError } = await supabase
+        .from('webhook_config')
+        .select('insights_limit, insights_used, insights_reset_date')
+        .eq('id', 1)
         .single();
       
-      if (error) throw error;
+      if (configError) throw configError;
       
-      if (data) {
-        setWebhookLimit(data.webhook_limit || 0);
-        setWebhookCount(data.webhook_count || 0);
-        setLastWebhookDate(data.last_webhook_date);
-        setWebhookUrl(data.webhook_url);
+      if (configData) {
+        // Check if we need to reset daily counter
+        const today = new Date().toISOString().split('T')[0];
+        const resetDate = configData.insights_reset_date;
+        
+        if (resetDate !== today) {
+          // Reset the counter for new day
+          const { error: updateError } = await supabase
+            .from('webhook_config')
+            .update({ 
+              insights_used: 0,
+              insights_reset_date: today 
+            })
+            .eq('id', 1);
+          
+          if (!updateError) {
+            setInsightsUsed(0);
+          }
+        } else {
+          setInsightsUsed(configData.insights_used || 0);
+        }
+        
+        setInsightsLimit(configData.insights_limit || 10);
       }
       
       // Also check for recent responses
       checkRecentInsights();
     } catch (err) {
-      console.error('Error fetching user profile:', err);
+      console.error('Error fetching insights limits:', err);
     }
   };
   
@@ -124,8 +142,15 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
       if (response.data && response.data.message) {
         setInsightsHTML(response.data.message);
         
-        // Update webhook count in state
-        setWebhookCount(prev => prev + 1);
+        // Update insights usage count in centralized config
+        const { error: updateError } = await supabase
+          .from('webhook_config')
+          .update({ insights_used: insightsUsed + 1 })
+          .eq('id', 1);
+        
+        if (!updateError) {
+          setInsightsUsed(prev => prev + 1);
+        }
         setLastWebhookDate(new Date().toISOString());
       } else {
         // Handle case where we got a successful response but no data
@@ -148,8 +173,8 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
     }
   };
 
-  const remainingRequests = Math.max(0, webhookLimit - webhookCount);
-  const isLimitExceeded = webhookCount >= webhookLimit;
+  const remainingRequests = Math.max(0, insightsLimit - insightsUsed);
+  const isLimitExceeded = insightsUsed >= insightsLimit;
 
   return (
     <Card className="bg-white shadow-sm">
@@ -166,7 +191,7 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
             
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="bg-muted">
-                {remainingRequests}/{webhookLimit} requests
+                {remainingRequests}/{insightsLimit} requests
               </Badge>
               
               <Button

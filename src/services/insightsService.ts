@@ -5,7 +5,6 @@ import { webhookService } from "./centralizedWebhookService";
 
 interface UserProfile {
   display_name: string;
-  webhook_url: string;
 }
 
 interface Goal {
@@ -33,7 +32,7 @@ export const fetchInsightsData = async (userId: string): Promise<InsightsResult>
   // First, get user profile data (for display name)
   const { data: profileData, error: profileError } = await supabase
     .from("profiles")
-    .select("display_name, webhook_url, email, preferred_unit")
+    .select("display_name, email, preferred_unit")
     .eq("id", userId)
     .single();
 
@@ -41,10 +40,8 @@ export const fetchInsightsData = async (userId: string): Promise<InsightsResult>
     throw new Error("Failed to fetch user profile");
   }
 
-  // Use the user's webhook URL or fall back to the centralized webhook URL
-  const webhookUrl = await fetchUserWebhookUrl(userId) || 
-                     profileData?.webhook_url || 
-                     await webhookService.getWebhookUrl();
+  // Use the centralized webhook URL
+  const webhookUrl = await webhookService.getWebhookUrl();
                      
   const displayName = profileData?.display_name || 'User';
   const email = profileData?.email || '';

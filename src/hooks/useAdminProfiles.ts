@@ -48,7 +48,7 @@ export const useAdminProfiles = () => {
           webhook_limit: undefined,
           webhook_count: undefined,
           last_webhook_date: undefined,
-          webhook_url: undefined,
+          
           is_admin: undefined,
           is_suspended: undefined,
           show_ai_insights: undefined,
@@ -68,7 +68,7 @@ export const useAdminProfiles = () => {
           webhook_limit: profile.webhook_limit,
           webhook_count: profile.webhook_count,
           last_webhook_date: profile.last_webhook_date,
-          webhook_url: profile.webhook_url,
+          
           is_admin: profile.is_admin,
           is_suspended: profile.is_suspended,
           show_ai_insights: profile.show_ai_insights,
@@ -135,24 +135,10 @@ export const useAdminProfiles = () => {
     }
   };
   
-  // Update webhook URL for a user
+  // Note: Webhook URLs are now centralized and no longer user-specific
   const updateWebhookUrl = async (profile: Profile, url: string) => {
-    if (!currentUserId) return;
-    
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ webhook_url: url })
-        .eq('id', profile.id);
-        
-      if (error) throw error;
-      
-      await fetchProfiles();
-      toast.success(`Updated webhook URL for ${profile.display_name || profile.email}`);
-    } catch (err: any) {
-      console.error('Error updating webhook URL:', err);
-      toast.error('Failed to update webhook URL');
-    }
+    console.warn('Individual webhook URLs are deprecated. Use centralized webhook configuration instead.');
+    toast.error('Individual webhook URLs are no longer supported. Use centralized configuration.');
   };
   
   // Toggle AI insights visibility for a user

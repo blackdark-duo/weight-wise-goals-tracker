@@ -9,7 +9,7 @@ import NotFound from "@/pages/NotFound";
 import Reports from "@/pages/Reports";
 import Goals from "@/pages/Goals";
 import Account from "@/pages/Account";
-import Admin from "@/pages/Admin";
+
 import ContactUs from "@/pages/ContactUs";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsOfService from "@/pages/TermsOfService";
@@ -47,12 +47,6 @@ const AppRoutes = () => {
         <Route path="/features" element={<Features />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         
-        {/* Admin Route - Protected but with its own access control */}
-        <Route path="/admin" element={
-          <PrivateRoute>
-            <Admin />
-          </PrivateRoute>
-        } />
         
         {/* Protected Routes */}
         <Route path="/dashboard" element={

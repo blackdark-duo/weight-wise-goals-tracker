@@ -140,7 +140,6 @@ export type Database = {
           updated_at: string | null
           webhook_count: number | null
           webhook_limit: number | null
-          webhook_url: string | null
         }
         Insert: {
           created_at?: string | null
@@ -158,7 +157,6 @@ export type Database = {
           updated_at?: string | null
           webhook_count?: number | null
           webhook_limit?: number | null
-          webhook_url?: string | null
         }
         Update: {
           created_at?: string | null
@@ -176,7 +174,6 @@ export type Database = {
           updated_at?: string | null
           webhook_count?: number | null
           webhook_limit?: number | null
-          webhook_url?: string | null
         }
         Relationships: []
       }
@@ -190,6 +187,9 @@ export type Database = {
           include_goals: boolean | null
           include_user_fields: boolean | null
           include_weight_entries: boolean | null
+          insights_limit: number
+          insights_reset_date: string | null
+          insights_used: number
           url: string | null
           webhook_version: string | null
         }
@@ -202,6 +202,9 @@ export type Database = {
           include_goals?: boolean | null
           include_user_fields?: boolean | null
           include_weight_entries?: boolean | null
+          insights_limit?: number
+          insights_reset_date?: string | null
+          insights_used?: number
           url?: string | null
           webhook_version?: string | null
         }
@@ -214,6 +217,9 @@ export type Database = {
           include_goals?: boolean | null
           include_user_fields?: boolean | null
           include_weight_entries?: boolean | null
+          insights_limit?: number
+          insights_reset_date?: string | null
+          insights_used?: number
           url?: string | null
           webhook_version?: string | null
         }

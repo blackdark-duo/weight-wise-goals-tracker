@@ -194,17 +194,9 @@ export const useWebhookConfig = () => {
         console.log("Direct database update result:", saveData);
       }
       
-      // Update all user profiles to use this URL
-      console.log("Updating all user profiles to use the new webhook URL");
-      const { error: profilesError } = await supabase
-        .from('profiles')
-        .update({
-          webhook_url: config.url
-        });
-      
-      if (profilesError) {
-        console.warn("Error updating profiles with new webhook URL:", profilesError);
-      }
+      // Note: Individual user webhook URLs have been deprecated
+      // All webhook calls now use the centralized configuration
+      console.log("Centralized webhook configuration updated successfully");
       
       toast.success("Webhook configuration saved and applied to all users");
     } catch (error: any) {
