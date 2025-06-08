@@ -62,29 +62,11 @@ export class CentralizedWebhookService {
 
   /**
    * Get webhook URL for a specific user
-   * Falls back to global webhook URL if user doesn't have a custom one
+   * Always uses the centralized webhook URL from webhook_config table
    */
   async getUserWebhookUrl(userId: string): Promise<string> {
-    try {
-      // First try to get user-specific webhook URL
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('webhook_url')
-        .eq('id', userId)
-        .single();
-
-      // If user has a custom webhook URL, use it
-      if (!profileError && profile?.webhook_url) {
-        return profile.webhook_url;
-      }
-
-      // Otherwise, fall back to global webhook URL
-      return await this.getWebhookUrl();
-    } catch (error) {
-      console.error("Error fetching user webhook URL:", error);
-      // Fall back to global webhook URL
-      return await this.getWebhookUrl();
-    }
+    // Always use the centralized webhook URL - no more user-specific URLs
+    return await this.getWebhookUrl();
   }
 
   /**
@@ -120,31 +102,11 @@ export class CentralizedWebhookService {
 
   /**
    * Update webhook URL for a specific user
+   * This now updates the centralized webhook config instead
    */
   async updateUserWebhookUrl(userId: string, url: string): Promise<boolean> {
-    try {
-      // Validate URL before updating
-      const validation = validateWebhookUrl(url);
-      if (!validation.isValid) {
-        console.error("Invalid webhook URL:", validation.error);
-        throw new Error(validation.error);
-      }
-
-      const { error } = await supabase
-        .from('profiles')
-        .update({ webhook_url: url })
-        .eq('id', userId);
-
-      if (error) {
-        console.error("Error updating user webhook URL:", error);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      console.error("Error in updateUserWebhookUrl:", error);
-      return false;
-    }
+    console.warn("updateUserWebhookUrl is deprecated. Use updateWebhookUrl to update the centralized configuration instead.");
+    return await this.updateWebhookUrl(url);
   }
 
   /**

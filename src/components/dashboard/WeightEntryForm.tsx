@@ -81,8 +81,18 @@ const WeightEntryForm: React.FC<WeightEntryFormProps> = ({ onEntryAdded, preferr
         return;
       }
 
+      // Validate description length (200 character limit)
+      if (description.length > 200) {
+        toast({
+          title: "Error",
+          description: "Notes cannot exceed 200 characters",
+          variant: "destructive"
+        });
+        return;
+      }
+
       // Sanitize description input
-      const sanitizedDescription = sanitizeText(description, 500);
+      const sanitizedDescription = sanitizeText(description, 200);
       
       const entryData = {
         user_id: user.id,
@@ -215,13 +225,15 @@ const WeightEntryForm: React.FC<WeightEntryFormProps> = ({ onEntryAdded, preferr
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="description">Notes (Diet Related)</Label>
+            <Label htmlFor="description">Notes (Diet Related) - {description.length}/200</Label>
             <Textarea
               id="description"
               placeholder="Add any notes about this weight entry..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
+              maxLength={200}
+              className={description.length > 200 ? "border-destructive" : ""}
             />
           </div>
         </form>
