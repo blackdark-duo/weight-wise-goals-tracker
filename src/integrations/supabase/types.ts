@@ -126,6 +126,7 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string | null
+          credits: number
           deletion_date: string | null
           display_name: string | null
           email: string | null
@@ -143,6 +144,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          credits?: number
           deletion_date?: string | null
           display_name?: string | null
           email?: string | null
@@ -160,6 +162,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          credits?: number
           deletion_date?: string | null
           display_name?: string | null
           email?: string | null
@@ -358,6 +361,10 @@ export type Database = {
       submit_user_data: {
         Args: { p_data: Json; p_ip_address: string }
         Returns: Json
+      }
+      use_credit: {
+        Args: { user_id_param: string }
+        Returns: boolean
       }
     }
     Enums: {

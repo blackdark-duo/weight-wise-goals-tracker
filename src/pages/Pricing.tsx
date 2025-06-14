@@ -78,7 +78,7 @@ const Pricing = () => {
             <Alert className="border-destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                You've reached your {limitExceeded === 'insights' ? 'AI insights' : 'webhook'} limit 
+                You've reached your {limitExceeded === 'credits' ? 'credit' : limitExceeded === 'insights' ? 'AI insights' : 'webhook'} limit 
                 ({currentUsage}/{usageLimit}). Upgrade to Basic plan to continue using all features.
               </AlertDescription>
             </Alert>
@@ -94,8 +94,8 @@ const Pricing = () => {
               price="Free"
               description="Perfect for getting started on your weight management journey."
               features={[
-                "5 AI insights per month",
-                "Weight Wise tracking",
+                "5 credits included",
+                "Weight tracking",
                 "Basic goal setting",
                 "30-day data history",
                 "Email support"
@@ -116,7 +116,7 @@ const Pricing = () => {
               price="$5"
               description="Enhanced features for serious weight management."
               features={[
-                "30 AI insights per month",
+                "Unlimited credits",
                 "Unlimited weight tracking",
                 "Advanced goal setting",
                 "1-year data history",
