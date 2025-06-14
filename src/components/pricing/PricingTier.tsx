@@ -8,6 +8,8 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 export interface PricingTierProps {
   title: string;
   price: string;
+  originalPrice?: string;
+  savings?: string;
   description: string;
   features: string[];
   notIncluded?: string[];
@@ -15,18 +17,22 @@ export interface PricingTierProps {
   highlighted?: boolean;
   onClick: () => void;
   loading?: boolean;
+  period?: 'monthly' | 'yearly';
 }
 
 export const PricingTier: React.FC<PricingTierProps> = ({
   title,
   price,
+  originalPrice,
+  savings,
   description,
   features,
   notIncluded = [],
   buttonText,
   highlighted = false,
   onClick,
-  loading = false
+  loading = false,
+  period = 'monthly'
 }) => {
   return (
     <motion.div
@@ -50,8 +56,20 @@ export const PricingTier: React.FC<PricingTierProps> = ({
             {title}
           </CardTitle>
           <div className="mt-2">
-            <span className="text-3xl font-bold">{price}</span>
-            {price !== "Free" && <span className="text-muted-foreground ml-1">/month</span>}
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-bold">{price}</span>
+              {originalPrice && (
+                <span className="text-lg text-muted-foreground line-through">{originalPrice}</span>
+              )}
+            </div>
+            {savings && (
+              <div className="text-sm text-green-600 font-medium mt-1">{savings}</div>
+            )}
+            {price !== "Free" && (
+              <span className="text-muted-foreground text-sm">
+                per {period === 'yearly' ? 'year' : 'month'}
+              </span>
+            )}
           </div>
           <p className="text-muted-foreground">{description}</p>
         </CardHeader>
