@@ -14,6 +14,7 @@ import WeightEntryForm from "@/components/dashboard/WeightEntryForm";
 import WeightChart from "@/components/dashboard/WeightChart";
 import RecentEntries from "@/components/dashboard/RecentEntries";
 import QuickActions from "@/components/dashboard/QuickActions";
+import CreditsDisplay from "@/components/dashboard/CreditsDisplay";
 import { Badge } from "@/components/ui/badge";
 
 interface WeightEntry {
@@ -50,6 +51,7 @@ const Dashboard = () => {
   const [maxWeight, setMaxWeight] = useState<number | undefined>(undefined);
   const [userId, setUserId] = useState<string | null>(null);
   const [showAIInsights, setShowAIInsights] = useState(true);
+  const [userCredits, setUserCredits] = useState<number>(0);
   const navigate = useNavigate();
   
   // Check if user is logged in
@@ -76,19 +78,21 @@ const Dashboard = () => {
       
       setUserId(user.id);
 
-      // Fetch user preferences for AI insights visibility
+      // Fetch user preferences for AI insights visibility and credits
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("show_ai_insights")
+        .select("show_ai_insights, credits")
         .eq("id", user.id)
         .single();
         
       if (!profileError && profileData) {
         // Make explicit the default behavior
         setShowAIInsights(profileData?.show_ai_insights ?? true);
+        setUserCredits(profileData?.credits ?? 0);
       } else {
         // Default to showing AI insights if there's an error or no data
         setShowAIInsights(true);
+        setUserCredits(0);
       }
 
       const { data: entries, error: entriesError } = await supabase
@@ -227,6 +231,8 @@ const Dashboard = () => {
             </Button>
           </div>
         </div>
+
+        <CreditsDisplay credits={userCredits} onCreditsUpdate={setUserCredits} />
 
         <WeightEntryForm onEntryAdded={handleEntryAdded} preferredUnit={preferredUnit} />
         

@@ -180,6 +180,36 @@ export type Database = {
         }
         Relationships: []
       }
+      upgrade_interest: {
+        Row: {
+          click_count: number
+          created_at: string
+          email_id: string
+          id: string
+          interest_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          click_count?: number
+          created_at?: string
+          email_id: string
+          id?: string
+          interest_date?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          click_count?: number
+          created_at?: string
+          email_id?: string
+          id?: string
+          interest_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       webhook_config: {
         Row: {
           days: number | null
@@ -360,6 +390,10 @@ export type Database = {
       }
       submit_user_data: {
         Args: { p_data: Json; p_ip_address: string }
+        Returns: Json
+      }
+      track_upgrade_interest: {
+        Args: { user_id_param: string; email_param: string }
         Returns: Json
       }
       use_credit: {
