@@ -49,7 +49,7 @@ export const useUsageLimits = () => {
         const isProtectedRoute = ['/dashboard', '/reports', '/goals', '/account'].includes(currentPath);
         
         if (isProtectedRoute && (creditsExceeded || webhooksExceeded)) {
-          navigate('/pricing', { 
+          navigate('/signup', { 
             state: { 
               reason: creditsExceeded ? 'credits' : 'webhooks',
               current: creditsExceeded ? usageData.credits : usageData.webhook_count,

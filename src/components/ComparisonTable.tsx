@@ -1,5 +1,6 @@
 
 import { Check, X } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const ComparisonTable = () => {
   const features = [
@@ -114,12 +115,12 @@ const ComparisonTable = () => {
           <p className="text-lg font-medium mb-6">
             Your health journey starts here - completely free, completely yours.
           </p>
-          <a 
-            href="/signup" 
+          <Link 
+            to="/signup" 
             className="inline-flex h-11 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
           >
             Start Your Transformation Today
-          </a>
+          </Link>
         </div>
       </div>
     </section>
