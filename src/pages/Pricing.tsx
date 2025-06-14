@@ -1,14 +1,16 @@
 
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Check, X } from "lucide-react";
+import { Check, X, AlertTriangle } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import Footer from "@/components/Footer";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/providers/auth";
+import { useLocation } from "react-router-dom";
 import { PricingTier } from "@/components/pricing/PricingTier";
 import { PricingFAQ } from "@/components/pricing/PricingFAQ";
 import { PricingHero } from "@/components/pricing/PricingHero";
@@ -17,7 +19,13 @@ import { recordPricingClick } from "@/services/pricingService";
 
 const Pricing = () => {
   const { session } = useAuth();
+  const location = useLocation();
   const [loadingTier, setLoadingTier] = useState<string | null>(null);
+  
+  // Check if user was redirected due to exceeding limits
+  const limitExceeded = location.state?.reason;
+  const currentUsage = location.state?.current;
+  const usageLimit = location.state?.limit;
 
   const handlePricingClick = async (tier: string) => {
     setLoadingTier(tier);
@@ -42,15 +50,13 @@ const Pricing = () => {
         console.error("Error recording pricing click:", error);
       }
       
-      // If Pro tier, send email notification
-      if (tier === "pro") {
-        // In a real app, this would call an edge function to send an email
-        console.log("Sending pro tier interest email to pro@weightwise.site");
-        toast.success("Thank you for your interest! We'll contact you about upgrading to Pro tier.");
+      // Handle different tier selections
+      if (tier === "basic") {
+        toast.success("Thank you for your interest! We'll contact you about upgrading to Basic plan.");
       } else if (tier === "free") {
         toast.success("You've selected the Free tier. Continue enjoying Weight Wise!");
       } else {
-        toast.success("Thank you for your interest in additional credits!");
+        toast.success("Thank you for your interest!");
       }
     } catch (error) {
       console.error("Error in pricing click handler:", error);
@@ -66,9 +72,23 @@ const Pricing = () => {
       
       <PricingHero />
       
+      {limitExceeded && (
+        <section className="py-8 px-4">
+          <div className="container mx-auto max-w-4xl">
+            <Alert className="border-destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                You've reached your {limitExceeded === 'insights' ? 'AI insights' : 'webhook'} limit 
+                ({currentUsage}/{usageLimit}). Upgrade to Basic plan to continue using all features.
+              </AlertDescription>
+            </Alert>
+          </div>
+        </section>
+      )}
+      
       <section className="py-20 px-4">
-        <div className="container mx-auto max-w-6xl">
-          <div className="grid gap-8 md:grid-cols-3">
+        <div className="container mx-auto max-w-4xl">
+          <div className="grid gap-8 md:grid-cols-2">
             <PricingTier
               title="Free Tier"
               price="Free"
@@ -92,38 +112,22 @@ const Pricing = () => {
             />
             
             <PricingTier
-              title="Pro Tier"
+              title="Basic Plan"
               price="$5"
               description="Enhanced features for serious weight management."
               features={[
                 "30 AI insights per month",
-                "Unlimited Weight Wise tracking",
+                "Unlimited weight tracking",
                 "Advanced goal setting",
                 "1-year data history",
                 "Priority email support",
                 "Extended data analysis",
-                "API access"
+                "Webhook integrations"
               ]}
-              buttonText="Upgrade to Pro"
+              buttonText="Upgrade to Basic"
               highlighted={true}
-              onClick={() => handlePricingClick("pro")}
-              loading={loadingTier === "pro"}
-            />
-            
-            <PricingTier
-              title="Top-Up Credits"
-              price="$5"
-              description="Need more AI insights? Add more as needed."
-              features={[
-                "100 additional AI insights",
-                "Use anytime",
-                "Never expires",
-                "Compatible with Free tier",
-                "Compatible with Pro tier"
-              ]}
-              buttonText="Buy Credits"
-              onClick={() => handlePricingClick("credits")}
-              loading={loadingTier === "credits"}
+              onClick={() => handlePricingClick("basic")}
+              loading={loadingTier === "basic"}
             />
           </div>
         </div>
