@@ -17,7 +17,7 @@ import { PricingHero } from "@/components/pricing/PricingHero";
 import { PricingCTA } from "@/components/pricing/PricingCTA";
 import { recordPricingClick } from "@/services/pricingService";
 import { CurrencySelector, Currency } from "@/components/pricing/CurrencySelector";
-import { detectLocalCurrency, formatPrice, formatPriceWithPeriod } from "@/utils/currencyUtils";
+import { detectLocalCurrency, formatPrice, formatPriceWithPeriod, formatYearlyAsMonthly } from "@/utils/currencyUtils";
 
 const Pricing = () => {
   const { session } = useAuth();
@@ -161,12 +161,12 @@ const Pricing = () => {
             <PricingTier
               title="Pro Plan"
               price={isYearly 
-                ? formatPriceWithPeriod(50, selectedCurrency, 'yearly') // 10 months worth (5*10)
+                ? formatYearlyAsMonthly(50, selectedCurrency).monthlyPrice // Show monthly equivalent
                 : formatPriceWithPeriod(5, selectedCurrency, 'monthly')
               }
               originalPrice={isYearly 
-                ? formatPriceWithPeriod(60, selectedCurrency, 'yearly') // 12 months worth (5*12)
-                : undefined // No strikethrough for monthly
+                ? formatYearlyAsMonthly(60, selectedCurrency).monthlyPrice // Show monthly equivalent of original
+                : undefined
               }
               savings={isYearly 
                 ? `🎉 LIMITED TIME: Get 2 months FREE!`
@@ -177,20 +177,21 @@ const Pricing = () => {
                 : "Enhanced features for serious weight management."
               }
               features={[
-                "✅ Unlimited credits",
-                "✅ Unlimited weight tracking", 
-                "✅ Advanced goal setting",
-                isYearly ? "✅ Unlimited data history" : "✅ 1-year data history",
-                "✅ Priority email support",
-                "✅ Extended data analysis", 
-                "✅ Webhook integrations",
-                ...(isYearly ? ["🎁 2 months absolutely FREE!", "💎 Premium support included", "🔥 Limited time offer"] : ["⭐ Great for committed users"])
+                "Unlimited credits",
+                "Unlimited weight tracking", 
+                "Advanced goal setting",
+                isYearly ? "Unlimited data history" : "1-year data history",
+                "Priority email support",
+                "Extended data analysis", 
+                "Webhook integrations",
+                ...(isYearly ? ["2 months absolutely FREE!", "Premium support included", "Limited time offer"] : ["Great for committed users"])
               ]}
               buttonText={isYearly ? "🚀 Get Pro Plan (Best Deal!)" : "Upgrade to Pro"}
               highlighted={true}
               onClick={() => handlePricingClick(isYearly ? "pro-yearly" : "pro")}
               loading={loadingTier === "pro" || loadingTier === "pro-yearly"}
               period={isYearly ? 'yearly' : 'monthly'}
+              yearlyTotal={isYearly ? formatYearlyAsMonthly(50, selectedCurrency).yearlyTotal : undefined}
             />
           </div>
           

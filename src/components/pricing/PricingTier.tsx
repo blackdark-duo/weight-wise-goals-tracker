@@ -18,6 +18,7 @@ export interface PricingTierProps {
   onClick: () => void;
   loading?: boolean;
   period?: 'monthly' | 'yearly';
+  yearlyTotal?: string;
 }
 
 export const PricingTier: React.FC<PricingTierProps> = ({
@@ -32,7 +33,8 @@ export const PricingTier: React.FC<PricingTierProps> = ({
   highlighted = false,
   onClick,
   loading = false,
-  period = 'monthly'
+  period = 'monthly',
+  yearlyTotal
 }) => {
   return (
     <motion.div
@@ -65,7 +67,10 @@ export const PricingTier: React.FC<PricingTierProps> = ({
             {savings && (
               <div className="text-sm text-green-600 font-medium mt-1">{savings}</div>
             )}
-            {price !== "Free" && (
+            {yearlyTotal && (
+              <div className="text-xs text-muted-foreground mt-1">{yearlyTotal}</div>
+            )}
+            {price !== "Free" && !yearlyTotal && (
               <span className="text-muted-foreground text-sm">
                 per {period === 'yearly' ? 'year' : 'month'}
               </span>

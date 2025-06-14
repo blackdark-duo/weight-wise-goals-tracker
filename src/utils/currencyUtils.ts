@@ -80,3 +80,14 @@ export const formatPriceWithPeriod = (usdPrice: number, currency: Currency, peri
   const price = formatPrice(usdPrice, currency);
   return period === 'yearly' ? `${price}/year` : `${price}/month`;
 };
+
+export const formatYearlyAsMonthly = (yearlyUsdPrice: number, currency: Currency): { monthlyPrice: string, yearlyTotal: string } => {
+  const monthlyEquivalent = yearlyUsdPrice / 12;
+  const monthlyPrice = formatPrice(monthlyEquivalent, currency);
+  const yearlyTotal = formatPrice(yearlyUsdPrice, currency);
+  
+  return {
+    monthlyPrice: `${monthlyPrice}/month`,
+    yearlyTotal: `${yearlyTotal} total per year`
+  };
+};
