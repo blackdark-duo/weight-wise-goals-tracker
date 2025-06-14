@@ -36,52 +36,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     };
   }, []);
 
-  useEffect(() => {
-    const createAdminUsers = async () => {
-      try {
-        // Create the admin users as requested
-        const adminEmails = [
-          "admin@weightwise.com",
-          "naveen831459@gmail.com",
-          "fitnessfea.t9@gmail.com", 
-          "fitnessfeat9@gmail.com"
-        ];
-        
-        for (const email of adminEmails) {
-          const { data: adminExists } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("email", email)
-            .maybeSingle();
-
-          if (!adminExists) {
-            const { error } = await supabase.auth.signUp({
-              email: email,
-              password: "password",
-              options: {
-                data: {
-                  is_admin: true,
-                  display_name: email === "admin@weightwise.com" ? "Admin User" : "Weight Wise",
-                },
-              },
-            });
-
-            if (error) {
-              console.error(`Failed to create admin user ${email}:`, error);
-            } else {
-              console.log(`Created admin user for ${email}`);
-            }
-          }
-        }
-      } catch (err) {
-        console.error("Error setting up admin users:", err);
-      }
-    };
-
-    if (process.env.NODE_ENV === "development") {
-      createAdminUsers();
-    }
-  }, []);
 
   return (
     <AuthContext.Provider value={{ session, isLoading }}>
