@@ -70,7 +70,7 @@ export const formatPrice = (usdPrice: number, currency: Currency): string => {
   if (currency.code === 'JPY' || currency.code === 'CNY') {
     roundedPrice = Math.round(convertedPrice);
   } else {
-    roundedPrice = Math.round(convertedPrice * 100) / 100;
+    roundedPrice = Math.round(convertedPrice * 10) / 10; // Round to nearest 0.1
   }
 
   return `${currency.symbol}${roundedPrice.toLocaleString()}`;

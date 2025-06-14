@@ -24,7 +24,7 @@ const Pricing = () => {
   const location = useLocation();
   const [loadingTier, setLoadingTier] = useState<string | null>(null);
   const [selectedCurrency, setSelectedCurrency] = useState<Currency>(detectLocalCurrency());
-  const [isYearly, setIsYearly] = useState(false);
+  const [isYearly, setIsYearly] = useState(true); // Default to yearly
   
   // Check if user was redirected due to exceeding limits
   const limitExceeded = location.state?.reason;
@@ -59,8 +59,8 @@ const Pricing = () => {
       }
       
       // Handle different tier selections
-      if (tier === "basic") {
-        toast.success("Thank you for your interest! We'll contact you about upgrading to Basic plan.");
+      if (tier === "pro" || tier === "pro-yearly") {
+        toast.success("🎉 Excellent choice! We'll contact you about upgrading to Pro plan.");
       } else if (tier === "free") {
         toast.success("You've selected the Free tier. Continue enjoying Weight Wise!");
       } else {
@@ -110,7 +110,7 @@ const Pricing = () => {
               </span>
               {isYearly && (
                 <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full ml-2">
-                  Save 2 months!
+                  🎉 Best Value!
                 </span>
               )}
             </div>
@@ -159,34 +159,37 @@ const Pricing = () => {
             />
             
             <PricingTier
-              title="Basic Plan"
+              title="Pro Plan"
               price={isYearly 
                 ? formatPriceWithPeriod(50, selectedCurrency, 'yearly') // 10 months worth (5*10)
                 : formatPriceWithPeriod(5, selectedCurrency, 'monthly')
               }
               originalPrice={isYearly 
                 ? formatPriceWithPeriod(60, selectedCurrency, 'yearly') // 12 months worth (5*12)
-                : formatPriceWithPeriod(10, selectedCurrency, 'monthly') // MRP
+                : undefined // No strikethrough for monthly
               }
               savings={isYearly 
-                ? `Save ${formatPrice(10, selectedCurrency)} (2 months free!)`
-                : `Save ${formatPrice(5, selectedCurrency)} off MRP`
+                ? `🎉 LIMITED TIME: Get 2 months FREE!`
+                : `✨ Most Popular Choice`
               }
-              description="Enhanced features for serious weight management."
+              description={isYearly 
+                ? "🚀 The ultimate weight management experience - our best value plan!" 
+                : "Enhanced features for serious weight management."
+              }
               features={[
-                "Unlimited credits",
-                "Unlimited weight tracking", 
-                "Advanced goal setting",
-                isYearly ? "Unlimited data history" : "1-year data history",
-                "Priority email support",
-                "Extended data analysis", 
-                "Webhook integrations",
-                ...(isYearly ? ["2 months free!", "Best value for long-term users"] : [])
+                "✅ Unlimited credits",
+                "✅ Unlimited weight tracking", 
+                "✅ Advanced goal setting",
+                isYearly ? "✅ Unlimited data history" : "✅ 1-year data history",
+                "✅ Priority email support",
+                "✅ Extended data analysis", 
+                "✅ Webhook integrations",
+                ...(isYearly ? ["🎁 2 months absolutely FREE!", "💎 Premium support included", "🔥 Limited time offer"] : ["⭐ Great for committed users"])
               ]}
-              buttonText={isYearly ? "Get Yearly Plan" : "Upgrade to Basic"}
+              buttonText={isYearly ? "🚀 Get Pro Plan (Best Deal!)" : "Upgrade to Pro"}
               highlighted={true}
-              onClick={() => handlePricingClick(isYearly ? "basic-yearly" : "basic")}
-              loading={loadingTier === "basic" || loadingTier === "basic-yearly"}
+              onClick={() => handlePricingClick(isYearly ? "pro-yearly" : "pro")}
+              loading={loadingTier === "pro" || loadingTier === "pro-yearly"}
               period={isYearly ? 'yearly' : 'monthly'}
             />
           </div>
@@ -194,10 +197,15 @@ const Pricing = () => {
           {/* Pricing explanation */}
           <div className="mt-12 text-center">
             <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
-              All prices are converted from our base USD pricing. 
-              {isYearly && " Yearly plans include 2 months free - pay for 10 months, get 12 months of service!"} 
-              {!isYearly && " Monthly plans are discounted from MRP to make them more affordable."}
+              All prices converted from USD base pricing. 
+              {isYearly && " 🔥 Yearly Pro Plan: Pay for 10 months, enjoy 12 months of premium features - that's 2 months completely FREE!"} 
+              {!isYearly && " Monthly Pro Plan offers premium features at an affordable rate."}
             </p>
+            {isYearly && (
+              <p className="text-xs text-orange-600 font-medium mt-2">
+                ⏰ Limited time offer - upgrade now to lock in this amazing deal!
+              </p>
+            )}
           </div>
         </div>
       </section>
