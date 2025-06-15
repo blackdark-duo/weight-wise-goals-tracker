@@ -9,6 +9,7 @@ import { AuthProvider } from "./providers/auth";
 import AppRoutes from "./components/AppRoutes";
 import ScrollToTop from "./components/ScrollToTop";
 import { CustomToastProvider } from "./components/ui/custom-toast";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 // Set application name
 const APP_NAME = "WeightWise";
@@ -31,20 +32,22 @@ const App = () => {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <CustomToastProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner position="top-right" expand={false} closeButton richColors />
-          <AuthProvider>
-            <BrowserRouter>
-              <ScrollToTop />
-              <AppRoutes />
-            </BrowserRouter>
-          </AuthProvider>
-        </TooltipProvider>
-      </CustomToastProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <CustomToastProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner position="top-right" expand={false} closeButton richColors />
+            <AuthProvider>
+              <BrowserRouter>
+                <ScrollToTop />
+                <AppRoutes />
+              </BrowserRouter>
+            </AuthProvider>
+          </TooltipProvider>
+        </CustomToastProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 };
 
