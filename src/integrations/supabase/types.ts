@@ -87,6 +87,39 @@ export type Database = {
         }
         Relationships: []
       }
+      console_logs: {
+        Row: {
+          created_at: string
+          id: string
+          log_level: string
+          message: string
+          page: string
+          stack_trace: string | null
+          timestamp: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          log_level: string
+          message: string
+          page: string
+          stack_trace?: string | null
+          timestamp?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          log_level?: string
+          message?: string
+          page?: string
+          stack_trace?: string | null
+          timestamp?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       goals: {
         Row: {
           achieved: boolean | null
@@ -177,6 +210,39 @@ export type Database = {
           updated_at?: string | null
           webhook_count?: number | null
           webhook_limit?: number | null
+        }
+        Relationships: []
+      }
+      toast_logs: {
+        Row: {
+          created_at: string
+          duration: number | null
+          id: string
+          message: string
+          page: string
+          timestamp: string
+          toast_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration?: number | null
+          id?: string
+          message: string
+          page: string
+          timestamp?: string
+          toast_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration?: number | null
+          id?: string
+          message?: string
+          page?: string
+          timestamp?: string
+          toast_type?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -371,6 +437,10 @@ export type Database = {
           p_window_minutes?: number
         }
         Returns: boolean
+      }
+      cleanup_old_logs: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       get_current_user_admin_status: {
         Args: Record<PropertyKey, never>
