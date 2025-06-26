@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { Webhook } from 'lucide-react';
+import { Webhook, Loader2 } from 'lucide-react';
 
 interface AIInsightsProps {
   userId: string | null;
@@ -14,7 +14,7 @@ interface AIInsightsProps {
 const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [insightsHTML, setInsightsHTML] = useState<string | null>(null);
-  const [insightsLimit, setInsightsLimit] = useState<number>(0);
+  const [insightsLimit, setInsightsLimit] = useState<number>(10);
   const [insightsUsed, setInsightsUsed] = useState<number>(0);
   const [lastWebhookDate, setLastWebhookDate] = useState<string | null>(null);
 
@@ -35,7 +35,13 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
         .eq('id', 1)
         .single();
       
-      if (configError) throw configError;
+      if (configError) {
+        console.error('Config error:', configError);
+        // Set defaults if config doesn't exist
+        setInsightsLimit(10);
+        setInsightsUsed(0);
+        return;
+      }
       
       if (configData) {
         // Check if we need to reset daily counter
@@ -54,6 +60,8 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
           
           if (!updateError) {
             setInsightsUsed(0);
+          } else {
+            setInsightsUsed(configData.insights_used || 0);
           }
         } else {
           setInsightsUsed(configData.insights_used || 0);
@@ -66,6 +74,9 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
       checkRecentInsights();
     } catch (err) {
       console.error('Error fetching insights limits:', err);
+      // Set defaults on error
+      setInsightsLimit(10);
+      setInsightsUsed(0);
     }
   };
   
@@ -82,7 +93,10 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
         .order('created_at', { ascending: false })
         .limit(1);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching recent logs:', error);
+        return;
+      }
       
       // If there's a recent log within the last hour, use it
       const oneHourAgo = new Date();
@@ -99,10 +113,8 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
         if (typeof responsePayload === 'string') {
           responseText = responsePayload;
         } else if (responsePayload && typeof responsePayload === 'object') {
-          // If it's an object, convert to string
           responseText = JSON.stringify(responsePayload);
         } else {
-          // Fallback
           responseText = String(responsePayload || '');
         }
         
@@ -123,7 +135,6 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
     setInsightsHTML(null);
     
     try {
-      // Request new insights from the edge function with improved error handling
       console.log('Calling send_ai_insights edge function...');
       const response = await supabase.functions.invoke('send_ai_insights', {
         method: 'POST',
@@ -132,13 +143,11 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
       
       console.log('Edge function response:', response);
       
-      // Check if we have an error object
       if (response.error) {
         console.error('Edge Function error:', response.error);
         throw new Error(`Edge Function error: ${response.error.message || 'Unknown error'}`);
       }
       
-      // Check if we have data
       if (response.data && response.data.message) {
         setInsightsHTML(response.data.message);
         
@@ -152,21 +161,19 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
           setInsightsUsed(prev => prev + 1);
         }
         setLastWebhookDate(new Date().toISOString());
+        toast.success('AI insights generated successfully!');
       } else {
-        // Handle case where we got a successful response but no data
         throw new Error('No insights returned from Edge Function');
       }
     } catch (err: any) {
       console.error('Error fetching AI insights:', err);
       
-      // Provide a more user-friendly error message
       if (err.message?.includes('non-2xx status code')) {
         toast.error('The AI insights service is currently unavailable. Please try again later.');
       } else {
         toast.error(err.message || 'Failed to fetch AI insights');
       }
       
-      // Optionally, provide a fallback experience
       setInsightsHTML('<p>Unable to generate insights at this time. Please try again later.</p>');
     } finally {
       setIsLoading(false);
@@ -175,12 +182,13 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
 
   const remainingRequests = Math.max(0, insightsLimit - insightsUsed);
   const isLimitExceeded = insightsUsed >= insightsLimit;
+  const isButtonDisabled = isLoading || isLimitExceeded || !userId;
 
   return (
-    <Card className="bg-white shadow-sm">
+    <Card className="bg-white shadow-sm border border-gray-200">
       <CardContent className="p-4">
         <div className="flex flex-col space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
             <div className="flex items-center gap-2">
               <Webhook className="h-5 w-5 text-primary" />
               <h3 className="font-medium">AI Weight Analysis</h3>
@@ -189,20 +197,21 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
               </Badge>
             </div>
             
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="bg-muted">
-                {remainingRequests}/{insightsLimit} requests
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+              <Badge variant="outline" className="bg-muted text-xs">
+                {remainingRequests}/{insightsLimit} requests today
               </Badge>
               
               <Button
                 size="sm"
                 onClick={fetchInsights}
-                disabled={isLoading || isLimitExceeded}
+                disabled={isButtonDisabled}
+                className="w-full sm:w-auto bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <>
-                    <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    Loading...
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Analyzing...
                   </>
                 ) : (
                   'Get AI Insights'
@@ -212,28 +221,47 @@ const AIInsights: React.FC<AIInsightsProps> = ({ userId }) => {
           </div>
           
           {isLimitExceeded && (
-            <div className="text-sm text-muted-foreground bg-muted/30 p-3 rounded">
-              <p>You've reached your AI insights limit for today. 
+            <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 p-3 rounded-lg">
+              <p>You've reached your AI insights limit for today ({insightsLimit} requests). 
                  {lastWebhookDate && 
                   ` Last request: ${new Date(lastWebhookDate).toLocaleString()}`}
               </p>
+              <p className="mt-1 text-xs text-amber-600">Limit resets daily at midnight.</p>
+            </div>
+          )}
+
+          {!userId && (
+            <div className="text-sm text-red-700 bg-red-50 border border-red-200 p-3 rounded-lg">
+              <p>Please sign in to use AI insights.</p>
             </div>
           )}
           
           {insightsHTML ? (
             <div className="prose prose-sm max-w-none mt-2">
-              <div className="bg-white rounded border border-gray-200 p-4">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Badge className="bg-blue-500 text-white">AI Generated</Badge>
+                  <span className="text-xs text-blue-600">
+                    {new Date().toLocaleString()}
+                  </span>
+                </div>
                 <iframe 
                   srcDoc={insightsHTML} 
-                  className="w-full min-h-[200px] border-0"
+                  className="w-full min-h-[200px] border-0 rounded"
                   title="AI Insights" 
                   sandbox="allow-scripts"
                 />
               </div>
             </div>
           ) : (
-            <div className="text-sm text-muted-foreground">
-              <p>Get AI-powered insights about your weight trends and progress.</p>
+            <div className="text-sm text-muted-foreground bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <p className="font-medium mb-2">🤖 AI-Powered Weight Analysis</p>
+              <p>Get personalized insights about your weight trends, patterns, and recommendations based on your data.</p>
+              <ul className="mt-2 text-xs space-y-1 list-disc list-inside text-gray-600">
+                <li>Trend analysis and pattern recognition</li>
+                <li>Personalized recommendations</li>
+                <li>Goal progress evaluation</li>
+              </ul>
             </div>
           )}
         </div>
